@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Pencil, UserPlus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -13,6 +13,8 @@ import { formatDate, humanize } from "@/lib/format";
 import { TEAM_ROLE_LABELS, type TeamRole } from "@/features/assignments/types/assignment.types";
 import { useClient } from "../hooks/use-clients";
 import { ClientFormDialog } from "./client-form-dialog";
+import type { ClientBranch } from "../types/client.types";
+import { BranchDialog, RemoveBranchDialog } from "./branch-dialogs";
 import { InviteClientUserDialog } from "./invite-client-user-dialog";
 
 function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
@@ -40,6 +42,8 @@ export function ClientDetailView({ id }: { id: number }) {
   const { data: client, isLoading, error, refetch } = useClient(id);
   const [editing, setEditing] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [branch, setBranch] = useState<ClientBranch | null | undefined>(undefined);
+  const [removing, setRemoving] = useState<ClientBranch | null>(null);
 
   const back = (
     <Link href="/admin/clients" className="text-muted-foreground mb-4 inline-flex items-center gap-1 text-sm hover:underline">
@@ -117,15 +121,29 @@ export function ClientDetailView({ id }: { id: number }) {
               </ul>
             )}
           </Section>
-          <Section title="Branches">
+          <Section
+            title="Branches"
+            aside={client.status !== "exited" && (
+              <Button variant="outline" size="sm" onClick={() => setBranch(null)}><Plus className="size-4" /> Add</Button>
+            )}
+          >
             {client.branches.length === 0 ? (
               <p className="text-muted-foreground text-sm">No branches recorded.</p>
             ) : (
               <ul className="space-y-3">
                 {client.branches.map((b) => (
-                  <li key={b.id} className="text-sm">
-                    <p className="font-medium">{b.name}</p>
-                    <p className="text-muted-foreground font-mono text-xs">{b.gstin ?? "No GSTIN"}</p>
+                  <li key={b.id} className="flex items-start justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium break-words">{b.name}</p>
+                      <p className="text-muted-foreground font-mono text-xs">{b.gstin ?? "No GSTIN"}</p>
+                      {b.external_branch_ref && <p className="text-muted-foreground text-xs">Ref: {b.external_branch_ref}</p>}
+                    </div>
+                    {client.status !== "exited" && (
+                      <div className="flex shrink-0">
+                        <Button variant="ghost" size="icon" className="size-8" aria-label={`Edit ${b.name}`} onClick={() => setBranch(b)}><Pencil className="size-4" /></Button>
+                        <Button variant="ghost" size="icon" className="size-8" aria-label={`Remove ${b.name}`} onClick={() => setRemoving(b)}><Trash2 className="size-4" /></Button>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -134,6 +152,8 @@ export function ClientDetailView({ id }: { id: number }) {
         </div>
       </div>
       <ClientFormDialog open={editing} onOpenChange={setEditing} client={client} />
+      <BranchDialog clientId={client.id} branch={branch} onClose={() => setBranch(undefined)} />
+      <RemoveBranchDialog clientId={client.id} branch={removing} onClose={() => setRemoving(null)} />
       <InviteClientUserDialog open={inviting} onOpenChange={setInviting} clientId={client.id} clientName={client.trade_name ?? client.legal_name} />
     </>
   );
