@@ -14,7 +14,6 @@ import { useClientOptions } from "@/features/clients/hooks/use-client-options";
 import { applyApiError } from "@/lib/form-errors";
 import { useCreateConnection } from "../hooks/use-integrations";
 import { connectionFormSchema, type ConnectionFormValues } from "../schemas/integration.schema";
-import { PROVIDER_LABELS, PROVIDERS } from "../types/integration.types";
 
 export function ConnectionFormDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const clients = useClientOptions();
@@ -39,11 +38,11 @@ export function ConnectionFormDialog({ open, onOpenChange }: { open: boolean; on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a connection</DialogTitle>
-          <DialogDescription>Register which software holds the books for this client.</DialogDescription>
+          <DialogTitle>Add a JournL connection</DialogTitle>
+          <DialogDescription>Link a client to the JournL organisation that holds their books.</DialogDescription>
         </DialogHeader>
         <form id="connection-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
-          <FormField id="client_id" label="Client" error={errors.client_id?.message}>
+          <FormField id="client_id" label="Client" error={errors.client_id?.message} className="sm:col-span-2">
             <Controller control={control} name="client_id" render={({ field }) => (
               <Select value={field.value || undefined} onValueChange={field.onChange}>
                 <SelectTrigger id="client_id" className="w-full" aria-invalid={!!errors.client_id}><SelectValue placeholder="Select a client" /></SelectTrigger>
@@ -51,18 +50,10 @@ export function ConnectionFormDialog({ open, onOpenChange }: { open: boolean; on
               </Select>
             )} />
           </FormField>
-          <FormField id="provider" label="Provider">
-            <Controller control={control} name="provider" render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="provider" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>{PROVIDERS.map((p) => <SelectItem key={p} value={p}>{PROVIDER_LABELS[p]}</SelectItem>)}</SelectContent>
-              </Select>
-            )} />
-          </FormField>
-          <FormField id="external_org_name" label="External organisation name" error={errors.external_org_name?.message}>
+          <FormField id="external_org_name" label="JournL organisation name" error={errors.external_org_name?.message}>
             <Input id="external_org_name" {...register("external_org_name")} />
           </FormField>
-          <FormField id="external_org_id" label="External organisation id" error={errors.external_org_id?.message}>
+          <FormField id="external_org_id" label="JournL organisation ID" error={errors.external_org_id?.message}>
             <Input id="external_org_id" {...register("external_org_id")} />
           </FormField>
         </form>

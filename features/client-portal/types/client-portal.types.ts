@@ -127,3 +127,10 @@ export interface PortalSettings {
   role: "owner" | "member";
   can_approve: boolean;
 }
+
+export interface PortalSoftware {
+  provider: string;
+  external_org_name: string | null;
+  status: string;
+  last_health_check: string | null;
+}

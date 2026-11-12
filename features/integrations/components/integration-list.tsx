@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, humanize } from "@/lib/format";
 import { useConnections, useHealthCheck } from "../hooks/use-integrations";
-import { CONNECTION_STATUSES, PROVIDER_LABELS, PROVIDERS, type Connection, type ConnectionStatus, type Provider } from "../types/integration.types";
+import { CONNECTION_STATUSES, PROVIDER_LABELS, type Connection, type ConnectionStatus } from "../types/integration.types";
 import { ConnectionFormDialog } from "./connection-form-dialog";
 
 function HealthCheckButton({ connection }: { connection: Connection }) {
@@ -52,11 +52,10 @@ const columns: Column<Connection>[] = [
 
 export function IntegrationList() {
   const [q, setQ] = useState("");
-  const [provider, setProvider] = useState<Provider>();
   const [status, setStatus] = useState<ConnectionStatus>();
   const [page, setPage] = useState(1);
   const [adding, setAdding] = useState(false);
-  const query = useConnections({ q, provider, status, page });
+  const query = useConnections({ q, status, page });
 
   return (
     <>
@@ -66,12 +65,11 @@ export function IntegrationList() {
         actions={<Button onClick={() => setAdding(true)}><Plus className="size-4" /> Add connection</Button>}
       />
       <p className="text-muted-foreground -mt-3 mb-4 text-xs">
-        Health checks currently mark the connection as connected and record the time; the JournL / Zoho Books API call is not wired up yet.
+        Health checks currently mark the connection as connected and record the time; the JournL API call is not wired up yet. Clients can also request a connection from their portal; it shows here as Pending until you run a health check.
       </p>
       <div className="bg-card rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search organisation" />
-          <FilterSelect allLabel="All providers" value={provider} onChange={(v) => { setProvider(v as Provider | undefined); setPage(1); }} options={PROVIDERS.map((p) => ({ value: p, label: PROVIDER_LABELS[p] }))} />
           <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as ConnectionStatus | undefined); setPage(1); }} options={CONNECTION_STATUSES.map((s) => ({ value: s, label: humanize(s) }))} />
         </div>
         <DataTable
@@ -81,7 +79,7 @@ export function IntegrationList() {
           isLoading={query.isLoading}
           error={query.error}
           onRetry={() => void query.refetch()}
-          empty={{ title: q || provider || status ? "No connections match" : "No connections yet" }}
+          empty={{ title: q || status ? "No connections match" : "No connections yet" }}
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />
       </div>

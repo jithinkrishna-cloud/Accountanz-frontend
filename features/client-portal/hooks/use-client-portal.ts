@@ -64,3 +64,8 @@ export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.updateSettings, onSuccess: (d) => qc.setQueryData(K("settings"), d) });
 }
+
+export function useConnectJournl() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.connectJournl, onSuccess: (rows) => qc.setQueryData(K("software"), rows) });
+}

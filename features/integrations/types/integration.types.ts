@@ -1,6 +1,6 @@
-export const PROVIDERS = ["journl", "zoho_books"] as const;
+export const PROVIDERS = ["journl"] as const;
 export type Provider = (typeof PROVIDERS)[number];
-export const PROVIDER_LABELS: Record<Provider, string> = { journl: "JournL", zoho_books: "Zoho Books" };
+export const PROVIDER_LABELS: Record<Provider, string> = { journl: "JournL" };
 export const CONNECTION_STATUSES = ["pending", "connected", "error", "disconnected"] as const;
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 

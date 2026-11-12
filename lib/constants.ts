@@ -55,7 +55,6 @@ export const STATUS_TONES: Record<string, Tone> = {
 
 export const ACCOUNTING_SOFTWARE_LABELS: Record<string, string> = {
   journl: "JournL",
-  zoho_books: "Zoho Books",
   none: "Not connected",
 };
 

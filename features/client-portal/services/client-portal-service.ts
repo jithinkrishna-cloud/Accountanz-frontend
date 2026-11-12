@@ -11,6 +11,7 @@ import type {
   PortalReport,
   PortalRequest,
   PortalSettings,
+  PortalSoftware,
   PortalTask,
   PortalThread,
   PortalThreadDetail,
@@ -26,7 +27,9 @@ export const clientPortalService = {
   dashboard: () => api<PortalDashboard>("/app/dashboard"),
   business: () => api<PortalBusiness>("/app/business"),
   team: () => items<{ full_name: string; email: string; team_role: string }>("/app/team"),
-  software: () => items<{ provider: string; external_org_name: string | null; status: string; last_health_check: string | null }>("/app/software"),
+  software: () => items<PortalSoftware>("/app/software"),
+  connectJournl: (body: { external_org_name: string; external_org_id: string }) =>
+    api<{ items: PortalSoftware[] }>("/app/software/journl", { method: "POST", body }).then((r) => r.items),
   documents: () => items<PortalDocument>("/app/documents"),
   upload: (file: File, meta: { category: string; period?: string; request_id?: number }) => {
     const body = new FormData();

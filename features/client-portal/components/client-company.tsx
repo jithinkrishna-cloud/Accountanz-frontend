@@ -1,15 +1,15 @@
 "use client";
 
-import { Plug } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
-import { formatDate, humanize, initials } from "@/lib/format";
-import { usePortalBusiness, usePortalSoftware, usePortalTeam } from "../hooks/use-client-portal";
+import { humanize, initials } from "@/lib/format";
+import { usePortalBusiness, usePortalTeam } from "../hooks/use-client-portal";
 import { CompanyGate } from "./company-gate";
+import { JournlConnection } from "./journl-connection";
 import { Card, ListBody } from "./portal-ui";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
@@ -109,37 +109,13 @@ export function ClientTeam() {
   );
 }
 
-function SoftwareBody() {
-  const q = usePortalSoftware();
-  return (
-    <Card title="Connected software" subtitle="Your books stay in your own accounting software; Accountanz never keeps the ledger.">
-      <ListBody query={q} empty={{ title: "No software connected", description: "Your accountant will connect your accounting software during onboarding." }}>
-        {(rows) => (
-          <ul className="divide-y">
-            {rows.map((s) => (
-              <li key={s.provider} className="flex items-center gap-3 px-5 py-4">
-                <Plug className="text-primary size-5" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{ACCOUNTING_SOFTWARE_LABELS[s.provider] ?? s.provider}</p>
-                  <p className="text-muted-foreground text-xs">{s.external_org_name ?? "Organisation not linked yet"}{s.last_health_check ? ` · checked ${formatDate(s.last_health_check, true)}` : ""}</p>
-                </div>
-                <StatusBadge status={s.status} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </ListBody>
-    </Card>
-  );
-}
-
 export function ClientSoftware() {
   return (
     <CompanyGate>
-      {() => (
+      {(company) => (
         <>
           <PageHeader title="Accounting Software" description="Where your books live." />
-          <SoftwareBody />
+          <JournlConnection company={company} />
         </>
       )}
     </CompanyGate>
