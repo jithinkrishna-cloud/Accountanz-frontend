@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { AuthCard } from "@/features/auth/components/auth-card";
+import { AuthSplitLayout } from "@/features/auth/components/auth-split-layout";
 import { LoginForm } from "@/features/auth/components/login-form";
 
 export default function LoginPage() {
   return (
-    <AuthCard
+    <AuthSplitLayout
+      narrow
       title="Welcome back"
-      description="Log in to your account"
+      description="Log in to your Accountanz account."
       footer={
         <>
           Don&apos;t have an account?{" "}
@@ -20,6 +21,6 @@ export default function LoginPage() {
       <Suspense>
         <LoginForm />
       </Suspense>
-    </AuthCard>
+    </AuthSplitLayout>
   );
 }

@@ -18,8 +18,22 @@ export const loginSchema = z.object({
 const passwordsMatch = (v: { password: string; confirmPassword: string }) => v.password === v.confirmPassword;
 const mismatch = { path: ["confirmPassword"], message: "Passwords don't match" };
 
+// Mirrors backend gstinSchema/panSchema: optional, upper-cased, validated only when filled in.
+const optionalPattern = (re: RegExp, message: string) =>
+  z.string().trim().transform((v) => v.toUpperCase()).refine((v) => v === "" || re.test(v), message);
+
 export const registerSchema = z
-  .object({ fullName: z.string().trim().min(2, "Enter your full name"), email, password, confirmPassword: z.string() })
+  .object({
+    fullName: z.string().trim().min(2, "Enter your full name").max(150),
+    email,
+    password,
+    confirmPassword: z.string(),
+    legal_name: z.string().trim().min(2, "Enter your company's legal name").max(200),
+    trade_name: z.string().trim().max(200),
+    gstin: optionalPattern(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, "Enter a valid 15-character GSTIN"),
+    pan: optionalPattern(/^[A-Z]{5}\d{4}[A-Z]$/, "Enter a valid 10-character PAN"),
+    state: z.string().trim().max(60),
+  })
   .refine(passwordsMatch, mismatch);
 export const setPasswordSchema = z.object({ password, confirmPassword: z.string() }).refine(passwordsMatch, mismatch);
 export const forgotPasswordSchema = z.object({ email });

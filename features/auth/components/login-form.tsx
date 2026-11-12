@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/form-field";
+import { PasswordInput } from "@/components/shared/password-input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { ApiError } from "@/lib/api-client";
 import { useSignedIn } from "../hooks/use-session";
@@ -34,28 +35,30 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5" noValidate>
       {formError && (
         <Alert variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      <FormField id="email" label="Email" error={errors.email?.message}>
-        <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" autoFocus aria-invalid={!!errors.email} {...register("email")} />
-      </FormField>
-      <FormField
-        id="password"
-        label="Password"
-        error={errors.password?.message}
-        aside={
-          <Link href="/forgot-password" className="text-primary text-xs font-medium hover:underline">
-            Forgot password?
-          </Link>
-        }
-      >
-        <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" aria-invalid={!!errors.password} {...register("password")} />
-      </FormField>
-      <SubmitButton pending={isSubmitting} className="w-full">
+      <div className="bg-card grid gap-4 rounded-xl border p-5 shadow-xs sm:p-6">
+        <FormField id="email" label="Email" error={errors.email?.message}>
+          <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" autoFocus aria-invalid={!!errors.email} {...register("email")} />
+        </FormField>
+        <FormField
+          id="password"
+          label="Password"
+          error={errors.password?.message}
+          aside={
+            <Link href="/forgot-password" className="text-primary text-xs font-medium hover:underline">
+              Forgot password?
+            </Link>
+          }
+        >
+          <PasswordInput id="password" autoComplete="current-password" invalid={!!errors.password} {...register("password")} />
+        </FormField>
+      </div>
+      <SubmitButton pending={isSubmitting} className="h-11 w-full text-base">
         Log in
       </SubmitButton>
     </form>

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { AuthCard } from "@/features/auth/components/auth-card";
+import { AuthSplitLayout } from "@/features/auth/components/auth-split-layout";
 import { RegisterForm } from "@/features/auth/components/register-form";
 
 export default function RegisterPage() {
   return (
-    <AuthCard
+    <AuthSplitLayout
       title="Create your account"
-      description="Register your business with Accountanz"
+      description="Register your business and get matched with a dedicated accountant."
       footer={
         <>
           Already have an account?{" "}
@@ -17,6 +17,6 @@ export default function RegisterPage() {
       }
     >
       <RegisterForm />
-    </AuthCard>
+    </AuthSplitLayout>
   );
 }

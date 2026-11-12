@@ -1,6 +1,8 @@
 export interface PortalCompany {
   id: number;
   name: string;
+  /** Client lifecycle status: "lead" while the application is being reviewed. */
+  status: string;
   role: "owner" | "member";
   can_approve: boolean;
 }

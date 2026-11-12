@@ -11,7 +11,18 @@ export const authService = {
   register: (values: RegisterValues) =>
     api<UserResponse>("/auth/register", {
       method: "POST",
-      body: { fullName: values.fullName, email: values.email, password: values.password },
+      body: {
+        fullName: values.fullName,
+        email: values.email,
+        password: values.password,
+        company: {
+          legal_name: values.legal_name,
+          trade_name: values.trade_name || null,
+          gstin: values.gstin || null,
+          pan: values.pan || null,
+          state: values.state || null,
+        },
+      },
       noRefresh: true,
     }).then((r) => r.user),
   logout: () => api<void>("/auth/logout", { method: "POST", noRefresh: true }),
