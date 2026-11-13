@@ -8,6 +8,7 @@ import type {
   PortalDashboard,
   PortalDocument,
   PortalMeeting,
+  PortalPackages,
   PortalReport,
   PortalRequest,
   PortalSettings,
@@ -30,6 +31,8 @@ export const clientPortalService = {
   software: () => items<PortalSoftware>("/app/software"),
   connectJournl: (body: { journl_email: string; journl_password: string; company_id?: string; authorize: true }) =>
     api<{ items: PortalSoftware[] }>("/app/software/journl", { method: "POST", body }).then((r) => r.items),
+  packages: () => api<PortalPackages>("/app/packages"),
+  choosePackage: (id: number) => api<PortalPackages>(`/app/packages/${id}/choose`, { method: "POST" }),
   disconnectJournl: () => api<{ items: PortalSoftware[] }>("/app/software/journl/disconnect", { method: "POST" }).then((r) => r.items),
   documents: () => items<PortalDocument>("/app/documents"),
   upload: (file: File, meta: { category: string; period?: string; request_id?: number }) => {

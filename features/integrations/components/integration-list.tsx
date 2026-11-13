@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, humanize } from "@/lib/format";
 import { useConnections, useHealthCheck } from "../hooks/use-integrations";
+import { integrationService } from "../services/integration-service";
 import { CONNECTION_STATUSES, PROVIDER_LABELS, type Connection, type ConnectionStatus } from "../types/integration.types";
 import { ConnectionFormDialog } from "./connection-form-dialog";
+import { JournlDataSheet, ViewJournlDataButton } from "./journl-data-sheet";
 import { VerifyConnectionDialog } from "./verify-connection-dialog";
 
 /** Asks JournL for Accountanz's grant. Until JournL ships its partner API the server answers with that reason. */
@@ -49,6 +51,7 @@ export function IntegrationList() {
   const [page, setPage] = useState(1);
   const [adding, setAdding] = useState(false);
   const [verifying, setVerifying] = useState<Connection | null>(null);
+  const [viewing, setViewing] = useState<Connection | null>(null);
   const query = useConnections({ q, status, page });
   // "Check with JournL" only appears once JournL's partner API exists; until then it could only fail.
   const apiAvailable = query.data?.journlApiAvailable ?? false;
@@ -86,6 +89,7 @@ export function IntegrationList() {
               {(c.status === "pending" || c.status === "error" || (c.status === "connected" && !c.verified_at)) && (
                 <Button size="sm" variant="outline" onClick={() => setVerifying(c)}>Mark verified</Button>
               )}
+              {c.status === "connected" && c.journl_session_until && <ViewJournlDataButton onClick={() => setViewing(c)} />}
               {apiAvailable && <CheckWithJournlButton connection={c} />}
             </div>
           ),
@@ -122,6 +126,18 @@ export function IntegrationList() {
       </div>
       <ConnectionFormDialog open={adding} onOpenChange={setAdding} />
       <VerifyConnectionDialog connection={verifying} onClose={() => setVerifying(null)} />
+      <JournlDataSheet
+        source={
+          viewing && {
+            key: ["admin", "integrations", "journl-data", viewing.id],
+            title: viewing.client_name,
+            orgId: viewing.external_org_id,
+            sessionUntil: viewing.journl_session_until,
+            load: (period) => integrationService.journlData(viewing.id, period),
+          }
+        }
+        onClose={() => setViewing(null)}
+      />
     </>
   );
 }

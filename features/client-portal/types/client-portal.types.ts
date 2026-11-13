@@ -136,4 +136,22 @@ export interface PortalSoftware {
   last_health_check: string | null;
   verified_at: string | null;
   authorized_at: string | null;
+  /** While set, Accountanz can read this JournL company (the session from the owner's sign-in). */
+  session_until: string | null;
+}
+
+export interface PortalPackage {
+  id: number;
+  name: string;
+  description: string | null;
+  monthly_fee: number;
+  billing_cycle: "monthly" | "quarterly" | "yearly";
+  scope_notes: string | null;
+  services: { id: number; code: string; name: string }[];
+}
+
+export interface PortalPackages {
+  items: PortalPackage[];
+  /** The client's engagement that hasn't ended, if any. */
+  current: { id: number; status: "draft" | "sent" | "accepted" | "active"; package_id: number; package_name: string } | null;
 }

@@ -60,6 +60,7 @@ function ConnectionRow({ row, isOwner, companyName }: { row: PortalSoftware; isO
   const copy = STATE_COPY[row.status] ?? STATE_COPY.pending;
   const Icon = copy.icon;
   const canEdit = isOwner && row.status !== "connected";
+  const canRefresh = isOwner && row.status === "connected" && !row.session_until;
   const canDisconnect = isOwner && row.status !== "disconnected";
   const checkedAt = row.verified_at ?? row.last_health_check;
 
@@ -81,11 +82,22 @@ function ConnectionRow({ row, isOwner, companyName }: { row: PortalSoftware; isO
             <ShieldCheck className="size-4" aria-hidden /> {row.status === "pending" ? "Sign in with JournL" : "Reconnect with JournL"}
           </Button>
         )}
+        {canRefresh && (
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <ShieldCheck className="size-4" aria-hidden /> Refresh JournL session
+          </Button>
+        )}
         {canDisconnect && <DisconnectButton />}
       </div>
       <p className="bg-muted/60 flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm">
         <Icon className={`mt-0.5 size-4 shrink-0 ${copy.tone}`} aria-hidden />
-        {copy.text}
+        <span>
+          {copy.text}
+          {row.status === "connected" &&
+            (row.session_until
+              ? ` Accountanz can read your JournL books until ${formatDate(row.session_until, true)}.`
+              : " JournL sessions last 8 hours: refresh it so your team can read your books.")}
+        </span>
       </p>
       <AuthorizeJournlDialog open={editing} onOpenChange={setEditing} companyName={companyName} />
     </div>

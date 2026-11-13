@@ -74,3 +74,16 @@ export function useDisconnectJournl() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.disconnectJournl, onSuccess: (rows) => qc.setQueryData(K("software"), rows) });
 }
+
+export const usePortalPackages = () => useQuery({ queryKey: K("packages"), queryFn: s.packages });
+
+export function useChoosePackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: s.choosePackage,
+    onSuccess: (d) => {
+      qc.setQueryData(K("packages"), d);
+      void qc.invalidateQueries({ queryKey: K("billing") });
+    },
+  });
+}
