@@ -171,7 +171,7 @@ export function ClientOverviewView({ id }: { id: number }) {
                   ))}
                 </ul>
               )}
-              <p className="text-muted-foreground mt-3 text-xs">Provisional list. The client&apos;s own JournL permissions also apply.</p>
+              <p className="text-muted-foreground mt-3 text-xs">Read-only for now: open them under Accounting — JournL in the sidebar. The client&apos;s JournL plan also applies.</p>
             </Card>
           )}
           <Card title="Client contacts">

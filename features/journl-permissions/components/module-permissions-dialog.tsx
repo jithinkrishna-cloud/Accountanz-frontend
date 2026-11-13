@@ -50,7 +50,7 @@ function ModuleRow({ assignmentId, module, access, allowUnverified }: { assignme
           {policy && <span className={cn("ml-2 rounded-full px-2 py-0.5 text-xs font-normal", restricted ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>{policy}</span>}
         </p>
         <p className="text-muted-foreground text-xs">
-          {!module.verified ? "Provisional, not verified against JournL" : `JournL id ${module.journl_module_id ?? "—"}`}
+          {!module.verified ? "Provisional, not verified against JournL" : `JournL features ${module.journl_module_id ?? "—"}`}
           {access.effective_actions.length > 0 && <span className="text-emerald-700"> · in effect</span>}
           {access.blocked_reason && <span className="text-amber-700"> · not in effect: {access.blocked_reason}</span>}
         </p>
@@ -92,7 +92,7 @@ function Body({ data, catalog }: { data: AssignmentPermissions; catalog: Catalog
   );
 }
 
-/** Which JournL modules an assignment may use; a provisional list until JournL's API confirms modules and levels. */
+/** Which JournL modules an assignment may use, mapped to JournL's feature ids. Read-only ("view") for now. */
 export function ModulePermissionsDialog({ assignment, onClose }: { assignment: { id: number; full_name: string; client_name: string } | null; onClose: () => void }) {
   const perms = useAssignmentPermissions(assignment?.id ?? null);
   const catalog = useJournlCatalog(!!assignment);
@@ -103,7 +103,7 @@ export function ModulePermissionsDialog({ assignment, onClose }: { assignment: {
         <DialogHeader>
           <DialogTitle>JournL modules: {assignment?.full_name}</DialogTitle>
           <DialogDescription>
-            What {assignment?.full_name} may use in {assignment?.client_name}&apos;s JournL. This module list is provisional and not yet verified against JournL&apos;s API. Changes are saved immediately and audited.
+            What {assignment?.full_name} may use in {assignment?.client_name}&apos;s JournL. Modules map to JournL&apos;s own features and are read-only for now (bookkeepers see them under Accounting — JournL). Changes are saved immediately and audited.
           </DialogDescription>
         </DialogHeader>
         {error ? (

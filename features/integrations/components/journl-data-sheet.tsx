@@ -162,21 +162,14 @@ export interface JournlDataSource {
   load: (period: { from?: string; to?: string }) => Promise<JournlOverview>;
 }
 
-function SheetBody({ source }: { source: JournlDataSource }) {
+/** Period picker plus the live overview; used inside the sheet and inline (Financial Reports page). */
+export function JournlOverviewPanel({ source }: { source: Pick<JournlDataSource, "key" | "load"> }) {
   const [draft, setDraft] = useState<{ from?: string; to?: string }>({});
   const [period, setPeriod] = useState<{ from?: string; to?: string }>({});
   const query = useQuery({ queryKey: [...source.key, period], queryFn: () => source.load(period), retry: false, staleTime: 60_000 });
 
   return (
     <>
-      <SheetHeader className="border-b">
-        <SheetTitle>{source.title} · JournL</SheetTitle>
-        <SheetDescription>
-          Read live from JournL company {source.orgId}. Read-only: Accountanz doesn&apos;t change anything in JournL.
-          {source.sessionUntil && ` JournL session valid until ${formatDate(source.sessionUntil, true)}.`}
-        </SheetDescription>
-      </SheetHeader>
-
       <form
         className="flex flex-wrap items-end gap-3 border-b px-5 py-3"
         onSubmit={(e) => {
@@ -206,6 +199,21 @@ function SheetBody({ source }: { source: JournlDataSource }) {
       ) : (
         <Overview data={query.data} />
       )}
+    </>
+  );
+}
+
+function SheetBody({ source }: { source: JournlDataSource }) {
+  return (
+    <>
+      <SheetHeader className="border-b">
+        <SheetTitle>{source.title} · JournL</SheetTitle>
+        <SheetDescription>
+          Read live from JournL company {source.orgId}. Read-only: Accountanz doesn&apos;t change anything in JournL.
+          {source.sessionUntil && ` JournL session valid until ${formatDate(source.sessionUntil, true)}.`}
+        </SheetDescription>
+      </SheetHeader>
+      <JournlOverviewPanel source={source} />
     </>
   );
 }
