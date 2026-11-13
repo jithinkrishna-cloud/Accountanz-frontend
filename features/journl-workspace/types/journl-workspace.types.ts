@@ -40,14 +40,14 @@ export interface JournlViewQuery {
 }
 
 export const JOURNL_MODULE_META: Record<string, { label: string; description: string }> = {
-  sales: { label: "Sales", description: "Sales invoices, credit notes and receipts in the client's JournL." },
-  purchases: { label: "Purchases", description: "Purchase bills, debit notes and payments in the client's JournL." },
+  sales: { label: "Sales", description: "Sales invoices, credit notes (returns) and receipts in the client's JournL." },
+  purchases: { label: "Purchases", description: "Purchase bills, debit notes (returns) and payments in the client's JournL." },
   expenses: { label: "Expenses", description: "Expense bookings recorded in the client's JournL." },
-  accounting: { label: "Accounting & Ledgers", description: "Journal vouchers, ledgers and ledger groups. Open a ledger for its statement." },
+  accounting: { label: "Accounting & Ledgers", description: "Journal vouchers, ledgers, ledger groups and chart of accounts. Open a ledger for its statement." },
   customers: { label: "Customers", description: "Customer ledgers (sundry debtors) with closing balances." },
   vendors: { label: "Vendors", description: "Vendor ledgers (sundry creditors) with closing balances." },
-  banking: { label: "Banking", description: "Bank accounts in JournL. Open one for its transactions. JournL has no reconciliation report yet." },
-  inventory: { label: "Inventory", description: "Stock items and stock journals." },
+  banking: { label: "Banking", description: "Bank accounts in JournL. Open one for its transactions. JournL has no reconciliation view yet." },
+  inventory: { label: "Inventory", description: "Stock items, stock journals, closing stock and stock statements in the client's JournL." },
   gst: { label: "GST & Tax", description: "GSTR-1 and GSTR-2B from JournL. GSTR-3B isn't available in JournL." },
-  financial_reports: { label: "Financial Reports", description: "Profit & loss, trial balance and recent vouchers, live from JournL." },
+  financial_reports: { label: "Financial Reports", description: "Trial balance, profit & loss, balance sheet, cash flow and ageing, live from JournL." },
 };

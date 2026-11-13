@@ -8,7 +8,7 @@ export interface ModuleAction {
   verified: boolean;
 }
 
-/** One entry of the provisional JournL module catalogue (database-configured, not code). */
+/** One entry of the JournL module catalogue (database-configured, not code; mapped to JournL's user-permission feature ids). */
 export interface CatalogModule {
   module_key: string;
   label: string;

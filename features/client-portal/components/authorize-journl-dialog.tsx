@@ -28,7 +28,7 @@ type JournlCompany = { id: string; name: string };
 
 const CAN = [
   "Record and post entries in your JournL books",
-  "Reconcile bank accounts and prepare GST and month-end reports",
+  "Prepare GST returns and financial reports from your JournL books",
   "Use only the JournL modules your Accountanz team is assigned",
 ];
 const CANNOT = ["Keep a copy of your ledger outside JournL", "See or store your JournL password"];
