@@ -28,8 +28,9 @@ export const clientPortalService = {
   business: () => api<PortalBusiness>("/app/business"),
   team: () => items<{ full_name: string; email: string; team_role: string }>("/app/team"),
   software: () => items<PortalSoftware>("/app/software"),
-  connectJournl: (body: { external_org_name: string; external_org_id: string }) =>
+  connectJournl: (body: { journl_email: string; journl_password: string; company_id?: string; authorize: true }) =>
     api<{ items: PortalSoftware[] }>("/app/software/journl", { method: "POST", body }).then((r) => r.items),
+  disconnectJournl: () => api<{ items: PortalSoftware[] }>("/app/software/journl/disconnect", { method: "POST" }).then((r) => r.items),
   documents: () => items<PortalDocument>("/app/documents"),
   upload: (file: File, meta: { category: string; period?: string; request_id?: number }) => {
     const body = new FormData();

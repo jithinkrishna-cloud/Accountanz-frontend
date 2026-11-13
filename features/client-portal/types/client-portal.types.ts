@@ -131,6 +131,9 @@ export interface PortalSettings {
 export interface PortalSoftware {
   provider: string;
   external_org_name: string | null;
+  external_org_id: string | null;
   status: string;
   last_health_check: string | null;
+  verified_at: string | null;
+  authorized_at: string | null;
 }

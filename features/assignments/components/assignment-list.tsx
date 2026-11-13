@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeft, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
+import { ArrowRightLeft, KeyRound, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ModulePermissionsDialog } from "@/features/journl-permissions/components/module-permissions-dialog";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { useAssignmentOptions, useAssignments, useEndAssignment } from "../hooks/use-assignments";
@@ -31,6 +32,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [replacing, setReplacing] = useState<Assignment | undefined>();
   const [ending, setEnding] = useState<Assignment | null>(null);
+  const [modules, setModules] = useState<Assignment | null>(null);
   const end = useEndAssignment();
   const options = useAssignmentOptions(!!clientId);
   const clientName = options.data?.clients.find((c) => c.id === clientId)?.name;
@@ -102,6 +104,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> Edit dates & access</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL modules</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setReplacing(a)}><ArrowRightLeft className="size-4" /> Hand over to someone else</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setEnding(a)}><UserMinus className="size-4" /> End assignment</DropdownMenuItem>
@@ -165,6 +168,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
       <AssignmentFormDialog open={creating} onOpenChange={setCreating} clientId={clientId} />
       <AssignmentFormDialog open={!!replacing} onOpenChange={(open) => !open && setReplacing(undefined)} replacing={replacing} />
       <AssignmentEditDialog assignment={editing} onOpenChange={(open) => !open && setEditing(null)} />
+      <ModulePermissionsDialog assignment={modules} onClose={() => setModules(null)} />
 
       <Dialog open={!!ending} onOpenChange={(open) => !open && setEnding(null)}>
         <DialogContent className="sm:max-w-md">

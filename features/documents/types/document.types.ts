@@ -12,6 +12,9 @@ export const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   other: "Other",
 };
 
+export const REQUEST_STATUSES = ["open", "fulfilled", "cancelled"] as const;
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+
 export interface ClientDocument {
   id: number;
   client_id: number;
@@ -22,6 +25,8 @@ export interface ClientDocument {
   mime_type: string | null;
   status: DocumentStatus;
   uploaded_by_email: string | null;
+  uploaded_by_name: string | null;
+  from_client: 0 | 1;
   created_at: string;
 }
 
@@ -33,5 +38,6 @@ export interface DocumentRequest {
   requested_by_email: string | null;
   due_date: string | null;
   period: string | null;
-  status: "open" | "fulfilled" | "cancelled";
+  status: RequestStatus;
+  created_at: string;
 }

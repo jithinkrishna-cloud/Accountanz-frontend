@@ -7,6 +7,8 @@ export interface ClosingCell {
   total: number;
   closed_by_email: string | null;
   closed_at: string | null;
+  /** Why it was marked ready with checklist items open; kept once closed. */
+  ready_override: string | null;
 }
 
 export interface ClosingRow {

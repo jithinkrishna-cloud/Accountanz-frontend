@@ -11,6 +11,7 @@ export interface TaskListParams {
   period?: string;
   source?: TaskSource;
   scope?: "mine" | "clients";
+  pageSize?: number;
   page?: number;
 }
 

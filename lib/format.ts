@@ -28,3 +28,13 @@ export const initials = (name: string) =>
     .join("");
 
 export const humanize = (value: string) => value.replaceAll("_", " ").replace(/^\w/, (c) => c.toUpperCase());
+
+/** API datetimes are UTC 'YYYY-MM-DD HH:MM:SS' without a zone marker. */
+export const parseUtc = (value: string) => new Date(`${value.replace(" ", "T")}Z`);
+
+/** A UTC datetime in the viewer's own timezone (IST for users in India). */
+export const formatLocalDateTime = (utc: string) => parseUtc(utc).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+/** A meeting's start and end in the viewer's own timezone. */
+export const formatMeetingTime = (startUtc: string, endUtc: string) =>
+  `${formatLocalDateTime(startUtc)} – ${parseUtc(endUtc).toLocaleTimeString("en-IN", { timeStyle: "short" })}`;

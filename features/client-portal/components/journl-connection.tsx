@@ -1,29 +1,19 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Clock, Link2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Clock, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
-import { FormField } from "@/components/shared/form-field";
 import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
-import { useConnectJournl, usePortalSoftware } from "../hooks/use-client-portal";
+import { useDisconnectJournl, usePortalSoftware } from "../hooks/use-client-portal";
 import type { PortalCompany, PortalSoftware } from "../types/client-portal.types";
+import { AuthorizeJournlDialog } from "./authorize-journl-dialog";
 import { Card } from "./portal-ui";
-
-const schema = z.object({
-  external_org_name: z.string().trim().min(2, "Enter your JournL organisation name").max(200),
-  external_org_id: z.string().trim().min(2, "Enter your JournL organisation ID").max(100),
-});
-type Values = z.infer<typeof schema>;
 
 function JournlMark() {
   return (
@@ -33,61 +23,45 @@ function JournlMark() {
   );
 }
 
-function ConnectForm({ defaults, onDone, onCancel }: { defaults?: Partial<Values>; onDone: () => void; onCancel?: () => void }) {
-  const connect = useConnectJournl();
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors },
-  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { external_org_name: "", external_org_id: "", ...defaults } });
-
-  const onSubmit = handleSubmit(async (v) => {
-    try {
-      await connect.mutateAsync(v);
-      toast.success("JournL details sent. Your team will verify access shortly.");
-      onDone();
-    } catch (err) {
-      applyApiError(err, setError, ["external_org_name", "external_org_id"]);
-    }
-  });
-
-  return (
-    <form onSubmit={onSubmit} className="grid gap-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="external_org_name" label="JournL organisation name" error={errors.external_org_name?.message}>
-          <Input id="external_org_name" placeholder="Acme Traders Pvt Ltd" autoFocus aria-invalid={!!errors.external_org_name} {...register("external_org_name")} />
-        </FormField>
-        <FormField id="external_org_id" label="JournL organisation ID" hint="As shown in your JournL account." error={errors.external_org_id?.message}>
-          <Input id="external_org_id" className="font-mono" placeholder="JL-ACM-1234" aria-invalid={!!errors.external_org_id} {...register("external_org_id")} />
-        </FormField>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <SubmitButton pending={connect.isPending}>
-          <Link2 className="size-4" aria-hidden /> Connect JournL
-        </SubmitButton>
-        {onCancel && (
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
-    </form>
-  );
-}
-
 const STATE_COPY: Record<string, { icon: typeof Clock; tone: string; text: string }> = {
-  pending: { icon: Clock, tone: "text-amber-600", text: "Your Accountanz team is verifying access to this JournL organisation." },
-  connected: { icon: CheckCircle2, tone: "text-emerald-600", text: "Your team works directly in your JournL books." },
+  pending: { icon: Clock, tone: "text-amber-600", text: "Waiting for confirmation. Sign in with JournL to connect straight away." },
+  connected: { icon: CheckCircle2, tone: "text-emerald-600", text: "Connected. Your Accountanz team works directly in your JournL books." },
   error: { icon: TriangleAlert, tone: "text-destructive", text: "We couldn't reach this JournL organisation. Check the details and reconnect." },
   disconnected: { icon: TriangleAlert, tone: "text-muted-foreground", text: "This connection was disconnected. Reconnect to give your team access again." },
 };
 
-function ConnectionRow({ row, isOwner }: { row: PortalSoftware; isOwner: boolean }) {
+function DisconnectButton() {
+  const disconnect = useDisconnectJournl();
+  const [confirming, setConfirming] = useState(false);
+  const run = async () => {
+    try {
+      await disconnect.mutateAsync();
+      toast.success("JournL disconnected. Your team no longer has access through Accountanz.");
+    } catch (err) {
+      applyApiError(err);
+    } finally {
+      setConfirming(false);
+    }
+  };
+  if (!confirming) {
+    return <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>Disconnect</Button>;
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-muted-foreground text-sm">Disconnect JournL?</span>
+      <SubmitButton type="button" size="sm" variant="destructive" pending={disconnect.isPending} onClick={run}>Yes, disconnect</SubmitButton>
+      <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>Cancel</Button>
+    </span>
+  );
+}
+
+function ConnectionRow({ row, isOwner, companyName }: { row: PortalSoftware; isOwner: boolean; companyName: string }) {
   const [editing, setEditing] = useState(false);
   const copy = STATE_COPY[row.status] ?? STATE_COPY.pending;
   const Icon = copy.icon;
   const canEdit = isOwner && row.status !== "connected";
+  const canDisconnect = isOwner && row.status !== "disconnected";
+  const checkedAt = row.verified_at ?? row.last_health_check;
 
   return (
     <div className="grid gap-5 p-5">
@@ -97,26 +71,29 @@ function ConnectionRow({ row, isOwner }: { row: PortalSoftware; isOwner: boolean
           <p className="font-medium">JournL</p>
           <p className="text-muted-foreground truncate text-sm">
             {row.external_org_name ?? "Organisation not linked yet"}
-            {row.last_health_check ? ` · checked ${formatDate(row.last_health_check, true)}` : ""}
+            {row.external_org_id ? ` · ID ${row.external_org_id}` : ""}
+            {row.status === "connected" && checkedAt ? ` · verified ${formatDate(checkedAt, true)}` : row.authorized_at ? ` · authorized ${formatDate(row.authorized_at, true)}` : ""}
           </p>
         </div>
         <StatusBadge status={row.status} />
-        {canEdit && !editing && (
+        {canEdit && (
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            {row.status === "pending" ? "Update details" : "Reconnect"}
+            <ShieldCheck className="size-4" aria-hidden /> {row.status === "pending" ? "Sign in with JournL" : "Reconnect with JournL"}
           </Button>
         )}
+        {canDisconnect && <DisconnectButton />}
       </div>
       <p className="bg-muted/60 flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm">
         <Icon className={`mt-0.5 size-4 shrink-0 ${copy.tone}`} aria-hidden />
         {copy.text}
       </p>
-      {editing && <ConnectForm defaults={{ external_org_name: row.external_org_name ?? "" }} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} />}
+      <AuthorizeJournlDialog open={editing} onOpenChange={setEditing} companyName={companyName} />
     </div>
   );
 }
 
-function NotConnected({ isOwner }: { isOwner: boolean }) {
+function NotConnected({ isOwner, companyName }: { isOwner: boolean; companyName: string }) {
+  const [authorizing, setAuthorizing] = useState(false);
   return (
     <div className="grid gap-6 p-5 sm:p-6">
       <div className="flex items-start gap-4">
@@ -124,12 +101,17 @@ function NotConnected({ isOwner }: { isOwner: boolean }) {
         <div>
           <p className="font-medium">Connect your JournL account</p>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Your books stay in your own JournL organisation. Share its details and your Accountanz team will verify access, then work directly in your books.
+            Your books stay in your own JournL organisation. Sign in with your JournL company account to authorize Accountanz. Your team then works directly in your books.
           </p>
         </div>
       </div>
       {isOwner ? (
-        <ConnectForm onDone={() => undefined} />
+        <div>
+          <Button onClick={() => setAuthorizing(true)}>
+            <ShieldCheck className="size-4" aria-hidden /> Sign in with JournL
+          </Button>
+          <AuthorizeJournlDialog open={authorizing} onOpenChange={setAuthorizing} companyName={companyName} />
+        </div>
       ) : (
         <p className="bg-muted/60 text-muted-foreground rounded-lg px-3 py-2.5 text-sm">Only your company owner can connect JournL. Ask them to do it from this page.</p>
       )}
@@ -152,9 +134,9 @@ export function JournlConnection({ company }: { company: PortalCompany }) {
           <Skeleton className="h-24 w-full" />
         </div>
       ) : row ? (
-        <ConnectionRow row={row} isOwner={isOwner} />
+        <ConnectionRow row={row} isOwner={isOwner} companyName={company.name} />
       ) : (
-        <NotConnected isOwner={isOwner} />
+        <NotConnected isOwner={isOwner} companyName={company.name} />
       )}
     </Card>
   );

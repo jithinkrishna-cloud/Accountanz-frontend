@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
-import { formatDate, formatPeriod, humanize } from "@/lib/format";
+import { formatDate, formatMeetingTime, formatPeriod, humanize, parseUtc } from "@/lib/format";
 import { useDecideApproval, usePortalApprovals, usePortalMeetings, usePortalReports, usePortalTasks } from "../hooks/use-client-portal";
 import { portalFileUrl } from "../services/client-portal-service";
 import type { PortalApproval, PortalCompany } from "../types/client-portal.types";
@@ -198,7 +198,6 @@ export function ClientApprovals() {
 
 function MeetingsBody() {
   const q = usePortalMeetings();
-  const now = new Date().toISOString().replace("T", " ");
   return (
     <>
       <PageHeader title="Meetings" description="Calls with your accounting team." />
@@ -207,14 +206,14 @@ function MeetingsBody() {
           {(rows) => (
             <ul className="divide-y">
               {rows.map((m) => {
-                const upcoming = m.starts_at > now;
+                const upcoming = parseUtc(m.starts_at) > new Date();
                 return (
                   <li key={m.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                     <CalendarClock className={upcoming ? "text-primary size-5" : "text-muted-foreground size-5"} aria-hidden />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{m.title}</p>
                       <p className="text-muted-foreground text-xs">
-                        {formatDate(m.starts_at, true)} – {m.ends_at.slice(11, 16)}{m.organiser ? ` · with ${m.organiser}` : ""}
+                        {formatMeetingTime(m.starts_at, m.ends_at)}{m.organiser ? ` · with ${m.organiser}` : ""}
                       </p>
                       {m.attendees && <p className="text-muted-foreground text-xs">Attendees: {m.attendees}</p>}
                     </div>

@@ -14,6 +14,7 @@ import {
   FileText,
   FolderOpen,
   Handshake,
+  Kanban,
   LayoutDashboard,
   type LucideIcon,
   Package,
@@ -21,6 +22,7 @@ import {
   Receipt,
   ScrollText,
   Settings,
+  Stamp,
   UserCog,
   UsersRound,
   UserPlus,
@@ -78,6 +80,15 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
+      label: "Client delivery",
+      items: [
+        { label: "Reports", href: "/admin/reports", icon: FileText },
+        { label: "Client Approvals", href: "/admin/client-approvals", icon: Stamp },
+        { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+        { label: "Meetings", href: "/admin/meetings", icon: CalendarDays },
+      ],
+    },
+    {
       label: "Finance",
       items: [
         { label: "Service Invoices", href: "/admin/invoices", icon: Receipt },
@@ -98,12 +109,35 @@ export const NAV: Record<Portal, NavGroup[]> = {
     },
   ],
   team: [
-    { label: "Overview", items: [{ label: "My Dashboard", href: "/team/dashboard", icon: LayoutDashboard }] },
+    {
+      label: "Overview",
+      items: [
+        { label: "My Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
+        { label: "My Clients", href: "/team/clients", icon: Building2 },
+      ],
+    },
     {
       label: "Work",
       items: [
+        { label: "Work Queue", href: "/team/queue", icon: Kanban },
         { label: "My Tasks", href: "/team/tasks", icon: ListChecks },
         { label: "Review Queue", href: "/team/reviews", icon: CircleCheck },
+        { label: "Documents", href: "/team/documents", icon: FolderOpen },
+        { label: "Month-End Closing", href: "/team/closing", icon: CalendarCheck },
+      ],
+    },
+    {
+      label: "Client delivery",
+      items: [
+        { label: "Reports", href: "/team/reports", icon: FileText },
+        { label: "Client Approvals", href: "/team/approvals", icon: Stamp },
+      ],
+    },
+    {
+      label: "Communication",
+      items: [
+        { label: "Messages", href: "/team/messages", icon: MessageSquare },
+        { label: "Meetings", href: "/team/meetings", icon: CalendarDays },
       ],
     },
   ],

@@ -14,6 +14,11 @@ export function useCreateConnection() {
   return useMutation({ mutationFn: integrationService.create, onSuccess: () => void qc.invalidateQueries({ queryKey: KEY }) });
 }
 
+export function useVerifyConnection() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: integrationService.verify, onSuccess: () => void qc.invalidateQueries({ queryKey: KEY }) });
+}
+
 export function useHealthCheck() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: integrationService.healthCheck, onSettled: () => void qc.invalidateQueries({ queryKey: KEY }) });

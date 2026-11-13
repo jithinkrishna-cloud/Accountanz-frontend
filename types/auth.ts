@@ -16,3 +16,6 @@ export interface SessionUser {
   role: PortalRole;
   portal: Portal;
 }
+
+/** The two staff portals; shared delivery features (documents, reports, communication) take one of these. */
+export type StaffPortal = Exclude<Portal, "app">;

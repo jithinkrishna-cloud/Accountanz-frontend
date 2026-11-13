@@ -69,3 +69,8 @@ export function useConnectJournl() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.connectJournl, onSuccess: (rows) => qc.setQueryData(K("software"), rows) });
 }
+
+export function useDisconnectJournl() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.disconnectJournl, onSuccess: (rows) => qc.setQueryData(K("software"), rows) });
+}

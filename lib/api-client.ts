@@ -11,6 +11,8 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly fieldErrors: FieldErrors = {},
+    /** The error body's `details` as sent; parse before use. */
+    readonly details: unknown = undefined,
   ) {
     super(message);
   }
@@ -56,6 +58,7 @@ async function toApiError(res: Response): Promise<ApiError> {
     err?.code ?? "INTERNAL",
     err?.message ?? (res.status >= 500 ? "Something went wrong. Please try again." : "Request failed"),
     err?.details?.fieldErrors ?? {},
+    err?.details,
   );
 }
 

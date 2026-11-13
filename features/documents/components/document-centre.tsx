@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { FilePlus2, FileText, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -8,21 +8,26 @@ import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useClientOptions } from "@/features/clients/hooks/use-client-options";
+import { useStaffClientOptions } from "@/features/workspace/hooks/use-workspace";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatPeriod, humanize } from "@/lib/format";
-import { useDocuments, useOpenRequests, useSetDocumentStatus } from "../hooks/use-documents";
+import type { StaffPortal } from "@/types/auth";
+import { useCancelRequest, useDocumentRequests, useDocuments, useSetDocumentStatus } from "../hooks/use-documents";
 import { documentFileUrl } from "../services/document-service";
 import {
   CATEGORY_LABELS,
   DOCUMENT_CATEGORIES,
   DOCUMENT_STATUSES,
+  REQUEST_STATUSES,
   type ClientDocument,
   type DocumentCategory,
   type DocumentRequest,
   type DocumentStatus,
+  type RequestStatus,
 } from "../types/document.types";
+import { RequestDocumentsDialog, UploadDocumentDialog } from "./document-dialogs";
 
 function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -36,8 +41,8 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   );
 }
 
-function DocumentStatusCell({ doc }: { doc: ClientDocument }) {
-  const setStatus = useSetDocumentStatus();
+function DocumentStatusCell({ portal, doc }: { portal: StaffPortal; doc: ClientDocument }) {
+  const setStatus = useSetDocumentStatus(portal);
   const change = async (status: string) => {
     try {
       await setStatus.mutateAsync({ id: doc.id, status: status as DocumentStatus });
@@ -54,12 +59,30 @@ function DocumentStatusCell({ doc }: { doc: ClientDocument }) {
   );
 }
 
-const docColumns: Column<ClientDocument>[] = [
+function CancelRequestButton({ portal, request }: { portal: StaffPortal; request: DocumentRequest }) {
+  const cancel = useCancelRequest(portal);
+  if (request.status !== "open") return null;
+  const run = async () => {
+    try {
+      await cancel.mutateAsync(request.id);
+      toast.success("Request cancelled");
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  return (
+    <Button variant="ghost" size="sm" disabled={cancel.isPending} onClick={() => void run()} aria-label={`Cancel request: ${request.description}`}>
+      <X className="size-4" /> Cancel
+    </Button>
+  );
+}
+
+const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
   {
     key: "document",
     header: "Document",
     cell: (d) => (
-      <a href={documentFileUrl(d.id)} target="_blank" rel="noopener" className="text-primary inline-flex max-w-64 items-center gap-1.5 font-medium hover:underline">
+      <a href={documentFileUrl(portal, d.id)} target="_blank" rel="noopener" className="text-primary inline-flex max-w-64 items-center gap-1.5 font-medium hover:underline">
         <FileText className="size-4 shrink-0" aria-hidden />
         <span className="truncate">{d.file_name}</span>
       </a>
@@ -68,39 +91,87 @@ const docColumns: Column<ClientDocument>[] = [
   { key: "client", header: "Client", cell: (d) => d.client_name },
   { key: "category", header: "Category", hideOnMobile: true, cell: (d) => CATEGORY_LABELS[d.category] },
   { key: "period", header: "Period", hideOnMobile: true, cell: (d) => (d.period ? formatPeriod(d.period) : "—") },
-  { key: "uploaded", header: "Uploaded by", hideOnMobile: true, cell: (d) => <span className="text-muted-foreground">{d.uploaded_by_email ?? "—"}</span> },
-  { key: "status", header: "Status", cell: (d) => <DocumentStatusCell doc={d} /> },
+  {
+    key: "uploaded",
+    header: "Uploaded by",
+    hideOnMobile: true,
+    cell: (d) => (
+      <span className="text-muted-foreground">
+        {d.uploaded_by_name ?? d.uploaded_by_email ?? "—"}
+        {d.uploaded_by_name && <span className="text-xs"> · {d.from_client ? "client" : "team"}</span>}
+      </span>
+    ),
+  },
+  { key: "status", header: "Status", cell: (d) => <DocumentStatusCell portal={portal} doc={d} /> },
 ];
 
-const requestColumns: Column<DocumentRequest>[] = [
+const requestColumns = (portal: StaffPortal): Column<DocumentRequest>[] => [
   { key: "request", header: "Request", cell: (r) => <span className="font-medium">{r.description}</span> },
   { key: "client", header: "Client", cell: (r) => r.client_name },
+  { key: "period", header: "Period", hideOnMobile: true, cell: (r) => (r.period ? formatPeriod(r.period) : "—") },
   { key: "asked", header: "Asked by", hideOnMobile: true, cell: (r) => <span className="text-muted-foreground">{r.requested_by_email ?? "—"}</span> },
   { key: "due", header: "Due", hideOnMobile: true, cell: (r) => formatDate(r.due_date) },
   { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
+  { key: "actions", header: "", cell: (r) => <CancelRequestButton portal={portal} request={r} /> },
 ];
 
-export function DocumentCentre() {
-  const clients = useClientOptions();
+export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
+  const clients = useStaffClientOptions(portal);
   const [docQ, setDocQ] = useState("");
   const [clientId, setClientId] = useState<string>();
   const [category, setCategory] = useState<DocumentCategory>();
   const [status, setStatus] = useState<DocumentStatus>();
   const [docPage, setDocPage] = useState(1);
   const [reqQ, setReqQ] = useState("");
+  const [reqStatus, setReqStatus] = useState<RequestStatus>("open");
   const [reqPage, setReqPage] = useState(1);
-  const docs = useDocuments({ q: docQ, client_id: clientId, category, status, page: docPage });
-  const requests = useOpenRequests({ q: reqQ, page: reqPage });
+  const [requesting, setRequesting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const docs = useDocuments(portal, { q: docQ, client_id: clientId, category, status, page: docPage });
+  const requests = useDocumentRequests(portal, { q: reqQ, client_id: clientId, status: reqStatus, page: reqPage });
   const filtered = !!(docQ || clientId || category || status);
 
   return (
     <>
-      <PageHeader title="Document Centre" description="Every file and every outstanding ask, across all clients." />
+      <PageHeader
+        title={portal === "admin" ? "Document Centre" : "Documents"}
+        description={portal === "admin" ? "Every file and every request, across all clients." : "Files and requests for the clients you're assigned to."}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setUploading(true)}><Upload className="size-4" /> Upload</Button>
+            <Button onClick={() => setRequesting(true)}><FilePlus2 className="size-4" /> Request documents</Button>
+          </>
+        }
+      />
+      <div className="mb-4">
+        <FilterSelect allLabel="All clients" value={clientId} onChange={(v) => { setClientId(v); setDocPage(1); setReqPage(1); }} options={clients.data ?? []} className="sm:w-64" />
+      </div>
       <div className="space-y-6">
-        <Section title="Documents" subtitle="Stored privately — only signed-in portal users can open them.">
+        <Section title="Document requests" subtitle="What the team has asked clients for. Uploading against a request marks it fulfilled.">
+          <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
+            <SearchInput value={reqQ} onChange={(v) => { setReqQ(v); setReqPage(1); }} placeholder="Search requests" />
+            <FilterSelect
+              allLabel="Open"
+              value={reqStatus === "open" ? undefined : reqStatus}
+              onChange={(v) => { setReqStatus((v as RequestStatus | undefined) ?? "open"); setReqPage(1); }}
+              options={REQUEST_STATUSES.filter((s) => s !== "open").map((s) => ({ value: s, label: humanize(s) }))}
+            />
+          </div>
+          <DataTable
+            columns={requestColumns(portal)}
+            rows={requests.data?.items}
+            rowKey={(r) => r.id}
+            isLoading={requests.isLoading}
+            error={requests.error}
+            onRetry={() => void requests.refetch()}
+            empty={{ title: reqStatus === "open" ? "Nothing outstanding" : `No ${reqStatus} requests`, description: reqStatus === "open" ? "No client owes the team a document right now." : undefined }}
+            pagination={requests.data && { ...requests.data, onPageChange: setReqPage }}
+          />
+        </Section>
+
+        <Section title="Documents" subtitle="Stored privately. Only people with access to the client can open them.">
           <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
             <SearchInput value={docQ} onChange={(v) => { setDocQ(v); setDocPage(1); }} placeholder="Search documents" />
-            <FilterSelect allLabel="All clients" value={clientId} onChange={(v) => { setClientId(v); setDocPage(1); }} options={clients.data ?? []} />
             <FilterSelect
               allLabel="All categories"
               value={category}
@@ -115,7 +186,7 @@ export function DocumentCentre() {
             />
           </div>
           <DataTable
-            columns={docColumns}
+            columns={docColumns(portal)}
             rows={docs.data?.items}
             rowKey={(d) => d.id}
             isLoading={docs.isLoading}
@@ -125,23 +196,9 @@ export function DocumentCentre() {
             pagination={docs.data && { ...docs.data, onPageChange: setDocPage }}
           />
         </Section>
-
-        <Section title="Open document requests" subtitle="What the team is waiting on from clients.">
-          <div className="border-b p-4">
-            <SearchInput value={reqQ} onChange={(v) => { setReqQ(v); setReqPage(1); }} placeholder="Search requests" />
-          </div>
-          <DataTable
-            columns={requestColumns}
-            rows={requests.data?.items}
-            rowKey={(r) => r.id}
-            isLoading={requests.isLoading}
-            error={requests.error}
-            onRetry={() => void requests.refetch()}
-            empty={{ title: reqQ ? "No requests match" : "Nothing outstanding", description: reqQ ? undefined : "No client owes the team a document right now." }}
-            pagination={requests.data && { ...requests.data, onPageChange: setReqPage }}
-          />
-        </Section>
       </div>
+      <RequestDocumentsDialog portal={portal} open={requesting} onOpenChange={setRequesting} />
+      <UploadDocumentDialog portal={portal} open={uploading} onOpenChange={setUploading} />
     </>
   );
 }

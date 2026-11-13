@@ -11,7 +11,7 @@ export const useClosingGrid = () => useQuery({ queryKey: KEY, queryFn: closingSe
 export function useSetClosingStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ clientId, period, status }: { clientId: number; period: string; status: ClosingStatus }) => closingService.setStatus(clientId, period, status),
+    mutationFn: ({ clientId, period, status, reason }: { clientId: number; period: string; status: ClosingStatus; reason?: string }) => closingService.setStatus(clientId, period, status, reason),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: KEY });
       void qc.invalidateQueries({ queryKey: ["admin", "dashboard"] });

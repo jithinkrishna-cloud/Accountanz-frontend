@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { TeamDashboard } from "@/features/workspace/components/team-dashboard";
 
 export default function TeamDashboardPage() {
-  return <ComingSoon title="My Dashboard" description="Your work across the clients you're assigned to." module="Accountant Workspace" />;
+  return <TeamDashboard />;
 }
