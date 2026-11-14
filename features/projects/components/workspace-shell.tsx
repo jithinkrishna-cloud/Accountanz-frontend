@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LayoutGrid, Menu, Plus, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ChevronsLeft, ChevronsRight, LayoutGrid, Menu, Plus, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/types/auth";
 import { useSpaces } from "../hooks/use-projects";
 
-function SpaceNav({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
+function SpaceNav({ user, collapsed = false, onNavigate }: { user: SessionUser; collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: spaces } = useSpaces({});
   const link = (href: string, active: boolean) =>
@@ -23,26 +23,28 @@ function SpaceNav({ user, onNavigate }: { user: SessionUser; onNavigate?: () => 
 
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
-      <div className="px-5 py-5">
-        <Logo inverted />
-        <p className="text-sidebar-muted mt-2 text-[11px] font-semibold tracking-[0.14em] uppercase">Workspace</p>
+      <div className={cn("px-5 py-5", collapsed && "px-3 py-3")}>
+        <Logo inverted collapsed={collapsed} />
+        <p className={cn("text-sidebar-muted mt-2 text-[11px] font-semibold tracking-[0.14em] uppercase", collapsed && "hidden")}>Workspace</p>
       </div>
       <nav className="no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 pb-4" aria-label="Workspace">
         <ul className="space-y-0.5">
           <li>
             <Link href={PORTAL_HOME[user.portal]} onClick={onNavigate} className={link("", false)}>
-              <ArrowLeft className="size-4" aria-hidden /> Back to Accountanz
+              <ArrowLeft className="size-4" aria-hidden />
+              <span className={cn("truncate", collapsed && "hidden")}>Back to Accountanz</span>
             </Link>
           </li>
           <li>
             <Link href="/projects" onClick={onNavigate} aria-current={pathname === "/projects" ? "page" : undefined} className={link("/projects", pathname === "/projects")}>
-              <LayoutGrid className="size-4" aria-hidden /> All spaces
+              <LayoutGrid className="size-4" aria-hidden />
+              <span className={cn("truncate", collapsed && "hidden")}>All spaces</span>
             </Link>
           </li>
         </ul>
         <div>
           <div className="flex items-center justify-between px-3 pb-2">
-            <p className="text-sidebar-muted text-[11px] font-semibold tracking-[0.14em] uppercase">Spaces</p>
+            <p className={cn("text-sidebar-muted text-[11px] font-semibold tracking-[0.14em] uppercase", collapsed && "hidden")}>Spaces</p>
             <Link href="/projects/new" onClick={onNavigate} className="text-sidebar-muted hover:text-white" aria-label="Create space" title="Create space">
               <Plus className="size-4" />
             </Link>
@@ -55,7 +57,7 @@ function SpaceNav({ user, onNavigate }: { user: SessionUser; onNavigate?: () => 
                 <li key={s.id}>
                   <Link href={`${href}/board`} onClick={onNavigate} aria-current={active ? "page" : undefined} className={link(href, active)}>
                     <span className="bg-sidebar-primary/20 text-sidebar-primary flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-bold">{s.space_key.slice(0, 2)}</span>
-                    <span className="truncate">{s.name}</span>
+                    <span className={cn("truncate", collapsed && "hidden")}>{s.name}</span>
                   </Link>
                 </li>
               );
@@ -73,6 +75,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isPending && user === null) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
@@ -93,9 +96,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
-        <SpaceNav user={user} />
+    <div className={cn("min-h-screen lg:pl-64", collapsed && "lg:pl-16")}>
+      <aside className={cn("fixed inset-y-0 left-0 hidden w-64 lg:block", collapsed && "w-16")}>
+        <SpaceNav user={user} collapsed={collapsed} />
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 border-none p-0">
@@ -104,6 +107,9 @@ function Shell({ children }: { children: React.ReactNode }) {
         </SheetContent>
       </Sheet>
       <header className="bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur sm:px-6">
+        <Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Open sidebar" : "Close sidebar"}>
+          {collapsed ? <ChevronsRight className="size-5" aria-hidden /> : <ChevronsLeft className="size-5" aria-hidden />}
+        </Button>
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
           <Menu className="size-5" />
         </Button>

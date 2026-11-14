@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Menu } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -14,17 +14,17 @@ import { ProfileMenu } from "./profile-menu";
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-function SidebarNav({ portal, onNavigate }: { portal: Portal; onNavigate?: () => void }) {
+function SidebarNav({ portal, collapsed = false, onNavigate }: { portal: Portal; collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
-      <div className="px-5 py-5">
-        <Logo inverted />
+      <div className={cn("px-5 py-5", collapsed && "px-3 py-3")}>
+        <Logo inverted collapsed={collapsed} />
       </div>
       <nav className="no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 pb-4" aria-label="Main">
         {NAV[portal].map((group) => (
           <div key={group.label}>
-            <p className="text-sidebar-muted px-3 pb-2 text-[11px] font-semibold tracking-[0.14em] uppercase">{group.label}</p>
+            <p className={cn("text-sidebar-muted px-3 pb-2 text-[11px] font-semibold tracking-[0.14em] uppercase", collapsed && "hidden")}>{group.label}</p>
             <ul className="space-y-0.5">
               {group.items.map((item: NavItem) => {
                 const active = isActive(pathname, item.href);
@@ -40,7 +40,7 @@ function SidebarNav({ portal, onNavigate }: { portal: Portal; onNavigate?: () =>
                       )}
                     >
                       <item.icon className={cn("size-4 shrink-0", active && "text-sidebar-primary")} aria-hidden />
-                      {item.label}
+                      <span className={cn("truncate", collapsed && "hidden")}>{item.label}</span>
                     </Link>
                   </li>
                 );
@@ -55,13 +55,14 @@ function SidebarNav({ portal, onNavigate }: { portal: Portal; onNavigate?: () =>
 
 export function PortalShell({ portal, user, children }: { portal: Portal; user: SessionUser; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const current = NAV[portal].flatMap((g) => g.items).find((i) => isActive(pathname, i.href));
 
   return (
-    <div className="min-h-screen lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
-        <SidebarNav portal={portal} />
+    <div className={cn("min-h-screen lg:pl-64", collapsed && "lg:pl-16")}>
+      <aside className={cn("fixed inset-y-0 left-0 hidden w-64 lg:block", collapsed && "w-16")}>
+        <SidebarNav portal={portal} collapsed={collapsed} />
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 border-none p-0">
@@ -71,6 +72,9 @@ export function PortalShell({ portal, user, children }: { portal: Portal; user: 
       </Sheet>
 
       <header className="bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur sm:px-6">
+        <Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Open sidebar" : "Close sidebar"}>
+          {collapsed ? <ChevronsRight className="size-5" aria-hidden /> : <ChevronsLeft className="size-5" aria-hidden />}
+        </Button>
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
           <Menu className="size-5" />
         </Button>
