@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
@@ -82,7 +82,7 @@ export function WorkQueue() {
   const [pending, setPending] = useState<Record<number, TaskStatus>>({});
   const move = useMoveTask();
   const { data, isLoading, error, refetch } = useTasks({ scope: "mine", period, pageSize: 100 }, "team");
-  const tasks = (data?.items ?? []).filter((t) => t.status !== "approved").map((t) => (pending[t.id] ? { ...t, status: pending[t.id]! } : t));
+  const tasks = useMemo<TaskListItem[]>(() => (data?.items ?? []).filter((t) => t.status !== "approved").map((t) => (pending[t.id] ? { ...t, status: pending[t.id]! } : t)), [data, pending]);
   const overdue = tasks.filter(isOverdue).length;
   const periods = [...new Set((data?.items ?? []).map((t) => t.period))].sort().reverse();
 
