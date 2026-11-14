@@ -1,6 +1,6 @@
 import { api, type Paged } from "@/lib/api-client";
 import type { ItemFormOutput, TaskFormOutput, TemplateFormOutput, WorkLogFormOutput } from "../schemas/task.schema";
-import type { GenerationResult, TaskDetail, TaskListItem, TaskOptions, TaskSource, TaskStatus, TaskTemplate, TaskTemplateItem } from "../types/task.types";
+import type { GenerationResult, TaskClientSummary, TaskDetail, TaskListItem, TaskOptions, TaskSource, TaskStatus, TaskTemplate, TaskTemplateItem } from "../types/task.types";
 
 /** Task screens exist in the admin and accountant portals; the API prefix picks the permission set. */
 export type TaskPortal = "admin" | "team";
@@ -11,6 +11,7 @@ export interface TaskListParams {
   period?: string;
   source?: TaskSource;
   scope?: "mine" | "clients";
+  client_id?: number;
   pageSize?: number;
   page?: number;
 }
@@ -26,6 +27,8 @@ const toBody = (v: TaskFormOutput) => ({
 
 export const taskService = {
   list: (portal: TaskPortal, params: TaskListParams) => api<Paged<TaskListItem>>(`/${portal}/tasks`, { query: { ...params } }),
+  /** Accountant portal: clients with tasks in this scope, with open / overdue counts. */
+  clients: (scope: "mine" | "clients") => api<{ items: TaskClientSummary[] }>("/team/tasks/clients", { query: { scope } }).then((r) => r.items),
   options: (portal: TaskPortal, clientId?: number) => api<TaskOptions>(`/${portal}/tasks/options`, { query: { client_id: clientId } }),
   get: (portal: TaskPortal, id: number) => api<TaskDetail>(`/${portal}/tasks/${id}`),
   create: (portal: TaskPortal, v: TaskFormOutput) => api<TaskDetail>(`/${portal}/tasks`, { method: "POST", body: toBody(v) }),

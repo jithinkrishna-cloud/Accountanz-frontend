@@ -24,7 +24,10 @@ export const useTasks = (params: TaskListParams, portal: TaskPortal = "admin") =
 export const useTask = (portal: TaskPortal, id: number | null) =>
   useQuery({ queryKey: detailKey(portal, id ?? 0), queryFn: () => taskService.get(portal, id!), enabled: id !== null });
 
-export const useTaskOptions = (portal: TaskPortal, clientId: number | undefined, enabled: boolean) =>
+export const useTaskClients = (scope: "mine" | "clients") =>
+  useQuery({ queryKey: ["team", "tasks", "clients", scope], queryFn: () => taskService.clients(scope) });
+
+export const useTaskOptions =(portal: TaskPortal, clientId: number | undefined, enabled: boolean) =>
   useQuery({ queryKey: [portal, "tasks", "options", clientId ?? null], queryFn: () => taskService.options(portal, clientId), enabled });
 
 /** Every task mutation returns the fresh detail; store it, then refresh the lists that show it. */

@@ -4,6 +4,15 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_SOURCES = ["template", "manual"] as const;
 export type TaskSource = (typeof TASK_SOURCES)[number];
 
+/** One client in the My Tasks client navigation. */
+export interface TaskClientSummary {
+  client_id: number;
+  client_name: string;
+  total: number;
+  open: number;
+  overdue: number;
+}
+
 export interface TaskListItem {
   id: number;
   title: string;
