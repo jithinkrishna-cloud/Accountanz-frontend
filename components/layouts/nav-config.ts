@@ -146,30 +146,36 @@ export const NAV: Record<Portal, NavGroup[]> = {
     },
   ],
   app: [
+    // Ordered by how often a client needs it: what's waiting on them, then their books, then contact, then setup.
     { label: "Overview", items: [{ label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard }] },
+    {
+      label: "Action needed",
+      items: [
+        { label: "Approvals", href: "/app/approvals", icon: CircleCheck },
+        { label: "Document Requests", href: "/app/requests", icon: FileText },
+      ],
+    },
+    {
+      label: "Books & reports",
+      items: [
+        { label: "Reports", href: "/app/reports", icon: ChartColumn },
+        { label: "Tasks & Progress", href: "/app/progress", icon: ListChecks },
+        { label: "Document Centre", href: "/app/documents", icon: FolderOpen },
+      ],
+    },
+    {
+      label: "Talk to us",
+      items: [
+        { label: "Messages", href: "/app/messages", icon: MessageSquare },
+        { label: "Meetings", href: "/app/meetings", icon: CalendarDays },
+      ],
+    },
     {
       label: "My company",
       items: [
         { label: "My Business", href: "/app/business", icon: Building2 },
         { label: "My Accounting Team", href: "/app/team", icon: UsersRound },
         { label: "Accounting Software", href: "/app/software", icon: Plug },
-      ],
-    },
-    {
-      label: "Work",
-      items: [
-        { label: "Document Centre", href: "/app/documents", icon: FolderOpen },
-        { label: "Document Requests", href: "/app/requests", icon: FileText },
-        { label: "Tasks & Progress", href: "/app/progress", icon: ListChecks },
-        { label: "Reports", href: "/app/reports", icon: ChartColumn },
-        { label: "Approvals", href: "/app/approvals", icon: CircleCheck },
-      ],
-    },
-    {
-      label: "Contact",
-      items: [
-        { label: "Messages", href: "/app/messages", icon: MessageSquare },
-        { label: "Meetings", href: "/app/meetings", icon: CalendarDays },
       ],
     },
     {

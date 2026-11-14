@@ -1,92 +1,71 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
-import { applyApiError } from "@/lib/form-errors";
-import { formatDate, humanize } from "@/lib/format";
-import { useConnections, useHealthCheck } from "../hooks/use-integrations";
+import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { useConnections } from "../hooks/use-integrations";
 import { integrationService } from "../services/integration-service";
-import { CONNECTION_STATUSES, type Connection, type ConnectionStatus } from "../types/integration.types";
-import { ConnectionFormDialog } from "./connection-form-dialog";
+import type { Connection, ConnectionStatus } from "../types/integration.types";
 import { JournlDataSheet, ViewJournlDataButton } from "./journl-data-sheet";
-import { VerifyConnectionDialog } from "./verify-connection-dialog";
 
-/** Asks JournL for Accountanz's grant. Until JournL ships its partner API the server answers with that reason. */
-function CheckWithJournlButton({ connection }: { connection: Connection }) {
-  const check = useHealthCheck();
-  const run = async () => {
-    try {
-      const r = await check.mutateAsync(connection.id);
-      if (r.status === "connected") toast.success(`${connection.client_name}: JournL confirmed access`);
-      else toast.error(`${connection.client_name}: ${r.last_error ?? r.status}`);
-    } catch (err) {
-      applyApiError(err);
-    }
-  };
-  return <SubmitButton type="button" size="sm" variant="ghost" pending={check.isPending} onClick={run}>Check with JournL</SubmitButton>;
+/** Only a JournL sign-in proves the company is the client's; anything else is shown as not confirmed. */
+const signedIn = (c: Connection) => c.verification_note?.startsWith("Confirmed by JournL sign-in") ?? false;
+
+type State = "connected" | "unconfirmed" | "disconnected";
+const stateOf = (c: Connection): State => (c.status === "disconnected" ? "disconnected" : c.status === "connected" && signedIn(c) ? "connected" : "unconfirmed");
+
+const STATE_LABEL: Record<State, { label: string; tone: string }> = {
+  connected: { label: "Connected", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900" },
+  unconfirmed: { label: "Not confirmed", tone: "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900" },
+  disconnected: { label: "Disconnected", tone: "bg-muted text-muted-foreground ring-border" },
+};
+
+function StateBadge({ c }: { c: Connection }) {
+  const s = STATE_LABEL[stateOf(c)];
+  return <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1", s.tone)}>{s.label}</span>;
 }
 
-/** How the connection was confirmed, and whether Accountanz can read the books right now (JournL session). */
-function Verification({ c }: { c: Connection }) {
-  if (c.status === "disconnected") return <span className="text-muted-foreground text-xs">Disconnected {c.disconnected_at ? formatDate(c.disconnected_at, true) : ""}</span>;
-  const signedIn = c.verification_note?.startsWith("Confirmed by JournL sign-in") ?? false;
-  return (
-    <div className="min-w-0 text-xs" title={c.verification_note ?? undefined}>
-      {!c.verified_at ? (
-        <p className="text-muted-foreground">Not verified</p>
-      ) : (
-        <p className="whitespace-nowrap">
-          {signedIn ? "JournL sign-in" : "Checked by hand"} · {formatDate(c.verified_at, true)}
-        </p>
-      )}
-      {c.status === "connected" &&
-        (c.journl_session_until ? (
-          <p className="text-emerald-700 dark:text-emerald-400">Readable until {formatDate(c.journl_session_until, true)}</p>
-        ) : signedIn ? (
-          <p className="text-amber-700 dark:text-amber-400">Session expired: owner must refresh</p>
-        ) : (
-          <p className="text-muted-foreground">No JournL session: owner signs in to enable data</p>
-        ))}
-    </div>
-  );
+/** Whether Accountanz can read the books now, or what has to happen first. */
+function DataAccess({ c }: { c: Connection }) {
+  const state = stateOf(c);
+  if (state === "disconnected") return <span className="text-muted-foreground text-xs">Disconnected by the owner{c.disconnected_at ? ` · ${formatDate(c.disconnected_at, true)}` : ""}</span>;
+  if (state === "unconfirmed") return <span className="text-xs text-amber-700 dark:text-amber-400">Ask the owner to sign in with JournL from their portal</span>;
+  if (c.journl_session_until) return <span className="text-xs text-emerald-700 dark:text-emerald-400">Readable until {formatDate(c.journl_session_until, true)}</span>;
+  return <span className="text-xs text-amber-700 dark:text-amber-400">Session expired · ask the owner to refresh it</span>;
 }
 
+const FILTERS: { value: ConnectionStatus; label: string }[] = [
+  { value: "connected", label: "Connected" },
+  { value: "pending", label: "Pending" },
+  { value: "disconnected", label: "Disconnected" },
+];
+
+/** Admin → Integrations: each client's JournL connection and whether its books can be read right now. Read-only. */
 export function IntegrationList() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ConnectionStatus>();
   const [page, setPage] = useState(1);
-  const [adding, setAdding] = useState(false);
-  const [verifying, setVerifying] = useState<Connection | null>(null);
   const [viewing, setViewing] = useState<Connection | null>(null);
   const query = useConnections({ q, status, page });
-  // "Check with JournL" only appears once JournL's partner API exists; until then it could only fail.
-  const apiAvailable = query.data?.journlApiAvailable ?? false;
 
   const columns = useMemo<Column<Connection>[]>(
     () => [
       { key: "client", header: "Client", cell: (c) => <span className="font-medium">{c.client_name}</span> },
       {
         key: "org",
-        header: "Organisation",
+        header: "JournL company",
         hideOnMobile: true,
         cell: (c) => (
           <div className="min-w-0">
             <p className="truncate">{c.external_org_name ?? "—"}</p>
-            {c.external_org_id && <p className="text-muted-foreground font-mono text-xs">{c.external_org_id}</p>}
-            {c.authorized_at && (
-              <p className="text-muted-foreground text-xs">
-                Authorized {formatDate(c.authorized_at, true)}{c.authorized_by_name ? ` by ${c.authorized_by_name}` : ""}
-              </p>
-            )}
+            {c.external_org_id && <p className="text-muted-foreground font-mono text-xs">ID {c.external_org_id}</p>}
           </div>
         ),
       },
@@ -95,48 +74,43 @@ export function IntegrationList() {
         header: "Status",
         cell: (c) => (
           <div>
-            <StatusBadge status={c.status} />
-            {c.last_error && <p className="text-destructive mt-1 max-w-48 truncate text-xs" title={c.last_error}>{c.last_error}</p>}
+            <StateBadge c={c} />
+            {signedIn(c) && c.authorized_by_name && c.authorized_at && (
+              <p className="text-muted-foreground mt-1 text-xs whitespace-nowrap">Signed in by {c.authorized_by_name} · {formatDate(c.authorized_at)}</p>
+            )}
           </div>
         ),
       },
-      { key: "verified", header: "Verified · data access", hideOnMobile: true, cell: (c) => <Verification c={c} /> },
+      { key: "access", header: "Data access", hideOnMobile: true, cell: (c) => <DataAccess c={c} /> },
       {
         key: "action",
         header: "",
         className: "text-right",
-        cell: (c) =>
-          c.status === "disconnected" ? null : (
-            <div className="flex justify-end gap-2 whitespace-nowrap">
-              {(c.status === "pending" || c.status === "error" || (c.status === "connected" && !c.verified_at)) && (
-                <Button size="sm" variant="outline" onClick={() => setVerifying(c)}>Mark verified</Button>
-              )}
-              {c.status === "connected" && c.journl_session_until && <ViewJournlDataButton onClick={() => setViewing(c)} />}
-              {apiAvailable && <CheckWithJournlButton connection={c} />}
-            </div>
-          ),
+        cell: (c) => (stateOf(c) === "connected" && c.journl_session_until ? <ViewJournlDataButton onClick={() => setViewing(c)} /> : null),
       },
     ],
-    [apiAvailable],
+    [],
   );
 
   return (
     <>
       <PageHeader
         title="Integrations"
-        description="Where each client's books live. Accountanz never keeps the ledger itself."
-        actions={<Button onClick={() => setAdding(true)}><Plus className="size-4" /> Add connection</Button>}
+        description="Each client's JournL connection and whether Accountanz can read their books right now."
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/admin/journl-access"><KeyRound className="size-4" aria-hidden /> JournL Access</Link>
+          </Button>
+        }
       />
-      <p className="text-muted-foreground -mt-3 mb-4 max-w-4xl text-xs">
-        Clients connect from their portal with <span className="text-foreground font-medium">Sign in with JournL</span>: JournL confirms the company, the connection shows here as
-        Connected, and Accountanz can read the books for 8 hours per sign-in (the owner refreshes it from their portal). Connections added by organisation ID show as Pending or
-        &ldquo;Not verified&rdquo;: check them in JournL and use Mark verified. Which accountant can read which module is managed under{" "}
-        <Link href="/admin/journl-access" className="text-primary hover:underline">JournL Access</Link>.
+      <p className="text-muted-foreground -mt-3 mb-4 max-w-3xl text-xs">
+        Clients connect from their portal with <span className="text-foreground font-medium">Sign in with JournL</span>: JournL confirms the company is theirs, and Accountanz can
+        read the books for 8 hours per sign-in. The owner refreshes it from the same page. Which accountant can read which module is set under JournL Access.
       </p>
       <div className="bg-card min-w-0 overflow-hidden rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
-          <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search organisation" />
-          <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as ConnectionStatus | undefined); setPage(1); }} options={CONNECTION_STATUSES.map((s) => ({ value: s, label: humanize(s) }))} />
+          <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search client or company" />
+          <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as ConnectionStatus | undefined); setPage(1); }} options={FILTERS} />
         </div>
         <DataTable
           columns={columns}
@@ -145,12 +119,10 @@ export function IntegrationList() {
           isLoading={query.isLoading}
           error={query.error}
           onRetry={() => void query.refetch()}
-          empty={{ title: q || status ? "No connections match" : "No connections yet" }}
+          empty={{ title: q || status ? "No connections match" : "No client has connected JournL yet", description: q || status ? undefined : "Owners connect from their portal: Accounting Software → Sign in with JournL." }}
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />
       </div>
-      <ConnectionFormDialog open={adding} onOpenChange={setAdding} />
-      <VerifyConnectionDialog connection={verifying} onClose={() => setVerifying(null)} />
       <JournlDataSheet
         source={
           viewing && {
