@@ -7,7 +7,7 @@ import type { ThreadVisibility } from "../types/communication.types";
 
 const key = (portal: StaffPortal) => [portal, "communication"] as const;
 
-export const useThreads = (portal: StaffPortal, params: { q?: string; client_id?: string; visibility?: ThreadVisibility; page?: number }) =>
+export const useThreads = (portal: StaffPortal, params: { q?: string; client_id?: string; visibility?: ThreadVisibility; mentioned?: "1"; page?: number }) =>
   useQuery({ queryKey: [...key(portal), "threads", params], queryFn: () => communicationService.threads(portal, params), placeholderData: keepPreviousData });
 
 export const useThread = (portal: StaffPortal, id: number | null) =>
@@ -24,17 +24,26 @@ function useRefresh(portal: StaffPortal) {
   };
 }
 
+/** People who can be @mentioned on a client's conversation (client threads include the client's portal users). */
+export const useMentionable = (portal: StaffPortal, clientId: number | null, visibility: ThreadVisibility) =>
+  useQuery({
+    queryKey: [...key(portal), "mentionable", clientId, visibility],
+    queryFn: () => communicationService.mentionable(portal, clientId!, visibility),
+    enabled: clientId !== null,
+    staleTime: 5 * 60_000,
+  });
+
 export function useStartThread(portal: StaffPortal) {
   const refresh = useRefresh(portal);
   return useMutation({
-    mutationFn: (body: { client_id: number; visibility: ThreadVisibility; subject: string; body: string }) => communicationService.startThread(portal, body),
+    mutationFn: (body: { client_id: number; visibility: ThreadVisibility; subject: string; body: string; mentions?: number[] }) => communicationService.startThread(portal, body),
     onSuccess: refresh,
   });
 }
 
 export function useReply(portal: StaffPortal, threadId: number) {
   const refresh = useRefresh(portal);
-  return useMutation({ mutationFn: (body: string) => communicationService.reply(portal, threadId, body), onSuccess: refresh });
+  return useMutation({ mutationFn: ({ body, mentions }: { body: string; mentions?: number[] }) => communicationService.reply(portal, threadId, body, mentions), onSuccess: refresh });
 }
 
 export function useScheduleMeeting(portal: StaffPortal) {

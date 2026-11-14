@@ -1,20 +1,20 @@
 "use client";
 
-import { ArrowLeft, Lock, MessageSquarePlus, Send } from "lucide-react";
+import { ArrowLeft, AtSign, Lock, MessageSquarePlus, Send } from "lucide-react";
 import { useState } from "react";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState, ErrorState } from "@/components/shared/states";
+import { MentionText, MentionTextarea, mentionIdsIn } from "@/components/shared/mention-textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useStaffClientOptions } from "@/features/workspace/hooks/use-workspace";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StaffPortal } from "@/types/auth";
-import { useReply, useThread, useThreads } from "../hooks/use-communication";
+import { useMentionable, useReply, useThread, useThreads } from "../hooks/use-communication";
 import type { Thread, ThreadVisibility } from "../types/communication.types";
 import { NewThreadDialog } from "./new-thread-dialog";
 
@@ -30,9 +30,12 @@ function ThreadListItem({ thread, active, onSelect }: { thread: Thread; active: 
       >
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-medium">{thread.subject ?? "Conversation"}</p>
-          {waiting && <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">Needs reply</span>}
+          <span className="flex shrink-0 gap-1">
+            {!!thread.mentions_me && <span className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800" title="You're mentioned"><AtSign className="size-3" aria-hidden />you</span>}
+            {waiting && <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium">Needs reply</span>}
+          </span>
         </div>
-        <p className="text-muted-foreground truncate text-xs">{thread.client_name}</p>
+        <p className="text-muted-foreground truncate text-xs">{thread.client_name}{thread.visibility === "internal" ? " · internal" : ""}</p>
         <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
           {thread.last_author ? `${thread.last_author}: ` : ""}{thread.last_body}
         </p>
@@ -44,6 +47,8 @@ function ThreadListItem({ thread, active, onSelect }: { thread: Thread; active: 
 function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threadId: number; onBack: () => void }) {
   const { data: t, isLoading, error, refetch } = useThread(portal, threadId);
   const reply = useReply(portal, threadId);
+  const mentionable = useMentionable(portal, t?.client_id ?? null, t?.visibility ?? "client");
+  const people = mentionable.data ?? [];
   const [body, setBody] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
@@ -51,7 +56,7 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
     e.preventDefault();
     if (!body.trim()) return setErr("Write a message");
     try {
-      await reply.mutateAsync(body.trim());
+      await reply.mutateAsync({ body: body.trim(), mentions: mentionIdsIn(body, people) });
       setBody("");
       setErr(null);
     } catch (e2) {
@@ -79,7 +84,7 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
           <li key={m.id} className={cn("flex", m.from_client ? "justify-start" : "justify-end")}>
             <div className={cn("max-w-[85%] rounded-xl px-4 py-2.5 text-sm", m.from_client ? "bg-muted" : internal ? "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-50" : "bg-primary text-primary-foreground")}>
               <p className="text-xs font-medium opacity-80">{m.author ?? "Former user"}{m.from_client ? " · client" : ""}</p>
-              <p className="mt-0.5 whitespace-pre-wrap break-words">{m.body}</p>
+              <p className="mt-0.5 whitespace-pre-wrap break-words"><MentionText body={m.body} mentions={m.mentions} onDark={!m.from_client && !internal} /></p>
               <p className="mt-1 text-[11px] opacity-70">{formatDate(m.created_at, true)}</p>
             </div>
           </li>
@@ -87,7 +92,7 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
       </ol>
       <form onSubmit={send} className="border-t p-4" noValidate>
         <label htmlFor="reply" className="sr-only">Reply</label>
-        <Textarea id="reply" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={internal ? "Add an internal note…" : "Reply to the client…"} aria-invalid={!!err} />
+        <MentionTextarea id="reply" rows={3} value={body} onChange={setBody} people={people} placeholder={`${internal ? "Add an internal note…" : "Reply to the client…"} Type @ to mention someone.`} aria-invalid={!!err} />
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className="text-destructive text-xs">{err}</p>
           <SubmitButton size="sm" pending={reply.isPending}><Send className="size-4" /> {internal ? "Post note" : "Send reply"}</SubmitButton>
@@ -99,12 +104,14 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
 
 export function StaffMessages({ portal }: { portal: StaffPortal }) {
   const clients = useStaffClientOptions(portal);
-  const [visibility, setVisibility] = useState<ThreadVisibility>("client");
+  /** Client / internal conversations, or every conversation where I'm @mentioned. */
+  const [tab, setTab] = useState<ThreadVisibility | "mentions">("client");
+  const visibility: ThreadVisibility = tab === "internal" ? "internal" : "client";
   const [clientId, setClientId] = useState<string>();
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number | null>(null);
   const [composing, setComposing] = useState(false);
-  const threads = useThreads(portal, { visibility, client_id: clientId, page });
+  const threads = useThreads(portal, tab === "mentions" ? { mentioned: "1", client_id: clientId, page } : { visibility: tab, client_id: clientId, page });
   const data = threads.data;
 
   return (
@@ -117,17 +124,17 @@ export function StaffMessages({ portal }: { portal: StaffPortal }) {
       <div className="bg-card grid min-h-[32rem] overflow-hidden rounded-xl border shadow-xs lg:grid-cols-[22rem_1fr]">
         <aside className={cn("flex min-h-0 flex-col border-r", selected !== null && "hidden lg:flex")}>
           <div className="space-y-3 border-b p-3">
-            <div role="tablist" aria-label="Conversation type" className="bg-muted grid grid-cols-2 rounded-lg p-1 text-sm">
-              {(["client", "internal"] as const).map((v) => (
+            <div role="tablist" aria-label="Conversation type" className="bg-muted grid grid-cols-3 rounded-lg p-1 text-sm">
+              {(["client", "internal", "mentions"] as const).map((v) => (
                 <button
                   key={v}
                   role="tab"
                   type="button"
-                  aria-selected={visibility === v}
-                  onClick={() => { setVisibility(v); setPage(1); setSelected(null); }}
-                  className={cn("rounded-md px-3 py-1.5 font-medium", visibility === v ? "bg-card shadow-xs" : "text-muted-foreground")}
+                  aria-selected={tab === v}
+                  onClick={() => { setTab(v); setPage(1); setSelected(null); }}
+                  className={cn("inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 font-medium", tab === v ? "bg-card shadow-xs" : "text-muted-foreground")}
                 >
-                  {v === "client" ? "Client" : "Internal"}
+                  {v === "client" ? "Client" : v === "internal" ? "Internal" : <><AtSign className="size-3.5" aria-hidden />Mentions</>}
                 </button>
               ))}
             </div>
@@ -138,7 +145,10 @@ export function StaffMessages({ portal }: { portal: StaffPortal }) {
           ) : threads.isLoading ? (
             <div className="space-y-2 p-4"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div>
           ) : !data?.items.length ? (
-            <EmptyState title={visibility === "client" ? "No client conversations" : "No internal discussions"} description="Start one with New conversation." />
+            <EmptyState
+              title={tab === "mentions" ? "No mentions yet" : tab === "client" ? "No client conversations" : "No internal discussions"}
+              description={tab === "mentions" ? "Conversations where someone @mentions you appear here." : "Start one with New conversation."}
+            />
           ) : (
             <>
               <ul className="flex-1 overflow-y-auto">

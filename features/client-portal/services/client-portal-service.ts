@@ -1,3 +1,4 @@
+import type { MentionPerson } from "@/components/shared/mention-textarea";
 import { api } from "@/lib/api-client";
 import type {
   NotificationPrefs,
@@ -15,6 +16,7 @@ import type {
   PortalSettings,
   PortalSoftware,
   PortalTask,
+  PortalTeamMember,
   PortalThread,
   PortalThreadDetail,
 } from "../types/client-portal.types";
@@ -28,7 +30,7 @@ export const clientPortalService = {
   context: () => api<{ company: PortalCompany | null }>("/app/context").then((r) => r.company),
   dashboard: () => api<PortalDashboard>("/app/dashboard"),
   business: () => api<PortalBusiness>("/app/business"),
-  team: () => items<{ full_name: string; email: string; team_role: string }>("/app/team"),
+  team: () => items<PortalTeamMember>("/app/team"),
   software: () => items<PortalSoftware>("/app/software"),
   connectJournl: (body: { journl_email: string; journl_password: string; company_id?: string; authorize: true }) =>
     api<{ items: PortalSoftware[] }>("/app/software/journl", { method: "POST", body }).then((r) => r.items),
@@ -52,8 +54,9 @@ export const clientPortalService = {
     api<void>(`/app/approvals/${id}/decision`, { method: "POST", body: { decision, comment: comment || null } }),
   threads: () => items<PortalThread>("/app/messages"),
   thread: (id: number) => api<PortalThreadDetail>(`/app/messages/${id}`),
-  startThread: (subject: string, body: string) => api<PortalThreadDetail>("/app/messages", { method: "POST", body: { subject, body } }),
-  reply: (id: number, body: string) => api<PortalThreadDetail>(`/app/messages/${id}`, { method: "POST", body: { body } }),
+  startThread: (subject: string, body: string, mentions: number[] = []) => api<PortalThreadDetail>("/app/messages", { method: "POST", body: { subject, body, mentions } }),
+  reply: (id: number, body: string, mentions: number[] = []) => api<PortalThreadDetail>(`/app/messages/${id}`, { method: "POST", body: { body, mentions } }),
+  mentionable: () => items<MentionPerson>("/app/messages/mentionable"),
   meetings: () => items<PortalMeeting>("/app/meetings"),
   meetingRequests: () => items<PortalMeetingRequest>("/app/meeting-requests"),
   requestMeeting: (body: { topic: string; notes: string | null; preferred_times: string[]; duration_minutes: number }) =>

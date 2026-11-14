@@ -12,6 +12,8 @@ export interface Thread {
   last_body: string | null;
   last_author: string | null;
   last_from_client: 0 | 1 | null;
+  /** How many times you're @mentioned in this conversation. */
+  mentions_me?: number;
 }
 
 export interface Message {
@@ -21,6 +23,7 @@ export interface Message {
   author: string | null;
   author_id: number | null;
   from_client: 0 | 1;
+  mentions: { user_id: number; full_name: string }[];
 }
 
 export interface ThreadDetail extends Thread {

@@ -5,16 +5,16 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FormField } from "@/components/shared/form-field";
+import { MentionTextarea, mentionIdsIn } from "@/components/shared/mention-textarea";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { ClientPicker } from "@/features/workspace/components/client-picker";
 import { applyApiError } from "@/lib/form-errors";
 import type { StaffPortal } from "@/types/auth";
-import { useStartThread } from "../hooks/use-communication";
+import { useMentionable, useStartThread } from "../hooks/use-communication";
 import type { ThreadVisibility } from "../types/communication.types";
 
 const schema = z.object({
@@ -32,9 +32,11 @@ function ThreadForm({ portal, clientId, visibility, onDone }: { portal: StaffPor
     defaultValues: { client_id: clientId ? String(clientId) : "", visibility, subject: "", body: "" },
   });
   const vis = useWatch({ control, name: "visibility" });
+  const chosenClient = useWatch({ control, name: "client_id" });
+  const people = useMentionable(portal, chosenClient ? Number(chosenClient) : null, vis).data ?? [];
   const onSubmit = handleSubmit(async (v) => {
     try {
-      const t = await start.mutateAsync({ client_id: Number(v.client_id), visibility: v.visibility, subject: v.subject, body: v.body });
+      const t = await start.mutateAsync({ client_id: Number(v.client_id), visibility: v.visibility, subject: v.subject, body: v.body, mentions: mentionIdsIn(v.body, people) });
       toast.success(v.visibility === "client" ? "Message sent to the client" : "Internal note posted");
       onDone(t.id);
     } catch (err) {
@@ -67,8 +69,10 @@ function ThreadForm({ portal, clientId, visibility, onDone }: { portal: StaffPor
         <FormField id="th-subject" label="Subject" error={errors.subject?.message} className="sm:col-span-2">
           <Input id="th-subject" aria-invalid={!!errors.subject} {...register("subject")} />
         </FormField>
-        <FormField id="th-body" label="Message" error={errors.body?.message} className="sm:col-span-2" hint={vis === "client" ? "The client's portal users are emailed." : "Colleagues on this client are emailed."}>
-          <Textarea id="th-body" rows={5} aria-invalid={!!errors.body} {...register("body")} />
+        <FormField id="th-body" label="Message" error={errors.body?.message} className="sm:col-span-2" hint={`${vis === "client" ? "The client's portal users are emailed." : "Colleagues on this client are emailed."} Type @ to mention someone.`}>
+          <Controller control={control} name="body" render={({ field }) => (
+            <MentionTextarea id="th-body" rows={5} aria-invalid={!!errors.body} value={field.value} onChange={field.onChange} people={people} />
+          )} />
         </FormField>
       </form>
       <DialogFooter>

@@ -32,6 +32,15 @@ import { Card, ListBody } from "./portal-ui";
 
 // ───────────── Reports ─────────────
 
+const REPORT_LABEL: Record<string, string> = {
+  profit_and_loss: "Profit & loss",
+  balance_sheet: "Balance sheet",
+  cash_flow: "Cash flow",
+  gst_summary: "GST summary",
+  mis: "Management report (MIS)",
+  other: "Report",
+};
+
 function ReportsBody() {
   const q = usePortalReports();
   return (
@@ -44,7 +53,7 @@ function ReportsBody() {
               {rows.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-start gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{humanize(r.report_type)} · {formatPeriod(r.period)}</p>
+                    <p className="text-sm font-medium">{REPORT_LABEL[r.report_type] ?? humanize(r.report_type)} · {formatPeriod(r.period)}</p>
                     {r.summary && <p className="text-muted-foreground mt-0.5 text-sm">{r.summary}</p>}
                     <p className="text-muted-foreground mt-1 text-xs">Published {formatDate(r.published_date)}</p>
                   </div>

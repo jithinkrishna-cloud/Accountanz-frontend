@@ -49,10 +49,12 @@ export function useDecideApproval() {
   return useMutation({ mutationFn: ({ id, decision, comment }: { id: number; decision: "approved" | "rejected"; comment: string }) => s.decide(id, decision, comment), onSettled });
 }
 
+export const usePortalMentionable = () => useQuery({ queryKey: K("mentionable"), queryFn: s.mentionable, staleTime: 5 * 60_000 });
+
 export function useStartThread() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ subject, body }: { subject: string; body: string }) => s.startThread(subject, body),
+    mutationFn: ({ subject, body, mentions }: { subject: string; body: string; mentions?: number[] }) => s.startThread(subject, body, mentions),
     onSuccess: (t) => {
       qc.setQueryData(K("messages", t.id), t);
       void qc.invalidateQueries({ queryKey: K("messages") });
@@ -63,7 +65,7 @@ export function useStartThread() {
 export function useReply(threadId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) => s.reply(threadId, body),
+    mutationFn: ({ body, mentions }: { body: string; mentions?: number[] }) => s.reply(threadId, body, mentions),
     onSuccess: (t) => {
       qc.setQueryData(K("messages", t.id), t);
       void qc.invalidateQueries({ queryKey: K("messages") });

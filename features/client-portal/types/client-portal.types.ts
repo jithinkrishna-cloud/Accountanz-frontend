@@ -54,11 +54,23 @@ export interface PortalRequest {
   files: number;
 }
 
+export interface PortalTeamMember {
+  user_id: number;
+  full_name: string;
+  email: string;
+  team_role: "cfo" | "finance_manager" | "reviewer" | "bookkeeper";
+}
+
 export interface PortalTask {
   id: number;
   title: string;
   /** Written by the team for this task (optional); the page falls back to a plain-language explanation. */
   description: string | null;
+  /** The accountant doing the work, and the senior accountant who checks it. */
+  assignee_id: number | null;
+  handled_by: string | null;
+  reviewer_id: number | null;
+  checked_by: string | null;
   status: "todo" | "in_progress" | "submitted" | "returned" | "approved";
   due_date: string | null;
   checklist: { text: string; done: boolean }[];
@@ -98,7 +110,7 @@ export interface PortalThread {
 export interface PortalThreadDetail {
   id: number;
   subject: string | null;
-  messages: { id: number; body: string; created_at: string; author: string | null; from_client: boolean }[];
+  messages: { id: number; body: string; created_at: string; author: string | null; from_client: boolean; mentions: { user_id: number; full_name: string }[] }[];
 }
 
 export interface PortalMeeting {
