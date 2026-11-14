@@ -44,6 +44,10 @@ export const useSetChecklist = (id: number) => useTaskMutation("team", (done: bo
 export const useLogWork = (id: number) => useTaskMutation("team", (v: WorkLogFormOutput) => taskService.logWork(id, v));
 export const useSubmitTask = (id: number) => useTaskMutation("team", () => taskService.submit(id));
 
+/** Work Queue moves: "start" (to do / returned → in progress) or "submit" (→ submitted, same rules as the Submit button). */
+export const useMoveTask = () =>
+  useTaskMutation("team", ({ id, to }: { id: number; to: "in_progress" | "submitted" }) => (to === "submitted" ? taskService.submit(id) : taskService.start(id)));
+
 export function useGenerateTasks() {
   const onSuccess = useInvalidateTaskViews();
   return useMutation({ mutationFn: taskService.generate, onSuccess });

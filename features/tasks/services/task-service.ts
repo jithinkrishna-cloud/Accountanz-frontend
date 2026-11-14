@@ -37,6 +37,7 @@ export const taskService = {
   },
   setChecklist: (id: number, done: boolean[]) => api<TaskDetail>(`/team/tasks/${id}/checklist`, { method: "PUT", body: { done } }),
   logWork: (id: number, v: WorkLogFormOutput) => api<TaskDetail>(`/team/tasks/${id}/work-logs`, { method: "POST", body: { ...v, note: v.note || null } }),
+  start: (id: number) => api<TaskDetail>(`/team/tasks/${id}/start`, { method: "POST" }),
   submit: (id: number) => api<TaskDetail>(`/team/tasks/${id}/submit`, { method: "POST" }),
   generate: (period: string) => api<GenerationResult>("/admin/tasks/generate", { method: "POST", body: { period } }),
 };
