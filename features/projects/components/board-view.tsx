@@ -221,7 +221,7 @@ export function BoardView() {
             {space.statuses.map((s) => {
               const list = byStatus.get(s.id) ?? [];
               return (
-                <section key={s.id} className="bg-muted/50 flex w-72 shrink-0 flex-col rounded-xl p-2" aria-label={s.name}>
+                <section key={s.id} className="bg-muted flex w-72 shrink-0 flex-col rounded-xl border border-border p-2" aria-label={s.name}>
                   <h3 className="text-muted-foreground flex items-center gap-2 px-2 py-1.5 text-xs font-semibold tracking-wide uppercase">
                     {s.name} <span className="bg-background rounded-full px-1.5 text-[11px]">{list.length}</span>
                   </h3>
