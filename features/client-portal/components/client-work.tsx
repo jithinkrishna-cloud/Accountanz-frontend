@@ -22,67 +22,13 @@ import {
   usePortalMeetingRequests,
   usePortalMeetings,
   usePortalReports,
-  usePortalTasks,
   useRequestMeeting,
   useWithdrawMeetingRequest,
 } from "../hooks/use-client-portal";
 import { portalFileUrl } from "../services/client-portal-service";
 import type { PortalApproval, PortalCompany, PortalMeetingRequest } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
-import { CLIENT_TASK_STATUS, Card, ListBody } from "./portal-ui";
-
-// ───────────── Tasks & Progress ─────────────
-
-function ProgressBody() {
-  const [period, setPeriod] = useState<string>();
-  const { data, isLoading, error, refetch } = usePortalTasks(period);
-  const tasks = data ? { data: data.tasks, isLoading, error, refetch } : { data: undefined, isLoading, error, refetch };
-  const done = data?.tasks.filter((t) => t.status === "approved").length ?? 0;
-  return (
-    <>
-      <PageHeader
-        title="Tasks & Progress"
-        description="The work your team is doing for you this month."
-        actions={
-          data && (
-            <Select value={data.period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-40" aria-label="Period"><SelectValue /></SelectTrigger>
-              <SelectContent>{data.periods.map((p) => <SelectItem key={p} value={p}>{formatPeriod(p)}</SelectItem>)}</SelectContent>
-            </Select>
-          )
-        }
-      />
-      <Card title={data ? `${formatPeriod(data.period)} · ${done} of ${data.tasks.length} done` : "Tasks"} subtitle="Some internal checks are done behind the scenes and don't appear here.">
-        <ListBody query={tasks} empty={{ title: "No work scheduled for this month yet" }}>
-          {(rows) => (
-            <ul className="divide-y">
-              {rows.map((t) => {
-                const s = CLIENT_TASK_STATUS[t.status] ?? { label: humanize(t.status), tone: t.status };
-                const ticked = t.checklist.filter((c) => c.done).length;
-                return (
-                  <li key={t.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{t.title}</p>
-                      <p className="text-muted-foreground text-xs">{t.due_date ? `Due ${formatDate(t.due_date)} · ` : ""}{ticked}/{t.checklist.length} steps done</p>
-                      <div className="bg-muted mt-1.5 h-1 w-40 overflow-hidden rounded-full" aria-hidden>
-                        <div className="bg-primary h-full" style={{ width: `${t.checklist.length ? (ticked / t.checklist.length) * 100 : 0}%` }} />
-                      </div>
-                    </div>
-                    <StatusBadge status={s.tone} label={s.label} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </ListBody>
-      </Card>
-    </>
-  );
-}
-
-export function ClientProgress() {
-  return <CompanyGate>{() => <ProgressBody />}</CompanyGate>;
-}
+import { Card, ListBody } from "./portal-ui";
 
 // ───────────── Reports ─────────────
 

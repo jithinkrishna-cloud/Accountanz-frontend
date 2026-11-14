@@ -57,6 +57,8 @@ export interface PortalRequest {
 export interface PortalTask {
   id: number;
   title: string;
+  /** Written by the team for this task (optional); the page falls back to a plain-language explanation. */
+  description: string | null;
   status: "todo" | "in_progress" | "submitted" | "returned" | "approved";
   due_date: string | null;
   checklist: { text: string; done: boolean }[];
