@@ -109,6 +109,21 @@ export interface PortalMeeting {
   attendees: string | null;
 }
 
+/** The client's own meeting requests. preferred_times are ISO strings (UTC). */
+export interface PortalMeetingRequest {
+  id: number;
+  requested_by: number | null;
+  requester: string | null;
+  topic: string;
+  notes: string | null;
+  preferred_times: string[];
+  duration_minutes: number;
+  status: "pending" | "scheduled" | "declined" | "withdrawn";
+  decided_by_name: string | null;
+  decline_reason: string | null;
+  created_at: string;
+}
+
 export interface PortalBilling {
   package: { package_name: string; monthly_fee: number; billing_cycle: string; scope_notes: string | null; start_date: string | null; renewal_date: string | null } | null;
   invoices: { id: number; invoice_number: string; period: string; amount: number; gst_amount: number; total: number; due_date: string; status: string; paid: number }[];

@@ -15,21 +15,34 @@ import { ClientPicker } from "@/features/workspace/components/client-picker";
 import { useClientOverview } from "@/features/workspace/hooks/use-workspace";
 import { ApiError } from "@/lib/api-client";
 import { applyApiError } from "@/lib/form-errors";
-import { humanize } from "@/lib/format";
+import { formatIsoDateTime, humanize } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { StaffPortal } from "@/types/auth";
-import { useScheduleMeeting } from "../hooks/use-communication";
+import { useScheduleMeeting, useScheduleRequest } from "../hooks/use-communication";
+import type { MeetingRequest } from "../types/communication.types";
 
 const DURATIONS = [15, 30, 45, 60, 90];
 
-function MeetingForm({ portal, clientId, onDone }: { portal: StaffPortal; clientId?: number; onDone: () => void }) {
+/** Local date (YYYY-MM-DD) and time (HH:MM) inputs for an ISO timestamp. */
+const localParts = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+};
+
+function MeetingForm({ portal, clientId: fixedClientId, request, onDone }: { portal: StaffPortal; clientId?: number; request?: MeetingRequest; onDone: () => void }) {
+  const clientId = request?.client_id ?? fixedClientId;
+  const firstSlot = request?.preferred_times[0] ? localParts(request.preferred_times[0]) : null;
   const schedule = useScheduleMeeting(portal);
+  const scheduleRequest = useScheduleRequest(portal);
+  const pending = schedule.isPending || scheduleRequest.isPending;
   const { data: me } = useSession();
   const [client, setClient] = useState(clientId ? String(clientId) : "");
   const overview = useClientOverview(client ? Number(client) : null, portal);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("10:00");
-  const [duration, setDuration] = useState("30");
+  const [title, setTitle] = useState(request?.topic ?? "");
+  const [date, setDate] = useState(firstSlot?.date ?? "");
+  const [time, setTime] = useState(firstSlot?.time ?? "10:00");
+  const [duration, setDuration] = useState(String(request && DURATIONS.includes(request.duration_minutes) ? request.duration_minutes : 30));
   const [link, setLink] = useState("");
   const [inviteClient, setInviteClient] = useState(true);
   const [staff, setStaff] = useState<number[]>([]);
@@ -50,7 +63,9 @@ function MeetingForm({ portal, clientId, onDone }: { portal: StaffPortal; client
     if (Object.keys(next).length) return;
     const ends = new Date(starts.getTime() + Number(duration) * 60_000);
     try {
-      await schedule.mutateAsync({ client_id: Number(client), title: title.trim(), starts_at: starts.toISOString(), ends_at: ends.toISOString(), meeting_link: link.trim() || null, invite_client: inviteClient, staff_ids: staff });
+      const body = { client_id: Number(client), title: title.trim(), starts_at: starts.toISOString(), ends_at: ends.toISOString(), meeting_link: link.trim() || null, invite_client: inviteClient, staff_ids: staff };
+      if (request) await scheduleRequest.mutateAsync({ id: request.id, body });
+      else await schedule.mutateAsync(body);
       toast.success("Meeting scheduled. Invitations have been emailed.");
       onDone();
     } catch (err) {
@@ -62,7 +77,7 @@ function MeetingForm({ portal, clientId, onDone }: { portal: StaffPortal; client
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Schedule a meeting</DialogTitle>
+        <DialogTitle>{request ? `Schedule ${request.client_name}’s request` : "Schedule a meeting"}</DialogTitle>
         <DialogDescription>Invitees are emailed, and the meeting appears in the client portal under Meetings.</DialogDescription>
       </DialogHeader>
       <form id="meeting-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
@@ -70,6 +85,23 @@ function MeetingForm({ portal, clientId, onDone }: { portal: StaffPortal; client
           <FormField id="mt-client" label="Client" error={errors.client} className="sm:col-span-2">
             <ClientPicker portal={portal} id="mt-client" value={client} onChange={(v) => { setClient(v); setStaff([]); }} invalid={!!errors.client} />
           </FormField>
+        )}
+        {request && (
+          <div className="bg-muted/50 grid gap-2 rounded-lg border p-3 text-sm sm:col-span-2">
+            <p><span className="font-medium">{request.requester ?? "The client"}</span> suggested (pick one, or set another time below):</p>
+            <div className="flex flex-wrap gap-2">
+              {request.preferred_times.map((t) => {
+                const p = localParts(t);
+                const chosen = p.date === date && p.time === time;
+                return (
+                  <Button key={t} type="button" size="sm" variant={chosen ? "default" : "outline"} aria-pressed={chosen} onClick={() => { setDate(p.date); setTime(p.time); }} className={cn(chosen && "pointer-events-none")}>
+                    {formatIsoDateTime(t)}
+                  </Button>
+                );
+              })}
+            </div>
+            {request.notes && <p className="text-muted-foreground whitespace-pre-line">“{request.notes}”</p>}
+          </div>
         )}
         <FormField id="mt-title" label="Title" error={errors.title} className="sm:col-span-2">
           <Input id="mt-title" placeholder="October books review" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={!!errors.title} />
@@ -108,16 +140,16 @@ function MeetingForm({ portal, clientId, onDone }: { portal: StaffPortal; client
       </form>
       <DialogFooter>
         <Button variant="outline" onClick={onDone}>Cancel</Button>
-        <SubmitButton form="meeting-form" pending={schedule.isPending}>Schedule</SubmitButton>
+        <SubmitButton form="meeting-form" pending={pending}>Schedule</SubmitButton>
       </DialogFooter>
     </>
   );
 }
 
-export function ScheduleMeetingDialog({ portal, clientId, open, onOpenChange }: { portal: StaffPortal; clientId?: number; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function ScheduleMeetingDialog({ portal, clientId, request, open, onOpenChange }: { portal: StaffPortal; clientId?: number; request?: MeetingRequest; open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">{open && <MeetingForm portal={portal} clientId={clientId} onDone={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="sm:max-w-lg">{open && <MeetingForm portal={portal} clientId={clientId} request={request} onDone={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   );
 }

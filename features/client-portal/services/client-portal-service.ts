@@ -8,6 +8,7 @@ import type {
   PortalDashboard,
   PortalDocument,
   PortalMeeting,
+  PortalMeetingRequest,
   PortalPackages,
   PortalReport,
   PortalRequest,
@@ -54,6 +55,10 @@ export const clientPortalService = {
   startThread: (subject: string, body: string) => api<PortalThreadDetail>("/app/messages", { method: "POST", body: { subject, body } }),
   reply: (id: number, body: string) => api<PortalThreadDetail>(`/app/messages/${id}`, { method: "POST", body: { body } }),
   meetings: () => items<PortalMeeting>("/app/meetings"),
+  meetingRequests: () => items<PortalMeetingRequest>("/app/meeting-requests"),
+  requestMeeting: (body: { topic: string; notes: string | null; preferred_times: string[]; duration_minutes: number }) =>
+    api<PortalMeetingRequest>("/app/meeting-requests", { method: "POST", body }),
+  withdrawMeetingRequest: (id: number) => api<void>(`/app/meeting-requests/${id}/withdraw`, { method: "POST" }),
   billing: () => api<PortalBilling>("/app/billing"),
   settings: () => api<PortalSettings>("/app/settings"),
   updateSettings: (body: { full_name?: string; phone?: string | null; notification_prefs?: NotificationPrefs }) =>

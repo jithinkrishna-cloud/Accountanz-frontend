@@ -27,6 +27,27 @@ export interface ThreadDetail extends Thread {
   items: Message[];
 }
 
+export type MeetingRequestStatus = "pending" | "scheduled" | "declined" | "withdrawn";
+
+/** A client's request for a meeting. preferred_times are ISO strings (UTC). */
+export interface MeetingRequest {
+  id: number;
+  client_id: number;
+  client_name: string;
+  requested_by: number | null;
+  requester: string | null;
+  topic: string;
+  notes: string | null;
+  preferred_times: string[];
+  duration_minutes: number;
+  status: MeetingRequestStatus;
+  meeting_id: number | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  decline_reason: string | null;
+  created_at: string;
+}
+
 export interface Meeting {
   id: number;
   client_id: number;

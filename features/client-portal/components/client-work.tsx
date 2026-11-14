@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, CheckCircle2, Download, Undo2, Video } from "lucide-react";
+import { CalendarClock, CalendarPlus, CheckCircle2, Download, Plus, Undo2, Video, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
@@ -11,12 +11,23 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useSession } from "@/features/auth/hooks/use-session";
 import { ApiError } from "@/lib/api-client";
-import { formatDate, formatMeetingTime, formatPeriod, humanize, parseUtc } from "@/lib/format";
-import { useDecideApproval, usePortalApprovals, usePortalMeetings, usePortalReports, usePortalTasks } from "../hooks/use-client-portal";
+import { formatDate, formatIsoDateTime, formatMeetingTime, formatPeriod, humanize, parseUtc } from "@/lib/format";
+import {
+  useDecideApproval,
+  usePortalApprovals,
+  usePortalMeetingRequests,
+  usePortalMeetings,
+  usePortalReports,
+  usePortalTasks,
+  useRequestMeeting,
+  useWithdrawMeetingRequest,
+} from "../hooks/use-client-portal";
 import { portalFileUrl } from "../services/client-portal-service";
-import type { PortalApproval, PortalCompany } from "../types/client-portal.types";
+import type { PortalApproval, PortalCompany, PortalMeetingRequest } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { CLIENT_TASK_STATUS, Card, ListBody } from "./portal-ui";
 
@@ -196,13 +207,154 @@ export function ClientApprovals() {
 
 // ───────────── Meetings ─────────────
 
-function MeetingsBody() {
-  const q = usePortalMeetings();
+const REQUEST_DURATIONS = [15, 30, 45, 60];
+const REQUEST_STATUS: Record<PortalMeetingRequest["status"], string> = { pending: "Waiting for your team", scheduled: "Scheduled", declined: "Not scheduled", withdrawn: "Withdrawn" };
+
+function RequestMeetingForm({ onDone }: { onDone: () => void }) {
+  const request = useRequestMeeting();
+  const [topic, setTopic] = useState("");
+  const [notes, setNotes] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [slots, setSlots] = useState([{ date: "", time: "10:00" }]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const setSlot = (i: number, patch: Partial<{ date: string; time: string }>) => setSlots((s) => s.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: Record<string, string> = {};
+    if (topic.trim().length < 2) next.topic = "Tell us what you'd like to discuss";
+    const filled = slots.filter((s) => s.date && s.time);
+    const times = filled.map((s) => new Date(`${s.date}T${s.time}`));
+    if (times.length === 0) next.times = "Suggest at least one time";
+    else if (times.some((t) => t <= new Date())) next.times = "Suggest times in the future";
+    else if (new Set(times.map((t) => t.getTime())).size !== times.length) next.times = "Suggest different times";
+    setErrors(next);
+    if (Object.keys(next).length) return;
+    try {
+      await request.mutateAsync({ topic: topic.trim(), notes: notes.trim() || null, preferred_times: times.map((t) => t.toISOString()), duration_minutes: Number(duration) });
+      toast.success("Request sent. Your team will confirm a time.");
+      onDone();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Couldn't send your request";
+      if (err instanceof ApiError && (err.fieldErrors.topic || err.fieldErrors.preferred_times)) {
+        setErrors({ topic: err.fieldErrors.topic?.[0] ?? "", times: err.fieldErrors.preferred_times?.[0] ?? "" });
+      } else toast.error(message);
+    }
+  };
+
   return (
     <>
-      <PageHeader title="Meetings" description="Calls with your accounting team." />
+      <DialogHeader>
+        <DialogTitle>Request a meeting</DialogTitle>
+        <DialogDescription>Suggest up to three times that suit you. Your team will confirm one and send you an invitation.</DialogDescription>
+      </DialogHeader>
+      <form id="meeting-request-form" onSubmit={submit} className="grid gap-4" noValidate>
+        <FormField id="mr-topic" label="What would you like to discuss?" error={errors.topic || undefined}>
+          <Input id="mr-topic" placeholder="Questions about last month's GST" value={topic} onChange={(e) => setTopic(e.target.value)} aria-invalid={!!errors.topic} maxLength={200} />
+        </FormField>
+        <fieldset className="grid gap-2">
+          <legend className="mb-1 text-sm font-medium">Times that suit you</legend>
+          {slots.map((s, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input type="date" aria-label={`Option ${i + 1} date`} value={s.date} onChange={(e) => setSlot(i, { date: e.target.value })} className="flex-1" aria-invalid={!!errors.times} />
+              <Input type="time" aria-label={`Option ${i + 1} time`} value={s.time} onChange={(e) => setSlot(i, { time: e.target.value })} className="w-32" />
+              {slots.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" aria-label={`Remove option ${i + 1}`} onClick={() => setSlots((all) => all.filter((_, k) => k !== i))}>
+                  <X className="size-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+          {slots.length < 3 && (
+            <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setSlots((s) => [...s, { date: "", time: "10:00" }])}>
+              <Plus className="size-4" /> Add another time
+            </Button>
+          )}
+          {errors.times && <p className="text-destructive text-xs">{errors.times}</p>}
+        </fieldset>
+        <FormField id="mr-duration" label="Length">
+          <Select value={duration} onValueChange={setDuration}>
+            <SelectTrigger id="mr-duration" className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>{REQUEST_DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} min</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField id="mr-notes" label="Anything we should prepare?" hint="Optional.">
+          <Textarea id="mr-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
+        </FormField>
+      </form>
+      <DialogFooter>
+        <Button variant="outline" onClick={onDone}>Cancel</Button>
+        <SubmitButton form="meeting-request-form" pending={request.isPending}>Send request</SubmitButton>
+      </DialogFooter>
+    </>
+  );
+}
+
+function WithdrawButton({ request }: { request: PortalMeetingRequest }) {
+  const withdraw = useWithdrawMeetingRequest();
+  const run = async () => {
+    try {
+      await withdraw.mutateAsync(request.id);
+      toast.success("Request withdrawn");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't withdraw the request");
+    }
+  };
+  return (
+    <Button variant="ghost" size="sm" disabled={withdraw.isPending} onClick={() => void run()} aria-label={`Withdraw request: ${request.topic}`}>
+      <Undo2 className="size-4" /> Withdraw
+    </Button>
+  );
+}
+
+function MeetingRequests({ company }: { company: PortalCompany }) {
+  const q = usePortalMeetingRequests();
+  const { data: me } = useSession();
+  if (!q.data?.length) return null;
+  return (
+    <Card title="Your requests" subtitle="Requests from the last 30 days.">
+      <ul className="divide-y">
+        {q.data.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-start gap-3 px-5 py-4">
+            <CalendarClock className="text-muted-foreground mt-0.5 size-5" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{r.topic}</p>
+              <p className="text-muted-foreground text-xs">
+                {r.preferred_times.map(formatIsoDateTime).join(" · ")} · {r.duration_minutes} min{r.requester ? ` · asked by ${r.requester}` : ""}
+              </p>
+              {r.status === "declined" && r.decline_reason && (
+                <p className="mt-1 text-xs">
+                  <span className="font-medium">{r.decided_by_name ?? "Your team"}:</span> {r.decline_reason}
+                </p>
+              )}
+              {r.status === "scheduled" && <p className="text-muted-foreground mt-1 text-xs">See the meeting below.</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <StatusBadge status={r.status} label={REQUEST_STATUS[r.status]} />
+              {r.status === "pending" && (r.requested_by === me?.id || company.role === "owner") && <WithdrawButton request={r} />}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function MeetingsBody({ company }: { company: PortalCompany }) {
+  const q = usePortalMeetings();
+  const [requesting, setRequesting] = useState(false);
+  return (
+    <>
+      <PageHeader
+        title="Meetings"
+        description="Calls with your accounting team."
+        actions={<Button onClick={() => setRequesting(true)}><CalendarPlus className="size-4" /> Request a meeting</Button>}
+      />
+      <div className="space-y-6">
+      <MeetingRequests company={company} />
       <Card title="Meetings">
-        <ListBody query={q} empty={{ title: "No meetings scheduled", description: "Your team schedules review calls here." }}>
+        <ListBody query={q} empty={{ title: "No meetings scheduled", description: "Your team schedules review calls here. Need to talk? Request a meeting." }}>
           {(rows) => (
             <ul className="divide-y">
               {rows.map((m) => {
@@ -229,10 +381,14 @@ function MeetingsBody() {
           )}
         </ListBody>
       </Card>
+      </div>
+      <Dialog open={requesting} onOpenChange={setRequesting}>
+        <DialogContent className="sm:max-w-lg">{requesting && <RequestMeetingForm onDone={() => setRequesting(false)} />}</DialogContent>
+      </Dialog>
     </>
   );
 }
 
 export function ClientMeetings() {
-  return <CompanyGate>{() => <MeetingsBody />}</CompanyGate>;
+  return <CompanyGate>{(company) => <MeetingsBody company={company} />}</CompanyGate>;
 }

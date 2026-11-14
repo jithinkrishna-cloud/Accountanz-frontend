@@ -18,6 +18,17 @@ export const usePortalApprovals = () => useQuery({ queryKey: K("approvals"), que
 export const usePortalThreads = () => useQuery({ queryKey: K("messages"), queryFn: s.threads });
 export const usePortalThread = (id: number | null) => useQuery({ queryKey: K("messages", id ?? 0), queryFn: () => s.thread(id!), enabled: id !== null });
 export const usePortalMeetings = () => useQuery({ queryKey: K("meetings"), queryFn: s.meetings });
+export const usePortalMeetingRequests = () => useQuery({ queryKey: K("meeting-requests"), queryFn: s.meetingRequests });
+
+export function useRequestMeeting() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.requestMeeting, onSuccess: () => void qc.invalidateQueries({ queryKey: K("meeting-requests") }) });
+}
+
+export function useWithdrawMeetingRequest() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.withdrawMeetingRequest, onSettled: () => void qc.invalidateQueries({ queryKey: K("meeting-requests") }) });
+}
 export const usePortalBilling = () => useQuery({ queryKey: K("billing"), queryFn: s.billing });
 export const usePortalSettings = () => useQuery({ queryKey: K("settings"), queryFn: s.settings });
 

@@ -46,3 +46,16 @@ export function useCancelMeeting(portal: StaffPortal) {
   const refresh = useRefresh(portal);
   return useMutation({ mutationFn: (id: number) => communicationService.cancelMeeting(portal, id), onSuccess: refresh });
 }
+
+export const usePendingMeetingRequests = (portal: StaffPortal, clientId?: string) =>
+  useQuery({ queryKey: [...key(portal), "meeting-requests", "pending", clientId], queryFn: () => communicationService.meetingRequests(portal, { status: "pending", client_id: clientId, page: 1 }) });
+
+export function useScheduleRequest(portal: StaffPortal) {
+  const refresh = useRefresh(portal);
+  return useMutation({ mutationFn: ({ id, body }: { id: number; body: NewMeeting }) => communicationService.scheduleRequest(portal, id, body), onSettled: refresh });
+}
+
+export function useDeclineRequest(portal: StaffPortal) {
+  const refresh = useRefresh(portal);
+  return useMutation({ mutationFn: ({ id, reason }: { id: number; reason: string }) => communicationService.declineRequest(portal, id, reason), onSettled: refresh });
+}

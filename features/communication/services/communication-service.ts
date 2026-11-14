@@ -1,6 +1,6 @@
 import { api, type Paged } from "@/lib/api-client";
 import type { StaffPortal } from "@/types/auth";
-import type { Meeting, Thread, ThreadDetail, ThreadVisibility } from "../types/communication.types";
+import type { Meeting, MeetingRequest, MeetingRequestStatus, Thread, ThreadDetail, ThreadVisibility } from "../types/communication.types";
 
 export interface NewMeeting {
   client_id: number;
@@ -25,4 +25,8 @@ export const communicationService = {
     api<Paged<Meeting>>(`${base(portal)}/meetings`, { query: { ...params } }),
   schedule: (portal: StaffPortal, body: NewMeeting) => api<Meeting>(`${base(portal)}/meetings`, { method: "POST", body }),
   cancelMeeting: (portal: StaffPortal, id: number) => api<void>(`${base(portal)}/meetings/${id}`, { method: "DELETE" }),
+  meetingRequests: (portal: StaffPortal, params: { status?: MeetingRequestStatus; client_id?: string; page?: number }) =>
+    api<Paged<MeetingRequest>>(`${base(portal)}/meeting-requests`, { query: { ...params } }),
+  scheduleRequest: (portal: StaffPortal, id: number, body: NewMeeting) => api<Meeting>(`${base(portal)}/meeting-requests/${id}/schedule`, { method: "POST", body }),
+  declineRequest: (portal: StaffPortal, id: number, reason: string) => api<void>(`${base(portal)}/meeting-requests/${id}/decline`, { method: "POST", body: { reason } }),
 };

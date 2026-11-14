@@ -57,6 +57,8 @@ export const STATUS_TONES: Record<string, Tone> = {
   exited: "danger",
   disabled: "danger",
   rejected: "danger",
+  declined: "danger",
+  withdrawn: "neutral",
   error: "danger",
 };
 

@@ -35,6 +35,9 @@ export const parseUtc = (value: string) => new Date(`${value.replace(" ", "T")}Z
 /** A UTC datetime in the viewer's own timezone (IST for users in India). */
 export const formatLocalDateTime = (utc: string) => parseUtc(utc).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
+/** An ISO timestamp (with offset, e.g. a proposed meeting time) in the viewer's own timezone. */
+export const formatIsoDateTime = (iso: string) => new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
 /** A meeting's start and end in the viewer's own timezone. */
 export const formatMeetingTime = (startUtc: string, endUtc: string) =>
   `${formatLocalDateTime(startUtc)} – ${parseUtc(endUtc).toLocaleTimeString("en-IN", { timeStyle: "short" })}`;
