@@ -23,6 +23,7 @@ import {
   Receipt,
   ScrollText,
   Settings,
+  SquareKanban,
   Stamp,
   UserCog,
   UsersRound,
@@ -50,7 +51,14 @@ export const PORTAL_LABEL: Record<Portal, string> = {
 
 export const NAV: Record<Portal, NavGroup[]> = {
   admin: [
-    { label: "Overview", items: [{ label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard }] },
+    {
+      label: "Overview",
+      items: [
+        { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        // Switches into the team's project Workspace (its own layout; "Back to Accountanz" returns here).
+        { label: "Workspace", href: "/projects", icon: SquareKanban },
+      ],
+    },
     {
       label: "Business",
       items: [
@@ -116,6 +124,7 @@ export const NAV: Record<Portal, NavGroup[]> = {
       items: [
         { label: "My Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
         { label: "My Clients", href: "/team/clients", icon: Building2 },
+        { label: "Workspace", href: "/projects", icon: SquareKanban },
       ],
     },
     {
