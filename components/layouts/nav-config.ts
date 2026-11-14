@@ -1,10 +1,5 @@
 import {
   Bell,
-  Boxes,
-  Landmark,
-  Percent,
-  ShoppingCart,
-  Truck,
   BookOpen,
   ChartColumn,
   Briefcase,
@@ -20,6 +15,7 @@ import {
   FolderOpen,
   Handshake,
   Kanban,
+  KeyRound,
   LayoutDashboard,
   type LucideIcon,
   Package,
@@ -105,6 +101,7 @@ export const NAV: Record<Portal, NavGroup[]> = {
       label: "Platform",
       items: [
         { label: "Integrations", href: "/admin/integrations", icon: Plug },
+        { label: "JournL Access", href: "/admin/journl-access", icon: KeyRound },
         { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
         { label: "Notifications", href: "/admin/notifications", icon: Bell },
         { label: "Knowledge Base", href: "/admin/knowledge-base", icon: BookOpen },
@@ -129,22 +126,8 @@ export const NAV: Record<Portal, NavGroup[]> = {
         { label: "Review Queue", href: "/team/reviews", icon: CircleCheck },
         { label: "Documents", href: "/team/documents", icon: FolderOpen },
         { label: "Month-End Closing", href: "/team/closing", icon: CalendarCheck },
-      ],
-    },
-    {
-      // Live, read-only views of each client's JournL books (the access the bookkeeper is granted).
-      label: "Accounting — JournL",
-      items: [
-        { label: "Sales", href: "/team/journl/sales", icon: Receipt },
-        { label: "Purchases", href: "/team/journl/purchases", icon: ShoppingCart },
-        { label: "Expenses", href: "/team/journl/expenses", icon: Wallet },
-        { label: "Accounting & Ledgers", href: "/team/journl/accounting", icon: BookOpen },
-        { label: "Customers", href: "/team/journl/customers", icon: Users },
-        { label: "Vendors", href: "/team/journl/vendors", icon: Truck },
-        { label: "Banking", href: "/team/journl/banking", icon: Landmark },
-        { label: "Inventory", href: "/team/journl/inventory", icon: Boxes },
-        { label: "GST & Tax", href: "/team/journl/gst", icon: Percent },
-        { label: "Financial Reports", href: "/team/journl/financial_reports", icon: ChartColumn },
+        // Opens the JournL area, which has its own module sub-sidebar (read-only, live from JournL).
+        { label: "JournL Books", href: "/team/journl", icon: BookOpen },
       ],
     },
     {

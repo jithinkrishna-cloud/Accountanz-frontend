@@ -14,6 +14,11 @@ export function useSetModulePermission(id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { moduleKey: string; actions: string[] }) => journlPermissionService.setModule(id, v.moduleKey, v.actions),
-    onSuccess: (data) => qc.setQueryData([...KEY, id], data),
+    onSuccess: (data) => {
+      qc.setQueryData([...KEY, id], data);
+      void qc.invalidateQueries({ queryKey: [...KEY, "overview"] });
+    },
   });
 }
+
+export const useJournlAccessOverview = () => useQuery({ queryKey: [...KEY, "overview"], queryFn: journlPermissionService.overview });

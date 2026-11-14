@@ -1,25 +1,21 @@
 "use client";
 
-import { ChevronRight, LogOut, Menu } from "lucide-react";
+import { ChevronRight, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { useLogout } from "@/features/auth/hooks/use-session";
-import { ROLE_LABELS } from "@/lib/constants";
-import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Portal, SessionUser } from "@/types/auth";
 import { Logo } from "./logo";
 import { NAV, PORTAL_LABEL, type NavItem } from "./nav-config";
+import { ProfileMenu } from "./profile-menu";
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-function SidebarNav({ portal, user, onNavigate }: { portal: Portal; user: SessionUser; onNavigate?: () => void }) {
+function SidebarNav({ portal, onNavigate }: { portal: Portal; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const logout = useLogout();
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
       <div className="px-5 py-5">
@@ -53,25 +49,6 @@ function SidebarNav({ portal, user, onNavigate }: { portal: Portal; user: Sessio
           </div>
         ))}
       </nav>
-      <div className="border-sidebar-accent flex items-center gap-3 border-t px-4 py-4">
-        <Avatar className="size-9">
-          <AvatarFallback className="bg-sidebar-accent text-xs text-white">{initials(user.fullName)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">{user.fullName}</p>
-          <p className="text-sidebar-muted truncate text-xs">{ROLE_LABELS[user.role]}</p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-white"
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-          aria-label="Sign out"
-        >
-          <LogOut className="size-4" />
-        </Button>
-      </div>
     </div>
   );
 }
@@ -84,12 +61,12 @@ export function PortalShell({ portal, user, children }: { portal: Portal; user: 
   return (
     <div className="min-h-screen lg:pl-64">
       <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
-        <SidebarNav portal={portal} user={user} />
+        <SidebarNav portal={portal} />
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 border-none p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarNav portal={portal} user={user} onNavigate={() => setMobileOpen(false)} />
+          <SidebarNav portal={portal} onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
 
@@ -106,15 +83,12 @@ export function PortalShell({ portal, user, children }: { portal: Portal; user: 
             </>
           )}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="bg-secondary hidden rounded-full px-3 py-1 text-xs font-medium sm:inline">{ROLE_LABELS[user.role]}</span>
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-sidebar text-xs text-white">{initials(user.fullName)}</AvatarFallback>
-          </Avatar>
+        <div className="ml-auto">
+          <ProfileMenu portal={portal} user={user} />
         </div>
       </header>
 
-      <main className="w-full px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</main>
+      <main className="w-full min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</main>
     </div>
   );
 }

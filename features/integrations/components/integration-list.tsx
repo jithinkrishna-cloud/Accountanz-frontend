@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -14,7 +15,7 @@ import { applyApiError } from "@/lib/form-errors";
 import { formatDate, humanize } from "@/lib/format";
 import { useConnections, useHealthCheck } from "../hooks/use-integrations";
 import { integrationService } from "../services/integration-service";
-import { CONNECTION_STATUSES, PROVIDER_LABELS, type Connection, type ConnectionStatus } from "../types/integration.types";
+import { CONNECTION_STATUSES, type Connection, type ConnectionStatus } from "../types/integration.types";
 import { ConnectionFormDialog } from "./connection-form-dialog";
 import { JournlDataSheet, ViewJournlDataButton } from "./journl-data-sheet";
 import { VerifyConnectionDialog } from "./verify-connection-dialog";
@@ -34,13 +35,27 @@ function CheckWithJournlButton({ connection }: { connection: Connection }) {
   return <SubmitButton type="button" size="sm" variant="ghost" pending={check.isPending} onClick={run}>Check with JournL</SubmitButton>;
 }
 
+/** How the connection was confirmed, and whether Accountanz can read the books right now (JournL session). */
 function Verification({ c }: { c: Connection }) {
   if (c.status === "disconnected") return <span className="text-muted-foreground text-xs">Disconnected {c.disconnected_at ? formatDate(c.disconnected_at, true) : ""}</span>;
-  if (!c.verified_at) return <span className="text-muted-foreground text-xs">not verified</span>;
+  const signedIn = c.verification_note?.startsWith("Confirmed by JournL sign-in") ?? false;
   return (
     <div className="min-w-0 text-xs" title={c.verification_note ?? undefined}>
-      <p className="whitespace-nowrap">{formatDate(c.verified_at, true)}{c.verified_by_name ? ` · ${c.verified_by_name}` : ""}</p>
-      {c.verification_note && <p className="text-muted-foreground max-w-56 truncate">{c.verification_note}</p>}
+      {!c.verified_at ? (
+        <p className="text-muted-foreground">Not verified</p>
+      ) : (
+        <p className="whitespace-nowrap">
+          {signedIn ? "JournL sign-in" : "Checked by hand"} · {formatDate(c.verified_at, true)}
+        </p>
+      )}
+      {c.status === "connected" &&
+        (c.journl_session_until ? (
+          <p className="text-emerald-700 dark:text-emerald-400">Readable until {formatDate(c.journl_session_until, true)}</p>
+        ) : signedIn ? (
+          <p className="text-amber-700 dark:text-amber-400">Session expired: owner must refresh</p>
+        ) : (
+          <p className="text-muted-foreground">No JournL session: owner signs in to enable data</p>
+        ))}
     </div>
   );
 }
@@ -59,7 +74,6 @@ export function IntegrationList() {
   const columns = useMemo<Column<Connection>[]>(
     () => [
       { key: "client", header: "Client", cell: (c) => <span className="font-medium">{c.client_name}</span> },
-      { key: "provider", header: "Provider", cell: (c) => PROVIDER_LABELS[c.provider] },
       {
         key: "org",
         header: "Organisation",
@@ -76,16 +90,24 @@ export function IntegrationList() {
           </div>
         ),
       },
-      { key: "status", header: "Status", cell: (c) => <StatusBadge status={c.status} /> },
-      { key: "verified", header: "Verified", hideOnMobile: true, cell: (c) => <Verification c={c} /> },
-      { key: "error", header: "Last error", hideOnMobile: true, cell: (c) => <span className="text-destructive text-xs">{c.last_error ?? "—"}</span> },
+      {
+        key: "status",
+        header: "Status",
+        cell: (c) => (
+          <div>
+            <StatusBadge status={c.status} />
+            {c.last_error && <p className="text-destructive mt-1 max-w-48 truncate text-xs" title={c.last_error}>{c.last_error}</p>}
+          </div>
+        ),
+      },
+      { key: "verified", header: "Verified · data access", hideOnMobile: true, cell: (c) => <Verification c={c} /> },
       {
         key: "action",
         header: "",
         className: "text-right",
         cell: (c) =>
           c.status === "disconnected" ? null : (
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 whitespace-nowrap">
               {(c.status === "pending" || c.status === "error" || (c.status === "connected" && !c.verified_at)) && (
                 <Button size="sm" variant="outline" onClick={() => setVerifying(c)}>Mark verified</Button>
               )}
@@ -105,10 +127,13 @@ export function IntegrationList() {
         description="Where each client's books live. Accountanz never keeps the ledger itself."
         actions={<Button onClick={() => setAdding(true)}><Plus className="size-4" /> Add connection</Button>}
       />
-      <p className="text-muted-foreground -mt-3 mb-4 text-xs">
-        Clients request a connection from their portal and it shows here as Pending. Check the organisation in JournL, then use Mark verified with a note on how you checked it. Connections marked &ldquo;not verified&rdquo; were approved before checks were recorded; verify them the same way. That is a manual check, not JournL API access{apiAvailable ? "; use Check with JournL to confirm access through the API." : ": JournL has no partner API yet, so access can't be checked automatically."}
+      <p className="text-muted-foreground -mt-3 mb-4 max-w-4xl text-xs">
+        Clients connect from their portal with <span className="text-foreground font-medium">Sign in with JournL</span>: JournL confirms the company, the connection shows here as
+        Connected, and Accountanz can read the books for 8 hours per sign-in (the owner refreshes it from their portal). Connections added by organisation ID show as Pending or
+        &ldquo;Not verified&rdquo;: check them in JournL and use Mark verified. Which accountant can read which module is managed under{" "}
+        <Link href="/admin/journl-access" className="text-primary hover:underline">JournL Access</Link>.
       </p>
-      <div className="bg-card rounded-xl border shadow-xs">
+      <div className="bg-card min-w-0 overflow-hidden rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search organisation" />
           <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as ConnectionStatus | undefined); setPage(1); }} options={CONNECTION_STATUSES.map((s) => ({ value: s, label: humanize(s) }))} />

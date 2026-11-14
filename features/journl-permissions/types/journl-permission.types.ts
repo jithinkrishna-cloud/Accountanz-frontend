@@ -61,3 +61,23 @@ export interface AssignmentPermissions extends AssignmentGates {
   allow_unverified: boolean;
   modules: ModuleAccess[];
 }
+
+/** Admin overview: per client, the JournL connection/session and each assigned person's module access. */
+export interface JournlAccessOverview {
+  modules: { key: string; label: string; journl_features: string | null }[];
+  clients: {
+    client_id: number;
+    client_name: string;
+    client_status: string;
+    engagement_active: boolean;
+    connection: { status: string; org_id: string | null; org_name: string | null; session_until: string | null; verification_note: string | null } | null;
+    people: {
+      assignment_id: number;
+      user_id: number;
+      full_name: string;
+      team_role: string;
+      journl_access: boolean;
+      modules: Record<string, { granted: boolean; effective: boolean; reason: string | null }>;
+    }[];
+  }[];
+}
