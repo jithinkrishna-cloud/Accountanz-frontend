@@ -89,6 +89,19 @@ export function useDisconnectJournl() {
 }
 
 export const usePortalPackages = () => useQuery({ queryKey: K("packages"), queryFn: s.packages });
+export const usePortalProposal = () => useQuery({ queryKey: K("proposal"), queryFn: s.proposal });
+
+/** Accepting moves the company to onboarding and opens a draft engagement, so refresh what shows that. */
+export function useAcceptProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: s.acceptProposal,
+    onSuccess: (p) => {
+      qc.setQueryData(K("proposal"), p);
+      for (const k of ["context", "packages", "dashboard", "billing"]) void qc.invalidateQueries({ queryKey: K(k) });
+    },
+  });
+}
 
 export function useChoosePackage() {
   const qc = useQueryClient();

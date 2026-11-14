@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCircle2, Info } from "lucide-react";
+import { Check, CheckCircle2, Info, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -11,8 +11,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton";
 import { applyApiError } from "@/lib/form-errors";
 import { formatINR } from "@/lib/format";
-import { useChoosePackage, usePortalPackages } from "../hooks/use-client-portal";
+import { useChoosePackage, usePortalPackages, usePortalProposal } from "../hooks/use-client-portal";
 import type { PortalCompany, PortalPackage, PortalPackages } from "../types/client-portal.types";
+import { ProposalCard } from "./client-proposal";
+import { TeamIncluded } from "./portal-ui";
 import { CompanyGate } from "./company-gate";
 
 const CYCLE: Record<PortalPackage["billing_cycle"], string> = { monthly: "Billed monthly", quarterly: "Billed quarterly", yearly: "Billed yearly" };
@@ -35,21 +37,26 @@ function CurrentBanner({ current }: { current: NonNullable<PortalPackages["curre
   );
 }
 
-function PackageCard({ pkg, current, isOwner, onChoose }: { pkg: PortalPackage; current: PortalPackages["current"]; isOwner: boolean; onChoose: (p: PortalPackage) => void }) {
+function PackageCard({ pkg, current, isOwner, recommended, proposalOpen, onChoose }: { pkg: PortalPackage; current: PortalPackages["current"]; isOwner: boolean; recommended: boolean; proposalOpen: boolean; onChoose: (p: PortalPackage) => void }) {
   const isCurrent = current?.package_id === pkg.id;
-  const locked = !!current && current.status !== "draft";
+  // While a proposal is open, the client accepts it (above) rather than picking from the catalogue.
+  const locked = proposalOpen || (!!current && current.status !== "draft");
   return (
-    <article className={`bg-card flex flex-col rounded-xl border p-5 shadow-xs ${isCurrent ? "border-primary ring-primary/20 ring-2" : ""}`}>
+    <article className={`bg-card flex flex-col rounded-xl border p-5 shadow-xs ${isCurrent || recommended ? "border-primary ring-primary/20 ring-2" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-semibold">{pkg.name}</h2>
           {pkg.description && <p className="text-muted-foreground mt-0.5 text-sm">{pkg.description}</p>}
         </div>
-        {isCurrent && (
+        {isCurrent ? (
           <span className="text-primary flex shrink-0 items-center gap-1 text-xs font-medium">
             <CheckCircle2 className="size-4" aria-hidden /> Your package
           </span>
-        )}
+        ) : recommended ? (
+          <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+            <Sparkles className="size-3.5" aria-hidden /> Recommended for you
+          </span>
+        ) : null}
       </div>
 
       <p className="mt-4">
@@ -68,6 +75,7 @@ function PackageCard({ pkg, current, isOwner, onChoose }: { pkg: PortalPackage; 
         </ul>
       )}
       {pkg.scope_notes && <p className="text-muted-foreground mt-3 text-sm">{pkg.scope_notes}</p>}
+      <TeamIncluded roles={pkg.team_roles} className="mt-4" />
 
       <div className="mt-auto pt-5">
         {isCurrent ? (
@@ -116,6 +124,8 @@ function ChooseDialog({ pkg, hasDraft, onClose }: { pkg: PortalPackage | null; h
 
 function PackagesBody({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = usePortalPackages();
+  const proposal = usePortalProposal().data;
+  const proposalOpen = proposal?.stage === "proposal_sent";
   const [choosing, setChoosing] = useState<PortalPackage | null>(null);
   const isOwner = company.role === "owner";
 
@@ -130,14 +140,19 @@ function PackagesBody({ company }: { company: PortalCompany }) {
   }
   return (
     <>
-      {data.current && <CurrentBanner current={data.current} />}
-      {!isOwner && <p className="text-muted-foreground mb-4 text-sm">Only your company owner can choose a package.</p>}
+      <ProposalCard className="mb-6" />
+      {data.current && !proposal && <CurrentBanner current={data.current} />}
+      {proposalOpen ? (
+        <p className="text-muted-foreground mb-4 text-sm">All our packages are below for reference. To go with something else, message your team.</p>
+      ) : (
+        !isOwner && <p className="text-muted-foreground mb-4 text-sm">Only your company owner can choose a package.</p>
+      )}
       {data.items.length === 0 ? (
         <p className="text-muted-foreground bg-card rounded-xl border px-6 py-12 text-center text-sm">No packages are available right now. Message your team for a quote.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.items.map((p) => (
-            <PackageCard key={p.id} pkg={p} current={data.current} isOwner={isOwner} onChoose={setChoosing} />
+            <PackageCard key={p.id} pkg={p} current={data.current} isOwner={isOwner} recommended={proposalOpen && proposal?.package_id === p.id} proposalOpen={proposalOpen} onChoose={setChoosing} />
           ))}
         </div>
       )}

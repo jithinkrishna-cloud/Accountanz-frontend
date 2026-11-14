@@ -11,6 +11,7 @@ export interface Thread {
   last_at: string | null;
   last_body: string | null;
   last_author: string | null;
+  last_author_id: number | null;
   last_from_client: 0 | 1 | null;
   /** How many times you're @mentioned in this conversation. */
   mentions_me?: number;

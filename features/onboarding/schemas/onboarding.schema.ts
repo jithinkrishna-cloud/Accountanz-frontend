@@ -32,6 +32,7 @@ export const assessmentFormSchema = z.object({
   suggested_package_id: z.string().transform((v) => (v ? Number(v) : null)),
   suggested_monthly_fee: optionalNumber(/^\d{1,10}(\.\d{1,2})?$/, "Enter an amount with at most 2 decimals"),
   notes: z.string().trim().max(2000),
+  proposal_message: z.string().trim().max(2000),
 });
 
 export type ProspectFormValues = z.input<typeof prospectFormSchema>;

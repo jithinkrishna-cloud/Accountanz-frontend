@@ -54,6 +54,27 @@ export interface PortalRequest {
   files: number;
 }
 
+/** The proposal Accountanz sent (while open), or the accepted one while the company is onboarding. */
+export interface PortalProposal {
+  id: number;
+  stage: "proposal_sent" | "accepted";
+  package_id: number;
+  package_name: string;
+  package_description: string | null;
+  billing_cycle: "monthly" | "quarterly" | "yearly";
+  scope_notes: string | null;
+  monthly_fee: number;
+  message: string | null;
+  sent_at: string | null;
+  sent_by: string | null;
+  accepted_at: string | null;
+  accepted_via: "client" | "team" | null;
+  services: string[];
+  /** The team included with the proposed package. */
+  team_roles: string[];
+  can_accept: boolean;
+}
+
 export interface PortalTeamMember {
   user_id: number;
   full_name: string;
@@ -105,6 +126,7 @@ export interface PortalThread {
   last_at: string | null;
   last_body: string | null;
   last_author: string | null;
+  last_author_id: number | null;
 }
 
 export interface PortalThreadDetail {
@@ -176,6 +198,8 @@ export interface PortalPackage {
   monthly_fee: number;
   billing_cycle: "monthly" | "quarterly" | "yearly";
   scope_notes: string | null;
+  /** The team included: bookkeeper, finance_manager, cfo. */
+  team_roles: string[];
   services: { id: number; code: string; name: string }[];
 }
 

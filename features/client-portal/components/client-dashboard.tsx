@@ -6,7 +6,9 @@ import { KpiCard } from "@/components/shared/kpi-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState } from "@/components/shared/states";
 import { formatDate, formatINR, formatPeriod } from "@/lib/format";
-import { usePortalDashboard } from "../hooks/use-client-portal";
+import { usePortalDashboard, usePortalProposal } from "../hooks/use-client-portal";
+import type { PortalCompany } from "../types/client-portal.types";
+import { ProposalCard } from "./client-proposal";
 import { CompanyGate } from "./company-gate";
 
 function Body() {
@@ -50,25 +52,28 @@ function Body() {
   );
 }
 
-export function ClientDashboard() {
+/** Dashboard for a company: its proposal (if any), the "reviewing your application" note for new leads, then the overview. */
+function DashboardForCompany({ company }: { company: PortalCompany }) {
+  const proposal = usePortalProposal().data;
   return (
-    <CompanyGate>
-      {(company) => (
-        <>
-          {company.status === "lead" && (
-            <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              <Hourglass className="mt-0.5 size-5 shrink-0" aria-hidden />
-              <div>
-                <p className="font-medium">Thanks for registering {company.name}</p>
-                <p className="mt-1 text-sm opacity-90">
-                  Our team is reviewing your application. We&apos;ll contact you to understand your business and propose a package. Once you accept, your accounting team is assigned and your work starts here.
-                </p>
-              </div>
-            </div>
-          )}
-          <Body />
-        </>
+    <>
+      <ProposalCard className="mb-6" />
+      {company.status === "lead" && !proposal && (
+        <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          <Hourglass className="mt-0.5 size-5 shrink-0" aria-hidden />
+          <div>
+            <p className="font-medium">Thanks for registering {company.name}</p>
+            <p className="mt-1 text-sm opacity-90">
+              Our team is reviewing your application. We&apos;ll contact you to understand your business and propose a package. Once you accept, your accounting team is assigned and your work starts here.
+            </p>
+          </div>
+        </div>
       )}
-    </CompanyGate>
+      <Body />
+    </>
   );
+}
+
+export function ClientDashboard() {
+  return <CompanyGate>{(company) => <DashboardForCompany company={company} />}</CompanyGate>;
 }

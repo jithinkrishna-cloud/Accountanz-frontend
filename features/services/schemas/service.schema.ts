@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BILLING_CYCLES } from "../types/service.types";
+import { BILLING_CYCLES, PACKAGE_ROLES } from "../types/service.types";
 
 // Mirrors backend service.validation.ts / package.validation.ts.
 export const serviceFormSchema = z.object({
@@ -18,6 +18,7 @@ export const packageFormSchema = z.object({
   billing_cycle: z.enum(BILLING_CYCLES),
   description: z.string().trim().max(500),
   scope_notes: z.string().trim().max(1000),
+  team_roles: z.array(z.enum(PACKAGE_ROLES)).min(1, "Include at least one role"),
   is_active: z.boolean(),
   service_ids: z.array(z.number()).min(1, "Pick at least one service"),
 });

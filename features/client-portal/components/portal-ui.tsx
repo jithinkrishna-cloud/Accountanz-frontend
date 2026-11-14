@@ -33,3 +33,29 @@ export const CLIENT_TASK_STATUS: Record<string, { label: string; tone: string }>
   submitted: { label: "In review", tone: "submitted" },
   approved: { label: "Done", tone: "approved" },
 };
+
+/** What each role does for the client, in plain words (shared by packages, proposals and the team page). */
+export const ROLE_INFO: Record<string, { label: string; does: string }> = {
+  bookkeeper: { label: "Bookkeeper", does: "Does your day-to-day bookkeeping" },
+  finance_manager: { label: "Finance manager", does: "Reviews your accounts every month" },
+  reviewer: { label: "Reviewer", does: "Reviews your accounts every month" },
+  cfo: { label: "CFO", does: "Financial review, insights and advice" },
+};
+
+/** "Your team" for a package: the roles included, not named people (people are assigned when the service starts). */
+export function TeamIncluded({ roles, className }: { roles: string[]; className?: string }) {
+  if (!roles.length) return null;
+  return (
+    <div className={className}>
+      <p className="text-muted-foreground mb-1.5 text-xs font-medium tracking-wide uppercase">Your team</p>
+      <ul className="grid gap-1 text-sm">
+        {roles.map((r) => (
+          <li key={r} className="flex gap-2">
+            <span className="bg-primary/10 text-primary mt-0.5 inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[11px] font-medium">{ROLE_INFO[r]?.label ?? r}</span>
+            <span className="text-muted-foreground">{ROLE_INFO[r]?.does}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

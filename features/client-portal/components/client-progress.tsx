@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPeriod, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePortalApprovals, usePortalRequests, usePortalTasks } from "../hooks/use-client-portal";
+import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks } from "../hooks/use-client-portal";
 import type { PortalRequest, PortalTask } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 
@@ -101,6 +101,65 @@ const stepCount = (t: PortalTask) => `${t.checklist.filter((c) => c.done).length
 
 // ───────────── Month summary and "waiting on you" ─────────────
 
+type MilestoneState = "done" | "current" | "you" | "upcoming";
+
+/**
+ * The month as client-friendly milestones, worked out from what already exists: open document requests, the jobs'
+ * stages, approvals waiting on the client, and reports published for the month.
+ */
+function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[] }) {
+  const requests = usePortalRequests().data;
+  const approvals = usePortalApprovals().data;
+  const reports = usePortalReports().data;
+  const stages = tasks.map((t) => STAGE_OF[t.status]);
+  const openDocs = blockingRequests(requests, period).length;
+  const pendingApprovals = (approvals ?? []).filter((a) => a.status === "pending").length;
+  const reportsReady = (reports ?? []).some((r) => r.period === period);
+  const bookkeepingDone = stages.length > 0 && stages.every((s) => s >= 2);
+  const reviewDone = stages.length > 0 && stages.every((s) => s === 3);
+
+  const steps: { label: string; state: MilestoneState; note: string }[] = [
+    { label: "Documents received", state: openDocs ? "you" : "done", note: openDocs ? `Waiting for ${openDocs} from you` : "All received" },
+    {
+      label: "Bookkeeping",
+      state: bookkeepingDone ? "done" : stages.some((s) => s >= 1) ? "current" : "upcoming",
+      note: bookkeepingDone ? "Done" : stages.some((s) => s >= 1) ? "In progress" : "Starting soon",
+    },
+    {
+      label: "Review",
+      state: reviewDone ? "done" : stages.some((s) => s === 2) ? "current" : "upcoming",
+      note: reviewDone ? "Checked" : stages.some((s) => s === 2) ? "Being checked" : "After bookkeeping",
+    },
+    {
+      label: "Your approval",
+      state: pendingApprovals ? "you" : reviewDone ? "done" : "upcoming",
+      note: pendingApprovals ? `${pendingApprovals} waiting for you` : reviewDone ? "Nothing waiting" : "If anything needs your sign-off",
+    },
+    { label: "Reports ready", state: reportsReady ? "done" : reviewDone ? "current" : "upcoming", note: reportsReady ? "Published" : reviewDone ? "Being prepared" : "At month end" },
+  ];
+  const dot: Record<MilestoneState, string> = {
+    done: "bg-emerald-500 text-white",
+    current: "border-2 border-sky-500 bg-white text-sky-700",
+    you: "border-2 border-amber-400 bg-amber-50 text-amber-800",
+    upcoming: "border border-border bg-white text-muted-foreground",
+  };
+  return (
+    <ol className="mt-4 grid grid-cols-5 gap-1" aria-label={`${formatPeriod(period)} milestones`}>
+      {steps.map((s, i) => (
+        <li key={s.label} className="relative flex flex-col items-center text-center">
+          {i > 0 && <span className={cn("absolute top-3 right-1/2 h-0.5 w-full -translate-x-3", steps[i - 1]!.state === "done" ? "bg-emerald-400" : "bg-border")} aria-hidden />}
+          <span className={cn("relative z-10 flex size-6 items-center justify-center rounded-full text-[11px] font-semibold", dot[s.state])} aria-hidden>
+            {s.state === "done" ? <Check className="size-3.5" /> : i + 1}
+          </span>
+          <span className="mt-1.5 text-xs font-medium">{s.label}</span>
+          <span className={cn("text-[11px]", s.state === "you" ? "font-medium text-amber-700" : "text-muted-foreground")}>{s.note}</span>
+          <span className="sr-only">{s.state === "done" ? "done" : s.state === "you" ? "waiting for you" : s.state === "current" ? "in progress" : "not started"}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function MonthSummary({ period, tasks }: { period: string; tasks: PortalTask[] }) {
   const counts = [0, 0, 0, 0];
   for (const t of tasks) counts[STAGE_OF[t.status]]! += 1;
@@ -111,9 +170,6 @@ function MonthSummary({ period, tasks }: { period: string; tasks: PortalTask[] }
     tasks.length === 0 ? "Nothing scheduled yet" : done === tasks.length ? "All done. Your books for this month are complete." : `${done} of ${tasks.length} jobs finished`;
   // How far the month is: each job counts for its stage (not started 0, working 40%, being checked 80%, done 100%).
   const percent = tasks.length ? Math.round((tasks.reduce((n, t) => n + STAGE_WEIGHT[STAGE_OF[t.status]]!, 0) / tasks.length) * 100) : 0;
-  const ordered = [...tasks].sort((a, b) => STAGE_OF[b.status] - STAGE_OF[a.status]);
-  // Same order as the dots: done first.
-  const breakdown = STAGES.map((s, i) => (counts[i] ? `${counts[i]} ${s.label.toLowerCase()}` : null)).filter(Boolean).reverse().join(" · ");
   return (
     <section className="bg-card rounded-xl border shadow-xs" aria-labelledby="month-heading">
       <div className="px-5 pt-5 pb-4 sm:px-6">
@@ -142,29 +198,7 @@ function MonthSummary({ period, tasks }: { period: string; tasks: PortalTask[] }
           >
             <div className={cn("h-full rounded-full transition-[width] duration-500", percent === 100 ? "bg-emerald-500" : "from-primary bg-linear-to-r to-emerald-500")} style={{ width: `${percent}%` }} />
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">Jobs</span>
-            <ol className="flex items-center" aria-hidden>
-              {ordered.map((t, i) => {
-                const stage = STAGE_OF[t.status];
-                return (
-                  <li key={t.id} className="flex items-center">
-                    {i > 0 && <span className={cn("h-px w-3", stage === 3 ? "bg-emerald-300" : "bg-border")} />}
-                    <span
-                      title={`${t.title}: ${STAGES[stage]!.label}`}
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded-full",
-                        stage === 3 ? "bg-emerald-500 text-white" : stage === 0 ? "border-border border bg-white" : cn("border-2 bg-white", stage === 1 ? "border-amber-400" : "border-sky-500"),
-                      )}
-                    >
-                      {stage === 3 && <Check className="size-2.5" />}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-            <span className="text-muted-foreground text-xs">{done === tasks.length ? "All finished" : breakdown}</span>
-          </div>
+          <MonthMilestones period={period} tasks={tasks} />
         </div>
       )}
     </section>

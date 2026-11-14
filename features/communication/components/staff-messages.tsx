@@ -9,6 +9,7 @@ import { MentionText, MentionTextarea, mentionIdsIn } from "@/components/shared/
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/features/auth/hooks/use-session";
 import { useStaffClientOptions } from "@/features/workspace/hooks/use-workspace";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
@@ -18,7 +19,7 @@ import { useMentionable, useReply, useThread, useThreads } from "../hooks/use-co
 import type { Thread, ThreadVisibility } from "../types/communication.types";
 import { NewThreadDialog } from "./new-thread-dialog";
 
-function ThreadListItem({ thread, active, onSelect }: { thread: Thread; active: boolean; onSelect: () => void }) {
+function ThreadListItem({ thread, active, meId, onSelect }: { thread: Thread; active: boolean; meId?: number; onSelect: () => void }) {
   const waiting = thread.visibility === "client" && thread.last_from_client === 1;
   return (
     <li>
@@ -37,7 +38,7 @@ function ThreadListItem({ thread, active, onSelect }: { thread: Thread; active: 
         </div>
         <p className="text-muted-foreground truncate text-xs">{thread.client_name}{thread.visibility === "internal" ? " · internal" : ""}</p>
         <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
-          {thread.last_author ? `${thread.last_author}: ` : ""}{thread.last_body}
+          {thread.last_author_id && thread.last_author_id === meId ? "You: " : thread.last_author ? `${thread.last_author}: ` : ""}{thread.last_body}
         </p>
       </button>
     </li>
@@ -104,6 +105,7 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
 
 export function StaffMessages({ portal }: { portal: StaffPortal }) {
   const clients = useStaffClientOptions(portal);
+  const { data: me } = useSession();
   /** Client / internal conversations, or every conversation where I'm @mentioned. */
   const [tab, setTab] = useState<ThreadVisibility | "mentions">("client");
   const visibility: ThreadVisibility = tab === "internal" ? "internal" : "client";
@@ -152,7 +154,7 @@ export function StaffMessages({ portal }: { portal: StaffPortal }) {
           ) : (
             <>
               <ul className="flex-1 overflow-y-auto">
-                {data.items.map((t) => <ThreadListItem key={t.id} thread={t} active={t.id === selected} onSelect={() => setSelected(t.id)} />)}
+                {data.items.map((t) => <ThreadListItem key={t.id} thread={t} active={t.id === selected} meId={me?.id} onSelect={() => setSelected(t.id)} />)}
               </ul>
               {data.total > data.pageSize && (
                 <div className="flex justify-between border-t p-2">

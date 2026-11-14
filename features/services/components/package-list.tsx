@@ -11,6 +11,7 @@ import { formatINR, humanize } from "@/lib/format";
 import { usePackages } from "../hooks/use-catalogue";
 import type { ServicePackage } from "../types/service.types";
 import { PackageFormDialog } from "./package-form-dialog";
+import { PACKAGE_ROLE_INFO } from "../types/service.types";
 
 export function PackageList() {
   const { data, isLoading, error, refetch } = usePackages();
@@ -44,6 +45,7 @@ export function PackageList() {
                 {formatINR(p.monthly_fee)} <span className="text-muted-foreground text-sm font-normal">· {humanize(p.billing_cycle)}</span>
               </p>
               {p.scope_notes && <p className="text-muted-foreground mt-2 text-sm">{p.scope_notes}</p>}
+              <p className="text-muted-foreground mt-2 text-xs">Team: {p.team_roles.map((r) => PACKAGE_ROLE_INFO[r].label).join(" · ")}</p>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {p.services.map((s) => <span key={s.id} className="bg-accent text-accent-foreground rounded-md px-2 py-0.5 text-xs font-medium">{s.name}</span>)}
               </div>

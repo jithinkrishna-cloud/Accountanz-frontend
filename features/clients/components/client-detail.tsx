@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, TriangleAlert, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -89,6 +89,18 @@ export function ClientDetailView({ id }: { id: number }) {
             title="Accounting team"
             aside={<Link href={`/admin/assignments?clientId=${client.id}`} className="text-primary text-xs font-medium hover:underline">Manage</Link>}
           >
+            {!!client.missing_roles?.length && (
+              <p className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                <span>
+                  {client.package_name} includes {client.missing_roles.map((r) => TEAM_ROLE_LABELS[r as TeamRole] ?? humanize(r)).join(" and ")}, but nobody is assigned.{" "}
+                  <Link href={`/admin/assignments?clientId=${client.id}`} className="font-medium underline">Assign now</Link>
+                </span>
+              </p>
+            )}
+            {client.package_roles && (
+              <p className="text-muted-foreground mb-3 text-xs">Package team: {client.package_roles.map((r) => TEAM_ROLE_LABELS[r as TeamRole] ?? humanize(r)).join(" · ")}</p>
+            )}
             {client.team.length === 0 ? (
               <p className="text-muted-foreground text-sm">No one is assigned today. Assignments grant access to this client.</p>
             ) : (

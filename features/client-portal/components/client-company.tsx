@@ -15,7 +15,7 @@ import { formatPeriod, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-client-portal";
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
-import { STAGE_OF, STAGE_WEIGHT, StagePill, isLate, shortDate } from "./client-progress";
+import { STAGE_OF, StagePill, isLate, shortDate } from "./client-progress";
 import { CompanyGate } from "./company-gate";
 import { JournlConnection } from "./journl-connection";
 import { Card, ListBody } from "./portal-ui";
@@ -81,19 +81,57 @@ export function ClientBusiness() {
 }
 
 /** What each role does for the client, in plain words. */
-const ROLE: Record<PortalTeamMember["team_role"], { label: string; does: string; verb: string }> = {
-  cfo: { label: "CFO", does: "Oversees your account and signs off your monthly reports.", verb: "Overseeing" },
-  finance_manager: { label: "Finance manager", does: "Checks every job before it's final and is your main point of contact.", verb: "Checking" },
-  reviewer: { label: "Reviewer", does: "Checks jobs before they're final.", verb: "Checking" },
-  bookkeeper: { label: "Bookkeeper", does: "Does the day-to-day work on your books.", verb: "Doing" },
+const ROLE: Record<PortalTeamMember["team_role"], { label: string; does: string; area: string }> = {
+  cfo: { label: "CFO", does: "Oversees your account and gives financial insights and advice.", area: "Financial review" },
+  finance_manager: { label: "Finance manager", does: "Reviews your accounts every month and is your main point of contact.", area: "Monthly review" },
+  reviewer: { label: "Reviewer", does: "Reviews your accounts every month.", area: "Monthly review" },
+  bookkeeper: { label: "Bookkeeper", does: "Does your day-to-day bookkeeping.", area: "Bookkeeping" },
 };
+
+type Tone = "working" | "done" | "waiting" | "scheduled";
+const TONE: Record<Tone, string> = {
+  working: "bg-amber-50 text-amber-800 ring-amber-200",
+  done: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  waiting: "bg-muted text-muted-foreground ring-border",
+  scheduled: "bg-sky-50 text-sky-800 ring-sky-200",
+};
+
+/**
+ * Where this person's area of work stands this month, in plain words. Deliberately not a score: clients see
+ * who is responsible for what and where it is, not how individual accountants are performing.
+ */
+function areaStatus(m: PortalTeamMember, tasks: PortalTask[]): { label: string; detail: string; tone: Tone } {
+  const first = m.full_name.split(" ")[0];
+  const stagesOf = (jobs: PortalTask[]) => jobs.map((t) => STAGE_OF[t.status]);
+  if (m.team_role === "bookkeeper") {
+    const s = stagesOf(jobsFor(m, tasks));
+    if (!s.length) return { label: "Nothing scheduled", detail: `No bookkeeping is planned for ${first} this month yet.`, tone: "waiting" };
+    if (s.every((x) => x === 3)) return { label: "Done for this month", detail: "This month's bookkeeping is complete and checked.", tone: "done" };
+    if (s.every((x) => x >= 2)) return { label: "Handed over for review", detail: `${first} has finished this month's bookkeeping and it's being checked.`, tone: "scheduled" };
+    if (s.some((x) => x >= 1)) return { label: "Working on this", detail: `${first} is working on this month's bookkeeping.`, tone: "working" };
+    return { label: "Starting soon", detail: `${first} will start this month's bookkeeping soon.`, tone: "scheduled" };
+  }
+  if (m.team_role === "finance_manager" || m.team_role === "reviewer") {
+    const s = stagesOf(jobsFor(m, tasks));
+    if (!s.length) return { label: "Nothing to review yet", detail: "Reviews start once this month's bookkeeping is under way.", tone: "waiting" };
+    if (s.every((x) => x === 3)) return { label: "Review complete", detail: "This month's accounts have been reviewed.", tone: "done" };
+    if (s.some((x) => x === 2)) return { label: "Reviewing your accounts", detail: `${first} is checking work that's ready for review.`, tone: "working" };
+    return { label: "Waiting for bookkeeping", detail: "The review starts as bookkeeping is finished.", tone: "waiting" };
+  }
+  const s = stagesOf(tasks);
+  if (s.length && s.every((x) => x === 3)) return { label: "Ready for financial review", detail: `The month is reviewed. ${first} looks at the bigger picture and advises.`, tone: "scheduled" };
+  return { label: "After the monthly review", detail: `${first} reviews your finances once the month's accounts are checked.`, tone: "waiting" };
+}
+
+function StatusChip({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  return <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset", TONE[tone])}>{children}</span>;
+}
 
 /** The month's jobs this person is responsible for: the ones they do, or the ones they check. The CFO oversees all. */
 function jobsFor(m: PortalTeamMember, tasks: PortalTask[]) {
   if (m.team_role === "cfo") return tasks;
   return tasks.filter((t) => (m.team_role === "bookkeeper" ? t.assignee_id === m.user_id : t.reviewer_id === m.user_id));
 }
-const progressOf = (jobs: PortalTask[]) => (jobs.length ? Math.round((jobs.reduce((n, t) => n + STAGE_WEIGHT[STAGE_OF[t.status]]!, 0) / jobs.length) * 100) : 0);
 
 function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
   return (
@@ -105,9 +143,8 @@ function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
 
 function MemberSheet({ member, tasks, period, onClose }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void }) {
   const jobs = member ? jobsFor(member, tasks) : [];
-  const done = jobs.filter((t) => STAGE_OF[t.status] === 3).length;
-  const percent = progressOf(jobs);
   const role = member ? ROLE[member.team_role] : null;
+  const status = member ? areaStatus(member, tasks) : null;
   return (
     <Sheet open={!!member} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
@@ -121,26 +158,18 @@ function MemberSheet({ member, tasks, period, onClose }: { member: PortalTeamMem
             </SheetHeader>
 
             <div className="grid gap-5 px-6 py-5">
-              <section aria-labelledby="member-progress">
-                <div className="flex items-baseline justify-between">
-                  <h3 id="member-progress" className="text-xs tracking-wide uppercase">
-                    <span className="text-muted-foreground">{period ? formatPeriod(period) : "This month"}</span> <span className="font-semibold">progress</span>
-                  </h3>
-                  <span className="text-lg font-semibold tabular-nums">{jobs.length ? `${percent}%` : "—"}</span>
+              <section aria-labelledby="member-area" className="rounded-xl border p-4">
+                <p className="text-muted-foreground text-xs tracking-wide uppercase">{period ? formatPeriod(period) : "This month"}</p>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                  <h3 id="member-area" className="font-medium">{role.area}</h3>
+                  {status && <StatusChip tone={status.tone}>{status.label}</StatusChip>}
                 </div>
-                <div className="bg-muted mt-2 h-2 overflow-hidden rounded-full" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={`${member.full_name}'s progress`}>
-                  <div className={cn("h-full rounded-full", percent === 100 ? "bg-emerald-500" : "from-primary bg-linear-to-r to-emerald-500")} style={{ width: `${percent}%` }} />
-                </div>
-                <p className="text-muted-foreground mt-2 text-xs">
-                  {jobs.length === 0
-                    ? `No jobs ${member.team_role === "bookkeeper" ? "assigned to" : "for"} ${member.full_name.split(" ")[0]} on your books this month.`
-                    : `${role.verb} ${jobs.length} job${jobs.length === 1 ? "" : "s"} · ${done} done`}
-                </p>
+                {status && <p className="text-muted-foreground mt-1 text-sm">{status.detail}</p>}
               </section>
 
               {jobs.length > 0 && (
                 <section aria-labelledby="member-jobs">
-                  <h3 id="member-jobs" className="font-medium">{member.team_role === "bookkeeper" ? "Jobs they're doing" : member.team_role === "cfo" ? "Everything this month" : "Jobs they're checking"}</h3>
+                  <h3 id="member-jobs" className="font-medium">{member.team_role === "bookkeeper" ? "What they're responsible for" : member.team_role === "cfo" ? "This month's jobs" : "What they review"}</h3>
                   <ul className="mt-3 grid gap-2">
                     {[...jobs].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status]).map((t) => {
                       const stage = STAGE_OF[t.status];
@@ -184,14 +213,13 @@ function TeamBody() {
   const monthTasks = tasks.data?.tasks ?? [];
   return (
     <>
-      <Card title="Your accounting team" subtitle="The people working on your books this month. Click someone to see their progress.">
+      <Card title="Your accounting team" subtitle="Who looks after each part of your accounts, and where it stands this month. Click someone for details.">
         <ListBody query={q} empty={{ title: "No team assigned yet", description: "Your team appears here once Accountanz assigns accountants to your company." }}>
           {(rows) => (
             <ul className="divide-y">
               {rows.map((m) => {
-                const jobs = jobsFor(m, monthTasks);
-                const done = jobs.filter((t) => STAGE_OF[t.status] === 3).length;
                 const role = ROLE[m.team_role];
+                const status = areaStatus(m, monthTasks);
                 return (
                   <li key={keyOf(m)}>
                     <button type="button" onClick={() => setOpenKey(keyOf(m))} className="hover:bg-muted/40 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-4 text-left sm:grid-cols-[auto_minmax(0,1fr)_200px_auto]">
@@ -201,15 +229,11 @@ function TeamBody() {
                         <p className="text-muted-foreground truncate text-xs">{role.does}</p>
                       </div>
                       <div className="col-span-3 col-start-2 sm:col-span-1 sm:col-start-auto">
-                        {tasks.data && jobs.length > 0 ? (
+                        {tasks.data && (
                           <>
-                            <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
-                              <div className="from-primary h-full rounded-full bg-linear-to-r to-emerald-500" style={{ width: `${progressOf(jobs)}%` }} />
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">{role.verb} {jobs.length} job{jobs.length === 1 ? "" : "s"} · {done} done</p>
+                            <p className="text-muted-foreground text-[11px] tracking-wide uppercase">{role.area}</p>
+                            <StatusChip tone={status.tone}>{status.label}</StatusChip>
                           </>
-                        ) : (
-                          tasks.data && <p className="text-muted-foreground text-xs">No jobs this month</p>
                         )}
                       </div>
                       <ChevronRight className="text-muted-foreground row-start-1 size-4 sm:row-start-auto" aria-hidden />

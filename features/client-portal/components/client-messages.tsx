@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/features/auth/hooks/use-session";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -104,6 +105,7 @@ function Conversation({ id, people }: { id: number; people: MentionPerson[] }) {
 function MessagesBody() {
   const threads = usePortalThreads();
   const mentionable = usePortalMentionable();
+  const { data: me } = useSession();
   const people = mentionable.data ?? [];
   const params = useSearchParams();
   const router = useRouter();
@@ -148,7 +150,7 @@ function MessagesBody() {
               <li key={t.id}>
                 <button type="button" onClick={() => setOpenId(t.id)} aria-current={t.id === selected} className={cn("w-full px-4 py-3 text-left", t.id === selected ? "bg-accent" : "hover:bg-muted")}>
                   <p className="truncate text-sm font-medium">{t.subject ?? "Conversation"}</p>
-                  <p className="text-muted-foreground truncate text-xs">{t.last_author ? `${t.last_author}: ` : ""}{t.last_body}</p>
+                  <p className="text-muted-foreground truncate text-xs">{t.last_author_id && t.last_author_id === me?.id ? "You: " : t.last_author ? `${t.last_author}: ` : ""}{t.last_body}</p>
                   <p className="text-muted-foreground text-[11px]">{formatDate(t.last_at ?? t.created_at, true)}</p>
                 </button>
               </li>

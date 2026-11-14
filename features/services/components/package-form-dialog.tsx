@@ -18,7 +18,7 @@ import { applyApiError } from "@/lib/form-errors";
 import { humanize } from "@/lib/format";
 import { useSavePackage, useServices } from "../hooks/use-catalogue";
 import { packageFormSchema, type PackageFormOutput, type PackageFormValues } from "../schemas/service.schema";
-import { BILLING_CYCLES, type ServicePackage } from "../types/service.types";
+import { BILLING_CYCLES, type ServicePackage, PACKAGE_ROLES, PACKAGE_ROLE_INFO } from "../types/service.types";
 
 const toValues = (p?: ServicePackage): PackageFormValues => ({
   name: p?.name ?? "",
@@ -26,6 +26,7 @@ const toValues = (p?: ServicePackage): PackageFormValues => ({
   billing_cycle: p?.billing_cycle ?? "monthly",
   description: p?.description ?? "",
   scope_notes: p?.scope_notes ?? "",
+  team_roles: p?.team_roles ?? ["bookkeeper", "finance_manager"],
   is_active: p?.is_active ?? true,
   service_ids: p?.services.map((s) => s.id) ?? [],
 });
@@ -99,6 +100,24 @@ export function PackageFormDialog({ open, onOpenChange, pkg }: { open: boolean; 
               )} />
             )}
             {errors.service_ids && <p role="alert" className="text-destructive text-xs">{errors.service_ids.message}</p>}
+          </fieldset>
+          <fieldset className="grid gap-2 sm:col-span-2">
+            <legend className="mb-1 text-sm font-medium">Team included</legend>
+            <p className="text-muted-foreground -mt-1 text-xs">The roles the client gets. You assign the people under Assignments, and can change them without changing the package.</p>
+            <Controller control={control} name="team_roles" render={({ field }) => (
+              <div className="grid gap-2 sm:grid-cols-3">
+                {PACKAGE_ROLES.map((r) => {
+                  const checked = field.value?.includes(r) ?? false;
+                  return (
+                    <Label key={r} className="hover:bg-muted flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 font-normal">
+                      <Checkbox className="mt-0.5" checked={checked} onCheckedChange={(c) => field.onChange(c ? [...(field.value ?? []), r] : (field.value ?? []).filter((x) => x !== r))} />
+                      <span><span className="block font-medium">{PACKAGE_ROLE_INFO[r].label}</span><span className="text-muted-foreground block text-xs">{PACKAGE_ROLE_INFO[r].does}</span></span>
+                    </Label>
+                  );
+                })}
+              </div>
+            )} />
+            {errors.team_roles && <p role="alert" className="text-destructive text-xs">{errors.team_roles.message}</p>}
           </fieldset>
           <FormField id="scope_notes" label="Scope notes" error={errors.scope_notes?.message} className="sm:col-span-2">
             <Textarea id="scope_notes" rows={2} placeholder="Transaction limits, bank accounts, review calls…" {...register("scope_notes")} />

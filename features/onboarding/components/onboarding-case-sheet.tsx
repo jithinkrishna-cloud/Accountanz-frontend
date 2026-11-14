@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight, Check, Info, Send, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -31,11 +31,12 @@ const toValues = (c: OnboardingCase): AssessmentFormValues => ({
   suggested_package_id: c.suggested_package_id?.toString() ?? "",
   suggested_monthly_fee: c.suggested_monthly_fee?.toString() ?? "",
   notes: c.notes ?? "",
+  proposal_message: c.proposal_message ?? "",
 });
 
 const ACTION_LABEL: Partial<Record<OnboardingStage, string>> = {
   assessment: "Start assessment",
-  proposal_sent: "Mark proposal sent",
+  proposal_sent: "Send proposal to client",
   accepted: "Mark accepted",
   rejected: "Reject",
 };
@@ -112,7 +113,13 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
       onChanged(updated);
       setRejecting(false);
       setReason("");
-      toast.success(to === "accepted" ? "Accepted. A draft engagement is ready." : `Moved to ${STAGE_LABELS[to].toLowerCase()}`);
+      toast.success(
+        to === "accepted"
+          ? "Accepted. A draft engagement is ready."
+          : to === "proposal_sent"
+            ? updated.owner_logins > 0 ? "Proposal sent. The owner has been emailed and can accept it in their portal." : "Proposal marked as sent. The company has no portal login, so nobody was emailed."
+            : `Moved to ${STAGE_LABELS[to].toLowerCase()}`,
+      );
     } catch (err) {
       applyApiError(err);
     }
@@ -228,7 +235,10 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
               <FormField id="suggested_monthly_fee" label="Proposed monthly fee (₹)" error={errors.suggested_monthly_fee?.message} hint="Before GST." className="sm:col-span-2">
                 <Input id="suggested_monthly_fee" inputMode="decimal" aria-invalid={!!errors.suggested_monthly_fee} {...register("suggested_monthly_fee")} />
               </FormField>
-              <FormField id="notes" label="Notes" error={errors.notes?.message} className="sm:col-span-2">
+              <FormField id="proposal_message" label="Message to the client" hint="Shown with the proposal in their portal and email." error={errors.proposal_message?.message} className="sm:col-span-2">
+                <Textarea id="proposal_message" rows={3} placeholder="Thanks for walking us through your business. With two branches and GST plus payroll, Growth Compliance covers everything you need." {...register("proposal_message")} />
+              </FormField>
+              <FormField id="notes" label="Internal notes" hint="Only Accountanz staff see these." error={errors.notes?.message} className="sm:col-span-2">
                 <Textarea id="notes" rows={3} {...register("notes")} />
               </FormField>
             </fieldset>
@@ -242,11 +252,34 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
           )}
         </section>
 
+        {row.stage === "accepted" && row.accepted_at && (
+          <p className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {row.accepted_via === "client"
+              ? `${row.accepted_by_name ?? "The client"} accepted the proposal in the client portal on ${formatDate(row.accepted_at, true)}.`
+              : `Marked accepted by ${row.accepted_by_name ?? "staff"} on ${formatDate(row.accepted_at, true)}.`}
+          </p>
+        )}
+
         {nextStages.length > 0 && (
           <>
             <Separator />
             <section aria-labelledby="stage-heading" className="space-y-3">
               <h3 id="stage-heading" className="font-medium">Next step</h3>
+              {row.stage === "proposal_sent" && (
+                <p className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                  <Send className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {row.owner_logins > 0
+                    ? `Sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. Waiting for the client to accept it in their portal. If they agree by phone or in a meeting, mark it accepted.`
+                    : `Marked sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. This company has no portal login, so they can't see it online: invite the owner from Clients, or mark it accepted once they agree.`}
+                </p>
+              )}
+              {row.stage === "assessment" && row.owner_logins === 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  No portal login for this company yet. The proposal can be sent, but they won&apos;t see it online until you invite the owner from Clients.
+                </p>
+              )}
               {rejecting ? (
                 <div className="space-y-3 rounded-lg border p-4">
                   <FormField id="reject-reason" label="Reason (optional)" hint="Recorded in the audit log.">
@@ -266,7 +299,8 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
                       return (
                         <Button key={s} size="sm" variant={backwards ? "outline" : "default"} disabled={stage.isPending} onClick={() => void move(s)}>
                           {s === "accepted" && <Check className="size-4" />}
-                          {backwards ? (row.stage === "rejected" ? "Reopen" : "Back to assessment") : ACTION_LABEL[s]}
+                          {s === "proposal_sent" && <Send className="size-4" />}
+                          {backwards ? (row.stage === "rejected" ? "Reopen" : "Back to assessment") : s === "accepted" ? "Mark accepted (agreed offline)" : ACTION_LABEL[s]}
                         </Button>
                       );
                     })}
@@ -278,7 +312,10 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
                 </div>
               )}
               {row.stage === "proposal_sent" && (
-                <p className="text-muted-foreground text-xs">Accepting moves the client to onboarding and opens a draft engagement on the suggested package.</p>
+                <p className="text-muted-foreground flex items-start gap-1.5 text-xs"><Info className="mt-px size-3.5 shrink-0" aria-hidden />Accepting (by the client or here) moves the client to onboarding and opens a draft engagement. &ldquo;Back to assessment&rdquo; withdraws the proposal from their portal.</p>
+              )}
+              {row.stage === "assessment" && (
+                <p className="text-muted-foreground flex items-start gap-1.5 text-xs"><Info className="mt-px size-3.5 shrink-0" aria-hidden />Sending emails the owner and shows the package, fee and your message in their portal, where they can accept it.</p>
               )}
             </section>
           </>

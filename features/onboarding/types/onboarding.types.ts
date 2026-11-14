@@ -37,6 +37,14 @@ export interface OnboardingCase {
   suggested_package_id: number | null;
   suggested_package_name: string | null;
   suggested_monthly_fee: number | null;
+  /** Shown to the client with the proposal (notes stay internal). */
+  proposal_message: string | null;
+  proposal_sent_at: string | null;
+  accepted_at: string | null;
+  accepted_by_name: string | null;
+  accepted_via: "client" | "team" | null;
+  /** Active owner logins; without one the client can't see or accept the proposal online. */
+  owner_logins: number;
   engagement_id: number | null;
   engagement_status: string | null;
   created_at: string;

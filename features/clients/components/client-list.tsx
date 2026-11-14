@@ -9,6 +9,7 @@ import { SearchInput } from "@/components/shared/search-input";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TEAM_ROLE_LABELS, type TeamRole } from "@/features/assignments/types/assignment.types";
 import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
 import { formatDate, humanize } from "@/lib/format";
 import { useClients } from "../hooks/use-clients";
@@ -29,7 +30,20 @@ const columns: Column<Client>[] = [
   { key: "gstin", header: "GSTIN", hideOnMobile: true, cell: (c) => <span className="font-mono text-xs">{c.gstin ?? "—"}</span> },
   { key: "state", header: "State", hideOnMobile: true, cell: (c) => c.state ?? "—" },
   { key: "software", header: "Software", hideOnMobile: true, cell: (c) => ACCOUNTING_SOFTWARE_LABELS[c.accounting_software] },
-  { key: "status", header: "Status", cell: (c) => <StatusBadge status={c.status} /> },
+  {
+    key: "status",
+    header: "Status",
+    cell: (c) => (
+      <span className="flex flex-wrap items-center gap-1.5">
+        <StatusBadge status={c.status} />
+        {!!c.missing_roles?.length && (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200 ring-inset" title={`Package includes: ${c.missing_roles.map((r) => TEAM_ROLE_LABELS[r as TeamRole] ?? humanize(r)).join(", ")}, not assigned`}>
+            No {c.missing_roles.map((r) => TEAM_ROLE_LABELS[r as TeamRole] ?? humanize(r)).join(", ")}
+          </span>
+        )}
+      </span>
+    ),
+  },
   { key: "added", header: "Added", hideOnMobile: true, cell: (c) => formatDate(c.created_at) },
 ];
 
