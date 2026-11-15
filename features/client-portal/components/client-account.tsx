@@ -244,27 +244,17 @@ function ProfileForm({ settings, onSave }: { settings: PortalSettings; onSave: (
 
 function NotificationsForm({ settings }: { settings: PortalSettings }) {
   const update = useUpdateSettings();
-  const [name, setName] = useState(settings.full_name);
-  const [phone, setPhone] = useState(settings.phone ?? "");
   const [prefs, setPrefs] = useState<NotificationPrefs>(settings.notification_prefs);
-  const [error, setError] = useState<string | null>(null);
   const save = async () => {
-    if (name.trim().length < 2) return setError("Enter your name");
     try {
-      await update.mutateAsync({ full_name: name.trim(), phone: phone.trim() || null, notification_prefs: prefs });
-      toast.success("Settings saved");
+      await update.mutateAsync({ notification_prefs: prefs });
+      toast.success("Notification preferences saved");
     } catch (err) {
       applyApiError(err);
     }
   };
   return (
     <div className="space-y-6">
-      <Card title="Your profile" subtitle={`${settings.email} · ${settings.company} · ${settings.role === "owner" ? "Owner" : settings.can_approve ? "Member (can approve)" : "Member"}`}>
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <FormField id="full_name" label="Name" error={error ?? undefined}><Input id="full_name" value={name} onChange={(e) => { setName(e.target.value); setError(null); }} /></FormField>
-          <FormField id="phone" label="Phone"><Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></FormField>
-        </div>
-      </Card>
       <Card title="Email notifications" subtitle="Choose what we email you about.">
         <ul className="divide-y">
           {PREFS.map((p) => (
