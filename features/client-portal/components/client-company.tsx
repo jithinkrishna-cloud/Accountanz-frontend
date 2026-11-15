@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Mail, MessageSquare } from "lucide-react";
+import { ChevronRight, Mail, MessageSquare, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -19,6 +19,7 @@ import { STAGE_OF, StagePill, isLate, shortDate } from "./client-progress";
 import { CompanyGate } from "./company-gate";
 import { JournlConnection } from "./journl-connection";
 import { Card, ListBody } from "./portal-ui";
+import { ClientJournlPermissionsDialog } from "@/features/journl-permissions/components/client-journl-permissions-dialog";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -141,7 +142,7 @@ function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
   );
 }
 
-function MemberSheet({ member, tasks, period, onClose }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void }) {
+function MemberSheet({ member, tasks, period, onClose, canManageJournl, onManageJournl }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void; canManageJournl: boolean; onManageJournl: (a: { user_id: number; full_name: string; team_role: string }) => void }) {
   const jobs = member ? jobsFor(member, tasks) : [];
   const role = member ? ROLE[member.team_role] : null;
   const status = member ? areaStatus(member, tasks) : null;
@@ -196,6 +197,11 @@ function MemberSheet({ member, tasks, period, onClose }: { member: PortalTeamMem
             <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 border-t px-6 py-4">
               <a href={`mailto:${member.email}`} className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 truncate text-xs hover:underline"><Mail className="size-3.5 shrink-0" aria-hidden />{member.email}</a>
               <Button asChild size="sm"><Link href={`/app/messages?to=${member.user_id}`}><MessageSquare className="size-4" /> Message {member.full_name.split(" ")[0]}</Link></Button>
+              {canManageJournl && (
+                <Button size="sm" variant="outline" onClick={() => { onClose(); onManageJournl({ user_id: member.user_id, full_name: member.full_name, team_role: member.team_role }); }}>
+                  <KeyRound className="size-4" aria-hidden /> Manage JournL access
+                </Button>
+              )}
             </SheetFooter>
           </>
         )}
@@ -204,10 +210,11 @@ function MemberSheet({ member, tasks, period, onClose }: { member: PortalTeamMem
   );
 }
 
-function TeamBody() {
+function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
   const q = usePortalTeam();
   const tasks = usePortalTasks();
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [managingJournl, setManagingJournl] = useState<{ user_id: number; full_name: string; team_role: string } | null>(null);
   const keyOf = (m: PortalTeamMember) => `${m.user_id}-${m.team_role}`;
   const open = q.data?.find((m) => keyOf(m) === openKey) ?? null;
   const monthTasks = tasks.data?.tasks ?? [];
@@ -245,7 +252,8 @@ function TeamBody() {
           )}
         </ListBody>
       </Card>
-      <MemberSheet member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} />
+      <MemberSheet member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} canManageJournl={canManageJournl} onManageJournl={setManagingJournl} />
+      <ClientJournlPermissionsDialog accountant={managingJournl} onClose={() => setManagingJournl(null)} />
     </>
   );
 }
@@ -253,10 +261,10 @@ function TeamBody() {
 export function ClientTeam() {
   return (
     <CompanyGate>
-      {() => (
+      {({ role }) => (
         <>
           <PageHeader title="My Accounting Team" description="Who looks after your accounts at Accountanz." />
-          <TeamBody />
+          <TeamBody canManageJournl={role === "owner"} />
         </>
       )}
     </CompanyGate>

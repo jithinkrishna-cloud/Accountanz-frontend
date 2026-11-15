@@ -24,8 +24,11 @@ export interface Catalog {
   modules: CatalogModule[];
 }
 
+export type GrantSource = "accountanz" | "client";
+
 export interface ModuleGrant {
   module_key: string;
+  grant_source: GrantSource;
   allowed_actions: string[];
   status: "active" | "revoked";
   granted_by_name: string | null;
@@ -49,6 +52,8 @@ export interface ModuleAccess {
   default_policy: ModulePolicy;
   verified: boolean;
   grant: ModuleGrant | null;
+  /** The client's own grant for this module (client-set ceiling; JournL enforces this side). */
+  client_grant: ModuleGrant | null;
   /** Granted actions that pass every Accountanz gate; JournL still applies the client's grant. */
   effective_actions: string[];
   /** Why granted actions don't take effect, when they don't. */
@@ -60,6 +65,23 @@ export interface AssignmentPermissions extends AssignmentGates {
   client_grant: "unknown";
   allow_unverified: boolean;
   modules: ModuleAccess[];
+}
+
+/** Client-facing view of one accountant's JournL module permissions on this client. */
+export interface ClientModulePermission {
+  module_key: string;
+  label: string;
+  client_granted: boolean;
+  client_actions: string[];
+  effective: boolean;
+  reason: string | null;
+}
+
+export interface ClientAssignmentPermission {
+  user_id: number;
+  full_name: string;
+  team_role: string;
+  modules: ClientModulePermission[];
 }
 
 /** Admin overview: per client, the JournL connection/session and each assigned person's module access. */

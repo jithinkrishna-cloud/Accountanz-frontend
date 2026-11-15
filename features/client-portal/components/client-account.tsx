@@ -15,11 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { applyApiError } from "@/lib/form-errors";
+import { cn } from "@/lib/utils";
 import { formatDate, formatINR, formatPeriod, humanize } from "@/lib/format";
-import { usePortalBilling, usePortalSettings, useUpdateSettings } from "../hooks/use-client-portal";
-import type { NotificationPrefs, PortalBilling, PortalSettings } from "../types/client-portal.types";
+import { usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
+import type { NotificationPrefs, PortalBilling, PortalCompany, PortalSettings } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { Card } from "./portal-ui";
+import { JournlConnection } from "./journl-connection";
 
 // ───────────── Service & Billing ─────────────
 
@@ -112,7 +114,135 @@ const PREFS: { key: keyof NotificationPrefs; label: string; description: string 
   { key: "monthly_summary", label: "Monthly summary", description: "A short summary after each month closes." },
 ];
 
-function SettingsForm({ settings }: { settings: PortalSettings }) {
+function ProfileForm({ settings, onSave }: { settings: PortalSettings; onSave: () => void }) {
+  const updateClient = useUpdateClient();
+  const q = usePortalBusiness();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<{
+    legal_name: string; trade_name: string; gstin: string; pan: string; state: string; address: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const business = q.data;
+  const save = async () => {
+    if (!draft) return;
+    try {
+      await updateClient.mutateAsync({
+        legal_name: draft.legal_name.trim() || undefined,
+        trade_name: draft.trade_name.trim() || null,
+        gstin: draft.gstin.trim() || null,
+        pan: draft.pan.trim() || null,
+        state: draft.state.trim() || null,
+        address: draft.address.trim() || null,
+      });
+      toast.success("Business details saved");
+      setEditing(false);
+      setDraft(null);
+      void q.refetch();
+      onSave();
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  const startEdit = () => {
+    if (!business) return;
+    setDraft({
+      legal_name: business.legal_name ?? "",
+      trade_name: business.trade_name ?? "",
+      gstin: business.gstin ?? "",
+      pan: business.pan ?? "",
+      state: business.state ?? "",
+      address: business.address ?? "",
+    });
+    setEditing(true);
+    setError(null);
+  };
+  if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
+  if (q.isLoading || !business) return <Skeleton className="h-64 w-full rounded-xl" />;
+  const baseDraft = {
+    legal_name: business.legal_name ?? "",
+    trade_name: business.trade_name ?? "",
+    gstin: business.gstin ?? "",
+    pan: business.pan ?? "",
+    state: business.state ?? "",
+    address: business.address ?? "",
+  };
+  return (
+    <div className="space-y-6">
+      <Card title="Your profile" subtitle={`${settings.email} · ${settings.company} · ${settings.role === "owner" ? "Owner" : settings.can_approve ? "Member (can approve)" : "Member"}`}>
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <FormField id="full_name" label="Name"><Input id="full_name" defaultValue={settings.full_name} readOnly /></FormField>
+          <FormField id="email" label="Email"><Input id="email" defaultValue={settings.email} type="email" readOnly /></FormField>
+          <FormField id="phone" label="Phone"><Input id="phone" type="tel" defaultValue={settings.phone ?? ""} readOnly /></FormField>
+        </div>
+      </Card>
+      <Card title="Business details" subtitle="Your company details as registered with Accountanz.">
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <FormField id="legal_name" label="Legal name" error={error ?? undefined}>
+            <Input
+              id="legal_name"
+              defaultValue={baseDraft.legal_name}
+              onChange={(e) => { setDraft({ ...baseDraft, legal_name: e.target.value }); setError(null); }}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="trade_name" label="Trade name">
+            <Input
+              id="trade_name"
+              defaultValue={baseDraft.trade_name}
+              onChange={(e) => setDraft({ ...baseDraft, trade_name: e.target.value })}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="gstin" label="GSTIN">
+            <Input
+              id="gstin"
+              defaultValue={baseDraft.gstin}
+              onChange={(e) => setDraft({ ...baseDraft, gstin: e.target.value })}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="pan" label="PAN">
+            <Input
+              id="pan"
+              defaultValue={baseDraft.pan}
+              onChange={(e) => setDraft({ ...baseDraft, pan: e.target.value })}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="state" label="State">
+            <Input
+              id="state"
+              defaultValue={baseDraft.state}
+              onChange={(e) => setDraft({ ...baseDraft, state: e.target.value })}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="address" label="Address">
+            <Input
+              id="address"
+              defaultValue={baseDraft.address}
+              onChange={(e) => setDraft({ ...baseDraft, address: e.target.value })}
+              readOnly={!editing}
+            />
+          </FormField>
+          <FormField id="software" label="Accounting software"><Input id="software" defaultValue={business.accounting_software} readOnly /></FormField>
+        </div>
+        <div className="px-5 pt-4 pb-5 border-t border-muted flex justify-end gap-2">
+          {editing ? (
+            <>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(false); setDraft(null); }}>Cancel</Button>
+              <SubmitButton type="button" pending={updateClient.isPending} onClick={() => void save()}>Save changes</SubmitButton>
+            </>
+          ) : (
+            <Button type="button" size="sm" onClick={startEdit}>Edit details</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function NotificationsForm({ settings }: { settings: PortalSettings }) {
   const update = useUpdateSettings();
   const [name, setName] = useState(settings.full_name);
   const [phone, setPhone] = useState(settings.phone ?? "");
@@ -153,22 +283,58 @@ function SettingsForm({ settings }: { settings: PortalSettings }) {
   );
 }
 
-function SettingsBody() {
+function JournlAccessTab({ company }: { company: PortalCompany }) {
+  return (
+    <Card title="Accounting Software" subtitle="Where your books live.">
+      <JournlConnection company={company} />
+    </Card>
+  );
+}
+
+function SettingsBody({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = usePortalSettings();
+  const [tab, setTab] = useState<"profile" | "journl" | "notifications">("profile");
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !data) return <Skeleton className="h-64 w-full rounded-xl" />;
-  return <SettingsForm settings={data} />;
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 border-b border-muted">
+        <button
+          onClick={() => setTab("profile")}
+          className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "profile" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => setTab("journl")}
+          className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "journl" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
+        >
+          JournL Access
+        </button>
+        <button
+          onClick={() => setTab("notifications")}
+          className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "notifications" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
+        >
+          Notifications
+        </button>
+      </div>
+      {tab === "profile" && <ProfileForm settings={data} onSave={() => void refetch()} />}
+      {tab === "journl" && <JournlAccessTab company={company} />}
+      {tab === "notifications" && <NotificationsForm settings={data} />}
+    </div>
+  );
 }
 
 export function ClientSettings() {
   return (
     <CompanyGate>
-      {() => (
+      {(company) => (
         <>
-          <PageHeader title="Settings" description="Your profile and notification preferences." />
-          <SettingsBody />
+          <PageHeader title="Settings" description="Your profile, JournL access and notification preferences." />
+          <SettingsBody company={company} />
         </>
       )}
     </CompanyGate>
   );
 }
+

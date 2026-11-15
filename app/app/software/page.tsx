@@ -1,5 +1,12 @@
-import { ClientSoftware } from "@/features/client-portal/components/client-company";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ClientSoftwarePage() {
-  return <ClientSoftware />;
+  const router = useRouter();
+  useEffect(() => {
+    void router.replace("/app/settings");
+  }, [router]);
+  return null;
 }

@@ -184,7 +184,6 @@ export const NAV: Record<Portal, NavGroup[]> = {
       items: [
         { label: "My Business", href: "/app/business", icon: Building2 },
         { label: "My Accounting Team", href: "/app/team", icon: UsersRound },
-        { label: "Accounting Software", href: "/app/software", icon: Plug },
       ],
     },
     {

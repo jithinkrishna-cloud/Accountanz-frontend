@@ -69,4 +69,6 @@ export const clientPortalService = {
   settings: () => api<PortalSettings>("/app/settings"),
   updateSettings: (body: { full_name?: string; phone?: string | null; notification_prefs?: NotificationPrefs }) =>
     api<PortalSettings>("/app/settings", { method: "PATCH", body }),
+  updateClient: (body: { legal_name?: string; trade_name?: string | null; gstin?: string | null; pan?: string | null; state?: string | null; address?: string | null }) =>
+    api<PortalBusiness>("/app/client", { method: "PATCH", body }),
 };

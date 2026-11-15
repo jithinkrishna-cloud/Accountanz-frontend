@@ -32,6 +32,11 @@ export function useWithdrawMeetingRequest() {
 export const usePortalBilling = () => useQuery({ queryKey: K("billing"), queryFn: s.billing });
 export const usePortalSettings = () => useQuery({ queryKey: K("settings"), queryFn: s.settings });
 
+export function useUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.updateClient, onSuccess: () => void qc.invalidateQueries({ queryKey: K("business") }) });
+}
+
 function useInvalidate(...keys: string[]) {
   const qc = useQueryClient();
   return () => {
