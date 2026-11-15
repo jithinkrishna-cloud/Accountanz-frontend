@@ -5,7 +5,7 @@ import type { Checklist, ClientOverview, MyClient, WorkspaceDashboard } from "..
 
 export const workspaceService = {
   dashboard: () => api<WorkspaceDashboard>("/team/workspace/dashboard"),
-  clients: () => api<{ items: MyClient[] }>("/team/workspace/clients").then((r) => r.items),
+  clients: (portal: StaffPortal = "team") => api<{ items: MyClient[] }>(`/${portal}/workspace/clients`).then((r) => r.items),
   client: (id: number, portal: StaffPortal = "team") => api<ClientOverview>(`/${portal}/workspace/clients/${id}`),
   /** Read-only JournL books for a client (needs JournL access on the assignment). */
   journlData: (id: number, period: { from?: string; to?: string }) => api<JournlOverview>(`/team/workspace/clients/${id}/journl-data`, { query: period }),

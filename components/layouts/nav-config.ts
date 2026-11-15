@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bell,
   BookOpen,
   ChartColumn,
@@ -86,6 +87,7 @@ export const NAV: Record<Portal, NavGroup[]> = {
         { label: "Document Centre", href: "/admin/documents", icon: FolderOpen },
         { label: "Reviews & Approvals", href: "/admin/reviews", icon: CircleCheck },
         { label: "Month-End Closing", href: "/admin/closing", icon: CalendarCheck },
+        { label: "Workspace", href: "/admin/workspace", icon: Activity },
       ],
     },
     {
