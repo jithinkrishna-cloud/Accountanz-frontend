@@ -16,6 +16,7 @@ export interface StaffUpdate {
 
 export const staffService = {
   list: (params: { type: StaffType; q?: string; page?: number }) => api<Paged<StaffMember>>("/admin/staff", { query: params }),
+  get: (id: number) => api<StaffMember>(`/admin/staff/${id}`),
   invite: (body: { staff_type: StaffType; full_name: string; email: string; phone: string; portal_role: string }) =>
     api<StaffMember & { invite_url: string; email_sent: boolean }>("/admin/staff/invite", { method: "POST", body }),
   /** New one-time link to set a password (also emailed); earlier links stop working. */

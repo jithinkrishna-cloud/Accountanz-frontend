@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -50,7 +51,9 @@ export function StaffList({ staffType }: { staffType: StaffType }) {
       header: "Name",
       cell: (m) => (
         <div className="min-w-0">
-          <p className="truncate font-medium">{m.full_name}</p>
+          <Link href={`/admin/${staffType === "accountant" ? "accountants" : "employees"}/${m.user_id}`} className="truncate font-medium hover:underline">
+            {m.full_name}
+          </Link>
           <p className="text-muted-foreground truncate text-xs">{m.email}</p>
         </div>
       ),

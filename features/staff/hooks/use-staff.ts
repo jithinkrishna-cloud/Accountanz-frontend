@@ -9,6 +9,9 @@ const KEY = ["admin", "staff"] as const;
 export const useStaff = (params: { type: StaffType; q?: string; page?: number }) =>
   useQuery({ queryKey: [...KEY, params], queryFn: () => staffService.list(params), placeholderData: keepPreviousData });
 
+export const useStaffMember = (id: number, enabled = true) =>
+  useQuery({ queryKey: [...KEY, "detail", id], queryFn: () => staffService.get(id), enabled: enabled && Number.isFinite(id) && id > 0 });
+
 export function useInviteStaff() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: staffService.invite, onSuccess: () => void qc.invalidateQueries({ queryKey: KEY }) });
