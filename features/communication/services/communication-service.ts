@@ -22,6 +22,8 @@ export const communicationService = {
   startThread: (portal: StaffPortal, body: { client_id: number; visibility: ThreadVisibility; subject: string; body: string; mentions?: number[] }) =>
     api<ThreadDetail>(`${base(portal)}/threads`, { method: "POST", body }),
   reply: (portal: StaffPortal, id: number, body: string, mentions: number[] = []) => api<ThreadDetail>(`${base(portal)}/threads/${id}/messages`, { method: "POST", body: { body, mentions } }),
+  editMessage: (portal: StaffPortal, id: number, messageId: number, body: string, mentions: number[] = []) =>
+    api<ThreadDetail>(`${base(portal)}/threads/${id}/messages/${messageId}`, { method: "PATCH", body: { body, mentions } }),
   mentionable: (portal: StaffPortal, clientId: number, visibility: ThreadVisibility) =>
     api<{ items: MentionPerson[] }>(`${base(portal)}/mentionable`, { query: { client_id: clientId, visibility } }).then((r) => r.items),
   meetings: (portal: StaffPortal, params: { client_id?: string; when: "upcoming" | "past"; page?: number }) =>

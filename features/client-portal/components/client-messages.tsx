@@ -17,7 +17,8 @@ import { useSession } from "@/features/auth/hooks/use-session";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePortalMentionable, usePortalThread, usePortalThreads, useReply, useStartThread } from "../hooks/use-client-portal";
+import { EditMessageButton, MessageEditor } from "@/components/shared/message-edit";
+import { useEditMessage, usePortalMentionable, usePortalThread, usePortalThreads, useReply, useStartThread } from "../hooks/use-client-portal";
 import { CompanyGate } from "./company-gate";
 
 /** Opening values for a new message, e.g. from "Message Arun" on a job (?to=<user id>&subject=…). */
@@ -66,10 +67,12 @@ function NewThreadDialog({ draft, people, onClose, onCreated }: { draft: Draft; 
   );
 }
 
-function Conversation({ id, people }: { id: number; people: MentionPerson[] }) {
+function Conversation({ id, people, meId }: { id: number; people: MentionPerson[]; meId?: number }) {
   const { data, isLoading, error, refetch } = usePortalThread(id);
   const reply = useReply(id);
+  const edit = useEditMessage(id);
   const [body, setBody] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !data) return <div className="space-y-3 p-5"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-16 w-2/3" /></div>;
   const send = async () => {
@@ -85,12 +88,29 @@ function Conversation({ id, people }: { id: number; people: MentionPerson[] }) {
     <div className="flex h-full min-h-0 flex-col">
       <h2 className="border-b px-5 py-4 font-medium">{data.subject ?? "Conversation"}</h2>
       <ol className="flex-1 space-y-3 overflow-y-auto p-5">
-        {data.messages.map((m) => (
-          <li key={m.id} className={cn("max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm", m.from_client ? "bg-primary text-primary-foreground ml-auto" : "bg-muted")}>
-            <p className="whitespace-pre-line"><MentionText body={m.body} mentions={m.mentions} onDark={m.from_client} /></p>
-            <p className={cn("mt-1 text-[11px]", m.from_client ? "text-primary-foreground/80" : "text-muted-foreground")}>{m.author ?? "—"} · {formatDate(m.created_at, true)}</p>
-          </li>
-        ))}
+        {data.messages.map((m) => {
+          const mine = !!meId && m.author_id === meId;
+          const editing = editingId === m.id;
+          return (
+            <li key={m.id} className={cn("max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm", editing && "w-full", m.from_client ? "bg-primary text-primary-foreground ml-auto" : "bg-muted")}>
+              {editing ? (
+                <MessageEditor
+                  initial={m.body}
+                  people={people}
+                  pending={edit.isPending}
+                  onSave={(text, mentions) => edit.mutateAsync({ messageId: m.id, body: text, mentions })}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <p className="whitespace-pre-line"><MentionText body={m.body} mentions={m.mentions} onDark={m.from_client} /></p>
+              )}
+              <p className={cn("mt-1 flex flex-wrap items-center gap-x-2 text-[11px]", m.from_client ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                <span>{m.author ?? "—"} · {formatDate(m.created_at, true)}{m.edited_at && <span title={`Edited ${formatDate(m.edited_at, true)}`}> · edited</span>}</span>
+                {mine && !editing && <EditMessageButton secondsLeft={m.edit_seconds_left} onEdit={() => setEditingId(m.id)} onDark={m.from_client} />}
+              </p>
+            </li>
+          );
+        })}
       </ol>
       <form className="flex items-end gap-2 border-t p-3" onSubmit={(e) => { e.preventDefault(); void send(); }}>
         <div className="flex-1">
@@ -156,7 +176,7 @@ function MessagesBody() {
               </li>
             ))}
           </ul>
-          {selected && <Conversation key={selected} id={selected} people={people} />}
+          {selected && <Conversation key={selected} id={selected} people={people} meId={me?.id} />}
         </div>
       )}
       {draft && <NewThreadDialog draft={draft} people={people} onClose={closeDraft} onCreated={setOpenId} />}

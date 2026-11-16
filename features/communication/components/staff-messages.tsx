@@ -15,7 +15,8 @@ import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StaffPortal } from "@/types/auth";
-import { useMentionable, useReply, useThread, useThreads } from "../hooks/use-communication";
+import { EditMessageButton, MessageEditor } from "@/components/shared/message-edit";
+import { useEditMessage, useMentionable, useReply, useThread, useThreads } from "../hooks/use-communication";
 import type { Thread, ThreadVisibility } from "../types/communication.types";
 import { NewThreadDialog } from "./new-thread-dialog";
 
@@ -48,6 +49,9 @@ function ThreadListItem({ thread, active, meId, onSelect }: { thread: Thread; ac
 function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threadId: number; onBack: () => void }) {
   const { data: t, isLoading, error, refetch } = useThread(portal, threadId);
   const reply = useReply(portal, threadId);
+  const edit = useEditMessage(portal, threadId);
+  const meId = useSession().data?.id;
+  const [editingId, setEditingId] = useState<number | null>(null);
   const mentionable = useMentionable(portal, t?.client_id ?? null, t?.visibility ?? "client");
   const people = mentionable.data ?? [];
   const [body, setBody] = useState("");
@@ -81,15 +85,35 @@ function Conversation({ portal, threadId, onBack }: { portal: StaffPortal; threa
         </div>
       </header>
       <ol className="flex-1 space-y-3 overflow-y-auto p-5" aria-label="Messages">
-        {t.items.map((m) => (
-          <li key={m.id} className={cn("flex", m.from_client ? "justify-start" : "justify-end")}>
-            <div className={cn("max-w-[85%] rounded-xl px-4 py-2.5 text-sm", m.from_client ? "bg-muted" : internal ? "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-50" : "bg-primary text-primary-foreground")}>
-              <p className="text-xs font-medium opacity-80">{m.author ?? "Former user"}{m.from_client ? " · client" : ""}</p>
-              <p className="mt-0.5 whitespace-pre-wrap break-words"><MentionText body={m.body} mentions={m.mentions} onDark={!m.from_client && !internal} /></p>
-              <p className="mt-1 text-[11px] opacity-70">{formatDate(m.created_at, true)}</p>
-            </div>
-          </li>
-        ))}
+        {t.items.map((m) => {
+          const mine = !!meId && m.author_id === meId;
+          const editing = editingId === m.id;
+          const onDark = !m.from_client && !internal;
+          return (
+            <li key={m.id} className={cn("flex", m.from_client ? "justify-start" : "justify-end")}>
+              <div className={cn("max-w-[85%] rounded-xl px-4 py-2.5 text-sm", editing && "w-full", m.from_client ? "bg-muted" : internal ? "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-50" : "bg-primary text-primary-foreground")}>
+                <p className="text-xs font-medium opacity-80">{m.author ?? "Former user"}{m.from_client ? " · client" : ""}</p>
+                {editing ? (
+                  <div className="mt-1">
+                    <MessageEditor
+                      initial={m.body}
+                      people={people}
+                      pending={edit.isPending}
+                      onSave={(text, mentions) => edit.mutateAsync({ messageId: m.id, body: text, mentions })}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-0.5 whitespace-pre-wrap break-words"><MentionText body={m.body} mentions={m.mentions} onDark={onDark} /></p>
+                )}
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px]">
+                  <span className="opacity-70">{formatDate(m.created_at, true)}{m.edited_at && <span title={`Edited ${formatDate(m.edited_at, true)}`}> · edited</span>}</span>
+                  {mine && !editing && <EditMessageButton secondsLeft={m.edit_seconds_left} onEdit={() => setEditingId(m.id)} onDark={onDark} />}
+                </p>
+              </div>
+            </li>
+          );
+        })}
       </ol>
       <form onSubmit={send} className="border-t p-4" noValidate>
         <label htmlFor="reply" className="sr-only">Reply</label>

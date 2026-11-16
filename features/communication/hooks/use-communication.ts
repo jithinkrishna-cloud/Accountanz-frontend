@@ -46,6 +46,15 @@ export function useReply(portal: StaffPortal, threadId: number) {
   return useMutation({ mutationFn: ({ body, mentions }: { body: string; mentions?: number[] }) => communicationService.reply(portal, threadId, body, mentions), onSuccess: refresh });
 }
 
+/** Edit one of your own messages (allowed for a few minutes after sending). */
+export function useEditMessage(portal: StaffPortal, threadId: number) {
+  const refresh = useRefresh(portal);
+  return useMutation({
+    mutationFn: ({ messageId, body, mentions }: { messageId: number; body: string; mentions?: number[] }) => communicationService.editMessage(portal, threadId, messageId, body, mentions),
+    onSuccess: refresh,
+  });
+}
+
 export function useScheduleMeeting(portal: StaffPortal) {
   const refresh = useRefresh(portal);
   return useMutation({ mutationFn: (body: NewMeeting) => communicationService.schedule(portal, body), onSuccess: refresh });

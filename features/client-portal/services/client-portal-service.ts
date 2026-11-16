@@ -59,6 +59,7 @@ export const clientPortalService = {
   thread: (id: number) => api<PortalThreadDetail>(`/app/messages/${id}`),
   startThread: (subject: string, body: string, mentions: number[] = []) => api<PortalThreadDetail>("/app/messages", { method: "POST", body: { subject, body, mentions } }),
   reply: (id: number, body: string, mentions: number[] = []) => api<PortalThreadDetail>(`/app/messages/${id}`, { method: "POST", body: { body, mentions } }),
+  editMessage: (id: number, messageId: number, body: string, mentions: number[] = []) => api<PortalThreadDetail>(`/app/messages/${id}/${messageId}`, { method: "PATCH", body: { body, mentions } }),
   mentionable: () => items<MentionPerson>("/app/messages/mentionable"),
   meetings: () => items<PortalMeeting>("/app/meetings"),
   meetingRequests: () => items<PortalMeetingRequest>("/app/meeting-requests"),

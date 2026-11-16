@@ -21,6 +21,9 @@ export interface Message {
   id: number;
   body: string;
   created_at: string;
+  edited_at: string | null;
+  /** How long the author can still edit it (0 once the window has closed). */
+  edit_seconds_left: number;
   author: string | null;
   author_id: number | null;
   from_client: 0 | 1;

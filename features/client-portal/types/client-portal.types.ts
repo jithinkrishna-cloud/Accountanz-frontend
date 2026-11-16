@@ -146,7 +146,8 @@ export interface PortalThread {
 export interface PortalThreadDetail {
   id: number;
   subject: string | null;
-  messages: { id: number; body: string; created_at: string; author: string | null; from_client: boolean; mentions: { user_id: number; full_name: string }[] }[];
+  /** edit_seconds_left: how long the author can still edit it (0 once the window has closed). */
+  messages: { id: number; body: string; created_at: string; edited_at: string | null; edit_seconds_left: number; author: string | null; author_id: number | null; from_client: boolean; mentions: { user_id: number; full_name: string }[] }[];
 }
 
 export interface PortalMeeting {

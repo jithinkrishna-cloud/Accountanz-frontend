@@ -78,6 +78,18 @@ export function useReply(threadId: number) {
   });
 }
 
+/** Edit one of your own messages (allowed for a few minutes after sending). */
+export function useEditMessage(threadId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, body, mentions }: { messageId: number; body: string; mentions?: number[] }) => s.editMessage(threadId, messageId, body, mentions),
+    onSuccess: (t) => {
+      qc.setQueryData(K("messages", t.id), t);
+      void qc.invalidateQueries({ queryKey: K("messages") });
+    },
+  });
+}
+
 export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.updateSettings, onSuccess: (d) => qc.setQueryData(K("settings"), d) });
