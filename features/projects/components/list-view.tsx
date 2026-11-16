@@ -145,9 +145,9 @@ export function ListView() {
   const data = query.data;
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchInput value={q} onChange={reset(setQ)} placeholder="Search work" className="sm:w-56" />
+    <div className="grid min-w-0 gap-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <SearchInput value={q} onChange={reset(setQ)} placeholder="Search work" className="w-full sm:w-56" />
         <AssigneeFilter members={members} value={assignees} onChange={reset(setAssignees)} />
         <FilterSelect allLabel="All types" value={type} onChange={reset(setType)} options={ITEM_TYPES.map((t) => ({ value: t, label: ITEM_TYPE_LABELS[t] }))} />
         <FilterSelect allLabel="All statuses" value={statusId} onChange={reset(setStatusId)} options={space.statuses.map((s) => ({ value: String(s.id), label: s.name }))} />
@@ -158,7 +158,7 @@ export function ListView() {
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto"><Columns3 className="size-4" /> Columns</Button>
+            <Button variant="outline" size="sm" className="sm:ml-auto"><Columns3 className="size-4" /> Columns</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {COLUMNS.filter((c) => c.key !== "sprint" || scrum).map((c) => (
@@ -174,9 +174,9 @@ export function ListView() {
       ) : !data ? (
         <Skeleton className="h-96 w-full" />
       ) : (
-        <div className="bg-card rounded-xl border shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="bg-card min-w-0 rounded-xl border shadow-xs">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-max text-sm">
               <thead className="border-b">
                 <tr>
                   {header("Work", "key")}
@@ -205,14 +205,15 @@ export function ListView() {
             </table>
           </div>
           <div className="flex flex-wrap items-center gap-3 border-t p-2">
-            <QuickCreate spaceKey={space.space_key} className="text-muted-foreground justify-start" />
-            <div className="text-muted-foreground ml-auto flex items-center gap-2 text-sm">
-              <span>
-                {data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1}–{Math.min(data.page * data.pageSize, data.total)} of {data.total}
+            <QuickCreate spaceKey={space.space_key} className="text-muted-foreground min-w-0 justify-start" />
+            <div className="text-muted-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
+              <span className="whitespace-nowrap">
+                {data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1}�?"{Math.min(data.page * data.pageSize, data.total)} of {data.total}
               </span>
               <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
               <Button size="sm" variant="outline" disabled={page * data.pageSize >= data.total} onClick={() => setPage(page + 1)}>Next</Button>
             </div>
+          </div>
           </div>
         </div>
       )}
