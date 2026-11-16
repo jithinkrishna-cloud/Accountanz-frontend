@@ -98,7 +98,7 @@ export default function AdminWorkspacePage() {
   if (loading || !dashboard) {
     return (
       <>
-        <PageHeader title="Workspace" description="All clients and every accountant’s working progress across the firm." />
+        <PageHeader title="Team Progress" description="All clients and every accountant’s working progress across the firm." />
         <div className="grid gap-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-8 w-48" /><Skeleton className="h-8 w-48" /></div>
       </>
     );
@@ -107,7 +107,7 @@ export default function AdminWorkspacePage() {
   return (
     <>
       <PageHeader
-        title="Workspace"
+        title="Team Progress"
         description="All clients and every accountant’s working progress across the firm."
         actions={
           <div className="flex items-center gap-2">

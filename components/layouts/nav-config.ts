@@ -1,6 +1,5 @@
 import {
   Activity,
-  Bell,
   BookOpen,
   ChartColumn,
   Briefcase,
@@ -50,44 +49,43 @@ export const PORTAL_LABEL: Record<Portal, string> = {
   app: "Client Portal",
 };
 
+/**
+ * Each portal's sidebar, ordered by how the work flows and how often it's used:
+ * admin = see the firm → win & onboard clients → run the work → deliver → bill → people → setup;
+ * team  = my day → my clients' books → review & close → deliver → talk;
+ * app   = what's waiting on the client → their books → contact → their company → account.
+ */
 export const NAV: Record<Portal, NavGroup[]> = {
   admin: [
     {
       label: "Overview",
       items: [
         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-        // Switches into the team's project Workspace (its own layout; "Back to Accountanz" returns here).
-        { label: "Workspace", href: "/projects", icon: SquareKanban },
+        { label: "Team Progress", href: "/admin/workspace", icon: Activity },
+        { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
       ],
     },
     {
-      label: "Business",
+      // A client's lifecycle: prospect → client → signed engagement; the catalogue they buy from comes after.
+      label: "Clients",
       items: [
-        { label: "Clients", href: "/admin/clients", icon: Building2 },
         { label: "Onboarding", href: "/admin/onboarding", icon: UserPlus },
-        { label: "Services", href: "/admin/services", icon: Briefcase },
-        { label: "Packages", href: "/admin/packages", icon: Package },
+        { label: "Clients", href: "/admin/clients", icon: Building2 },
         { label: "Engagements", href: "/admin/engagements", icon: Handshake },
+        { label: "Packages", href: "/admin/packages", icon: Package },
+        { label: "Services", href: "/admin/services", icon: Briefcase },
       ],
     },
     {
-      label: "People",
-      items: [
-        { label: "Accountants", href: "/admin/accountants", icon: UserCog },
-        { label: "Employees", href: "/admin/employees", icon: Users },
-        { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
-        { label: "Teams", href: "/admin/teams", icon: UsersRound },
-      ],
-    },
-    {
+      // Daily operations, in the order work moves: plan → do → review → close.
       label: "Operations",
       items: [
+        // Switches into the project Workspace (its own layout; "Back to Accountanz" returns here).
+        { label: "Workspace", href: "/projects", icon: SquareKanban },
         { label: "Task Management", href: "/admin/tasks", icon: ClipboardList },
-        { label: "Task Templates", href: "/admin/task-templates", icon: ListChecks },
         { label: "Document Centre", href: "/admin/documents", icon: FolderOpen },
         { label: "Reviews & Approvals", href: "/admin/reviews", icon: CircleCheck },
         { label: "Month-End Closing", href: "/admin/closing", icon: CalendarCheck },
-        { label: "Workspace", href: "/admin/workspace", icon: Activity },
       ],
     },
     {
@@ -108,12 +106,22 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
-      label: "Platform",
+      // Who works on what first (most used), then the people records.
+      label: "People",
       items: [
-        { label: "Integrations", href: "/admin/integrations", icon: Plug },
+        { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
+        { label: "Teams", href: "/admin/teams", icon: UsersRound },
+        { label: "Accountants", href: "/admin/accountants", icon: UserCog },
+        { label: "Employees", href: "/admin/employees", icon: Users },
+      ],
+    },
+    {
+      // Configured once, revisited rarely.
+      label: "Setup",
+      items: [
+        { label: "Task Templates", href: "/admin/task-templates", icon: ListChecks },
         { label: "JournL Access", href: "/admin/journl-access", icon: KeyRound },
-        { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
-        { label: "Notifications", href: "/admin/notifications", icon: Bell },
+        { label: "Integrations", href: "/admin/integrations", icon: Plug },
         { label: "Knowledge Base", href: "/admin/knowledge-base", icon: BookOpen },
         { label: "Audit Logs", href: "/admin/audit", icon: ScrollText },
         { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -122,23 +130,29 @@ export const NAV: Record<Portal, NavGroup[]> = {
   ],
   team: [
     {
-      label: "Overview",
+      // An accountant's day: what's assigned to me, then everything else that's waiting.
+      label: "My work",
       items: [
         { label: "My Dashboard", href: "/team/dashboard", icon: LayoutDashboard },
-        { label: "My Clients", href: "/team/clients", icon: Building2 },
+        { label: "My Tasks", href: "/team/tasks", icon: ListChecks },
+        { label: "Work Queue", href: "/team/queue", icon: Kanban },
         { label: "Workspace", href: "/projects", icon: SquareKanban },
       ],
     },
     {
-      label: "Work",
+      label: "Clients",
       items: [
-        { label: "Work Queue", href: "/team/queue", icon: Kanban },
-        { label: "My Tasks", href: "/team/tasks", icon: ListChecks },
-        { label: "Review Queue", href: "/team/reviews", icon: CircleCheck },
-        { label: "Documents", href: "/team/documents", icon: FolderOpen },
-        { label: "Month-End Closing", href: "/team/closing", icon: CalendarCheck },
+        { label: "My Clients", href: "/team/clients", icon: Building2 },
         // Opens the JournL area, which has its own module sub-sidebar (read-only, live from JournL).
         { label: "JournL Books", href: "/team/journl", icon: BookOpen },
+        { label: "Documents", href: "/team/documents", icon: FolderOpen },
+      ],
+    },
+    {
+      label: "Review & close",
+      items: [
+        { label: "Review Queue", href: "/team/reviews", icon: CircleCheck },
+        { label: "Month-End Closing", href: "/team/closing", icon: CalendarCheck },
       ],
     },
     {
@@ -160,17 +174,18 @@ export const NAV: Record<Portal, NavGroup[]> = {
     // Ordered by how often a client needs it: what's waiting on them, then their books, then contact, then setup.
     { label: "Overview", items: [{ label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard }] },
     {
+      // Things only the client can unblock: send what's asked for, then sign off.
       label: "Action needed",
       items: [
-        { label: "Approvals", href: "/app/approvals", icon: CircleCheck },
         { label: "Document Requests", href: "/app/requests", icon: FileText },
+        { label: "Approvals", href: "/app/approvals", icon: CircleCheck },
       ],
     },
     {
       label: "Books & reports",
       items: [
-        { label: "Reports", href: "/app/reports", icon: ChartColumn },
         { label: "Tasks & Progress", href: "/app/progress", icon: ListChecks },
+        { label: "Reports", href: "/app/reports", icon: ChartColumn },
         { label: "Document Centre", href: "/app/documents", icon: FolderOpen },
       ],
     },
@@ -191,8 +206,8 @@ export const NAV: Record<Portal, NavGroup[]> = {
     {
       label: "Account",
       items: [
-        { label: "Packages", href: "/app/packages", icon: Package },
         { label: "Service & Billing", href: "/app/billing", icon: CreditCard },
+        { label: "Packages", href: "/app/packages", icon: Package },
         { label: "Settings", href: "/app/settings", icon: Settings },
       ],
     },

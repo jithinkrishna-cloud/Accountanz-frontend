@@ -1,5 +1,11 @@
-import { SettingsForm } from "@/features/settings/components/settings-form";
+import { Suspense } from "react";
+import { AdminSettings } from "@/features/settings/components/admin-settings";
 
 export default function SettingsPage() {
-  return <SettingsForm />;
+  // Suspense: the page reads ?tab= (General / Notifications).
+  return (
+    <Suspense>
+      <AdminSettings />
+    </Suspense>
+  );
 }

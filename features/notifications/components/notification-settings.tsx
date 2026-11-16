@@ -20,8 +20,8 @@ const REMINDERS: { key: ReminderKey; title: string; description: string }[] = [
   { key: "remind_invoice_overdue", title: "Invoice overdue", description: "Remind the client and the ops team when a service invoice is unpaid." },
 ];
 
-/** Workspace-wide reminder switches, stored on the settings record. */
-export function NotificationSettings() {
+/** Workspace-wide reminder switches, stored on the settings record. Shown as a tab of admin Settings (embedded). */
+export function NotificationSettings({ embedded = false }: { embedded?: boolean }) {
   const { data: user } = useSession();
   const canEdit = user?.role === "super_admin";
   const settings = useSettings();
@@ -49,12 +49,9 @@ export function NotificationSettings() {
     }
   };
 
-  const header = (
-    <PageHeader
-      title="Notifications"
-      description="Email reminders sent automatically by the platform."
-      actions={canEdit && <SubmitButton type="button" pending={update.isPending} disabled={!dirty} onClick={save}>Save settings</SubmitButton>}
-    />
+  const saveButton = canEdit && <SubmitButton type="button" pending={update.isPending} disabled={!dirty} onClick={save}>Save settings</SubmitButton>;
+  const header = embedded ? null : (
+    <PageHeader title="Notifications" description="Email reminders sent automatically by the platform." actions={saveButton} />
   );
   if (settings.error) return <>{header}<ErrorState error={settings.error} onRetry={() => void settings.refetch()} /></>;
 
@@ -86,6 +83,8 @@ export function NotificationSettings() {
           Reminders go out once a day in the morning. Turning one off stops it for the whole workspace.
         </p>
       </section>
+      {/* Embedded in Settings: save sits under the card, like the General tab's form. */}
+      {embedded && saveButton && <div className="mt-6 flex justify-end">{saveButton}</div>}
     </>
   );
 }

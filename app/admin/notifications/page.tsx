@@ -1,5 +1,6 @@
-import { NotificationSettings } from "@/features/notifications/components/notification-settings";
+import { redirect } from "next/navigation";
 
+/** Notifications moved into Settings; keeps old links and bookmarks working. */
 export default function NotificationsPage() {
-  return <NotificationSettings />;
+  redirect("/admin/settings?tab=notifications");
 }

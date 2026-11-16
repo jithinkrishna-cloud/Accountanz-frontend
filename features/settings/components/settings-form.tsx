@@ -29,7 +29,8 @@ const toValues = (s: AppSettings): SettingsFormValues => ({
   gst_rate: s.gst_rate,
 });
 
-export function SettingsForm() {
+/** Company details and billing. Shown as the General tab of admin Settings (embedded = no page header). */
+export function SettingsForm({ embedded = false }: { embedded?: boolean }) {
   const { data: user } = useSession();
   const canEdit = user?.role === "super_admin";
   const settings = useSettings();
@@ -59,7 +60,7 @@ export function SettingsForm() {
     }
   });
 
-  const header = <PageHeader title="Settings" description="Accountanz's own billing identity and the GST rate used on service invoices." />;
+  const header = embedded ? null : <PageHeader title="Settings" description="Accountanz's own billing identity and the GST rate used on service invoices." />;
   if (settings.error) return <>{header}<ErrorState error={settings.error} onRetry={() => void settings.refetch()} /></>;
   if (settings.isLoading) return <>{header}<Skeleton className="h-96 w-full rounded-xl" /></>;
 
