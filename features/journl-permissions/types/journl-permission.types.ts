@@ -9,11 +9,20 @@ export interface ModuleAction {
 }
 
 /** One entry of the JournL module catalogue (database-configured, not code; mapped to JournL's user-permission feature ids). */
+/** A JournL feature a module opens (from JournL's FeatureIds). known=false: the id isn't in JournL's list. */
+export interface JournlFeature {
+  id: number;
+  name: string;
+  known: boolean;
+}
+
 export interface CatalogModule {
   module_key: string;
   label: string;
   default_policy: ModulePolicy;
   journl_module_id: string | null;
+  /** What this module opens in JournL, by name. */
+  features: JournlFeature[];
   verified: boolean;
   actions: ModuleAction[];
 }
@@ -78,6 +87,8 @@ export interface ClientModulePermission {
 }
 
 export interface ClientAssignmentPermission {
+  /** Grants are saved against this, not user_id (one person can hold two roles on a company). */
+  assignment_id: number;
   user_id: number;
   full_name: string;
   team_role: string;
@@ -86,7 +97,7 @@ export interface ClientAssignmentPermission {
 
 /** Admin overview: per client, the JournL connection/session and each assigned person's module access. */
 export interface JournlAccessOverview {
-  modules: { key: string; label: string; journl_features: string | null }[];
+  modules: { key: string; label: string; journl_features: string | null; features: JournlFeature[] }[];
   clients: {
     client_id: number;
     client_name: string;

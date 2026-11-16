@@ -14,7 +14,7 @@ import { ScheduleMeetingDialog } from "@/features/communication/components/sched
 import { RequestDocumentsDialog, UploadDocumentDialog } from "@/features/documents/components/document-dialogs";
 import { NewReportDialog } from "@/features/reports/components/new-report-dialog";
 import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
-import { formatDate, humanize } from "@/lib/format";
+import { formatDate, humanize, formatLocalDateTime } from "@/lib/format";
 import { JournlDataSheet, type JournlDataSource } from "@/features/integrations/components/journl-data-sheet";
 import { useClientOverview } from "../hooks/use-workspace";
 import { workspaceService } from "../services/workspace-service";
@@ -134,7 +134,7 @@ export function ClientOverviewView({ id }: { id: number }) {
                   <p className="text-muted-foreground mt-2 text-sm">Your assignment doesn&apos;t include JournL access. An admin can turn it on.</p>
                 ) : jc.session_until ? (
                   <>
-                    <p className="text-muted-foreground mt-1 text-xs">Readable until {formatDate(jc.session_until, true)}</p>
+                    <p className="text-muted-foreground mt-1 text-xs">Readable until {formatLocalDateTime(jc.session_until)}</p>
                     <Button
                       size="sm"
                       variant="outline"

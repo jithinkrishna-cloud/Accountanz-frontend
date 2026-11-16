@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { RegistrationStatus } from "@/features/clients/types/client.types";
@@ -21,7 +21,6 @@ import { STAGE_OF, StagePill, isLate, shortDate } from "./client-progress";
 import { CompanyGate } from "./company-gate";
 import { JournlConnection } from "./journl-connection";
 import { Card, ListBody } from "./portal-ui";
-import { ClientJournlPermissionsDialog } from "@/features/journl-permissions/components/client-journl-permissions-dialog";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -238,21 +237,21 @@ function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
   );
 }
 
-function MemberSheet({ member, tasks, period, onClose, canManageJournl, onManageJournl }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void; canManageJournl: boolean; onManageJournl: (a: { user_id: number; full_name: string; team_role: string }) => void }) {
+function MemberDialog({ member, tasks, period, onClose, canManageJournl }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void; canManageJournl: boolean }) {
   const jobs = member ? jobsFor(member, tasks) : [];
   const role = member ? ROLE[member.team_role] : null;
   const status = member ? areaStatus(member, tasks) : null;
   return (
-    <Sheet open={!!member} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+    <Dialog open={!!member} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-md">
         {member && role && (
           <>
-            <SheetHeader className="items-center border-b px-6 py-6 text-center">
+            <DialogHeader className="items-center border-b px-6 pt-8 pb-6 text-center sm:text-center">
               <MemberAvatar name={member.full_name} large />
-              <SheetTitle className="mt-2 text-lg">{member.full_name}</SheetTitle>
+              <DialogTitle className="mt-2 text-lg">{member.full_name}</DialogTitle>
               <span className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-medium">{role.label}</span>
-              <SheetDescription className="mt-1">{role.does}</SheetDescription>
-            </SheetHeader>
+              <DialogDescription className="mt-1">{role.does}</DialogDescription>
+            </DialogHeader>
 
             <div className="grid gap-5 px-6 py-5">
               <section aria-labelledby="member-area" className="rounded-xl border p-4">
@@ -290,19 +289,26 @@ function MemberSheet({ member, tasks, period, onClose, canManageJournl, onManage
               )}
             </div>
 
-            <SheetFooter className="mt-auto flex-row items-center justify-between gap-2 border-t px-6 py-4">
-              <a href={`mailto:${member.email}`} className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 truncate text-xs hover:underline"><Mail className="size-3.5 shrink-0" aria-hidden />{member.email}</a>
-              <Button asChild size="sm"><Link href={`/app/messages?to=${member.user_id}`}><MessageSquare className="size-4" /> Message {member.full_name.split(" ")[0]}</Link></Button>
-              {canManageJournl && (
-                <Button size="sm" variant="outline" onClick={() => { onClose(); onManageJournl({ user_id: member.user_id, full_name: member.full_name, team_role: member.team_role }); }}>
-                  <KeyRound className="size-4" aria-hidden /> Manage JournL access
-                </Button>
-              )}
-            </SheetFooter>
+            <div className="grid gap-3 border-t px-6 py-4">
+              <a href={`mailto:${member.email}`} className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs hover:underline">
+                <Mail className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{member.email}</span>
+              </a>
+              <DialogFooter className="gap-2">
+                {canManageJournl && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/app/settings?tab=journl&user=${member.user_id}&role=${member.team_role}`}>
+                      <KeyRound className="size-4" aria-hidden /> Manage JournL access
+                    </Link>
+                  </Button>
+                )}
+                <Button asChild size="sm"><Link href={`/app/messages?to=${member.user_id}`}><MessageSquare className="size-4" /> Message {member.full_name.split(" ")[0]}</Link></Button>
+              </DialogFooter>
+            </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -310,7 +316,6 @@ function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
   const q = usePortalTeam();
   const tasks = usePortalTasks();
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [managingJournl, setManagingJournl] = useState<{ user_id: number; full_name: string; team_role: string } | null>(null);
   const keyOf = (m: PortalTeamMember) => `${m.user_id}-${m.team_role}`;
   const open = q.data?.find((m) => keyOf(m) === openKey) ?? null;
   const monthTasks = tasks.data?.tasks ?? [];
@@ -348,8 +353,7 @@ function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
           )}
         </ListBody>
       </Card>
-      <MemberSheet member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} canManageJournl={canManageJournl} onManageJournl={setManagingJournl} />
-      <ClientJournlPermissionsDialog accountant={managingJournl} onClose={() => setManagingJournl(null)} />
+      <MemberDialog member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} canManageJournl={canManageJournl} />
     </>
   );
 }

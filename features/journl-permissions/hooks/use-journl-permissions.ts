@@ -30,12 +30,12 @@ export const useClientJournlCatalog = (enabled = true) => useQuery({ queryKey: [
 
 export const useClientJournlTeam = () => useQuery({ queryKey: [...CLIENT_KEY, "team"], queryFn: journlPermissionService.clientTeam, staleTime: 5 * 60_000 });
 
-export function useClientSetModulePermission(assignmentId: number) {
+/** Owner sets the client side of one module grant for any assignment on the company (used by the team access grid). */
+export function useClientSetTeamModule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { moduleKey: string; actions: string[] }) => journlPermissionService.clientSetModule(assignmentId, v.moduleKey, v.actions),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: [...CLIENT_KEY, "team"] });
-    },
+    mutationFn: (v: { assignmentId: number; moduleKey: string; actions: string[] }) => journlPermissionService.clientSetModule(v.assignmentId, v.moduleKey, v.actions),
+    onSettled: () => qc.invalidateQueries({ queryKey: [...CLIENT_KEY, "team"] }),
   });
 }
+

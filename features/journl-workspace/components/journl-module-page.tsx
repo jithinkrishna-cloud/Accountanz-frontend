@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JournlOverviewPanel } from "@/features/integrations/components/journl-data-sheet";
-import { formatDate, formatINR } from "@/lib/format";
+import { formatDate, formatINR, formatLocalDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useJournlView, useJournlWorkspace } from "../hooks/use-journl-workspace";
 import { journlWorkspaceService } from "../services/journl-workspace-service";
@@ -195,7 +195,7 @@ export function JournlModulePage({ moduleKey }: { moduleKey: string }) {
               <p className="font-medium">{client.client_name}</p>
               <p className="text-muted-foreground text-xs">
                 {client.org_name ? `JournL: ${client.org_name} · ID ${client.org_id}` : "JournL not connected"}
-                {client.session_until && ` · readable until ${formatDate(client.session_until, true)}`}
+                {client.session_until && ` · readable until ${formatLocalDateTime(client.session_until)}`}
               </p>
             </div>
             {picker}

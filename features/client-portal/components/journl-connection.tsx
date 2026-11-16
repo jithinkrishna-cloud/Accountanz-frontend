@@ -9,7 +9,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { applyApiError } from "@/lib/form-errors";
-import { formatDate } from "@/lib/format";
+import { formatLocalDateTime } from "@/lib/format";
 import { useDisconnectJournl, usePortalSoftware } from "../hooks/use-client-portal";
 import type { PortalCompany, PortalSoftware } from "../types/client-portal.types";
 import { AuthorizeJournlDialog } from "./authorize-journl-dialog";
@@ -65,29 +65,34 @@ function ConnectionRow({ row, isOwner, companyName }: { row: PortalSoftware; isO
   const checkedAt = row.verified_at ?? row.last_health_check;
 
   return (
-    <div className="grid gap-5 p-5">
-      <div className="flex flex-wrap items-center gap-4">
-        <JournlMark />
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">JournL</p>
-          <p className="text-muted-foreground truncate text-sm">
-            {row.external_org_name ?? "Organisation not linked yet"}
-            {row.external_org_id ? ` · ID ${row.external_org_id}` : ""}
-            {row.status === "connected" && checkedAt ? ` · verified ${formatDate(checkedAt, true)}` : row.authorized_at ? ` · authorized ${formatDate(row.authorized_at, true)}` : ""}
-          </p>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <JournlMark />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">JournL</p>
+            {/* Wraps on phones instead of truncating, so the org name, ID and verified time stay readable. */}
+            <p className="text-muted-foreground text-sm sm:truncate">
+              {row.external_org_name ?? "Organisation not linked yet"}
+              {row.external_org_id ? ` · ID ${row.external_org_id}` : ""}
+              {row.status === "connected" && checkedAt ? ` · verified ${formatLocalDateTime(checkedAt)}` : row.authorized_at ? ` · authorized ${formatLocalDateTime(row.authorized_at)}` : ""}
+            </p>
+          </div>
         </div>
-        <StatusBadge status={row.status} />
-        {canEdit && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            <ShieldCheck className="size-4" aria-hidden /> {row.status === "pending" ? "Sign in with JournL" : "Reconnect with JournL"}
-          </Button>
-        )}
-        {canRefresh && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            <ShieldCheck className="size-4" aria-hidden /> Refresh JournL session
-          </Button>
-        )}
-        {canDisconnect && <DisconnectButton />}
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:gap-4">
+          <StatusBadge status={row.status} />
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <ShieldCheck className="size-4" aria-hidden /> {row.status === "pending" ? "Sign in with JournL" : "Reconnect with JournL"}
+            </Button>
+          )}
+          {canRefresh && (
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <ShieldCheck className="size-4" aria-hidden /> Refresh JournL session
+            </Button>
+          )}
+          {canDisconnect && <DisconnectButton />}
+        </div>
       </div>
       <p className="bg-muted/60 flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm">
         <Icon className={`mt-0.5 size-4 shrink-0 ${copy.tone}`} aria-hidden />
@@ -95,7 +100,7 @@ function ConnectionRow({ row, isOwner, companyName }: { row: PortalSoftware; isO
           {copy.text}
           {row.status === "connected" &&
             (row.session_until
-              ? ` Accountanz can read your JournL books until ${formatDate(row.session_until, true)}.`
+              ? ` Accountanz can read your JournL books until ${formatLocalDateTime(row.session_until)}.`
               : " JournL sessions last 8 hours: refresh it so your team can read your books.")}
         </span>
       </p>

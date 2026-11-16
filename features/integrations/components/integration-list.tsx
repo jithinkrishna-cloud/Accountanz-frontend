@@ -8,7 +8,7 @@ import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatLocalDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useConnections } from "../hooks/use-integrations";
 import { integrationService } from "../services/integration-service";
@@ -37,7 +37,7 @@ function DataAccess({ c }: { c: Connection }) {
   const state = stateOf(c);
   if (state === "disconnected") return <span className="text-muted-foreground text-xs">Disconnected by the owner{c.disconnected_at ? ` · ${formatDate(c.disconnected_at, true)}` : ""}</span>;
   if (state === "unconfirmed") return <span className="text-xs text-amber-700 dark:text-amber-400">Ask the owner to sign in with JournL from their portal</span>;
-  if (c.journl_session_until) return <span className="text-xs text-emerald-700 dark:text-emerald-400">Readable until {formatDate(c.journl_session_until, true)}</span>;
+  if (c.journl_session_until) return <span className="text-xs text-emerald-700 dark:text-emerald-400">Readable until {formatLocalDateTime(c.journl_session_until)}</span>;
   return <span className="text-xs text-amber-700 dark:text-amber-400">Session expired · ask the owner to refresh it</span>;
 }
 

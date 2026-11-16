@@ -50,7 +50,7 @@ function ModuleRow({ assignmentId, module, access, allowUnverified }: { assignme
           {policy && <span className={cn("ml-2 rounded-full px-2 py-0.5 text-xs font-normal", restricted ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>{policy}</span>}
         </p>
         <p className="text-muted-foreground text-xs">
-          {!module.verified ? "Mapped, not verified against JournL" : `JournL features ${module.journl_module_id ?? "—"}`}
+          {!module.verified ? "Mapped, not verified against JournL" : module.features.length ? module.features.map((f) => f.name).join(", ") : "No JournL features mapped"}
           {access.effective_actions.length > 0 && <span className="text-emerald-700"> · in effect</span>}
           {access.blocked_reason && <span className="text-amber-700"> · not in effect: {access.blocked_reason}</span>}
         </p>

@@ -9,7 +9,7 @@ import { ErrorState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TEAM_ROLE_LABELS, type TeamRole } from "@/features/assignments/types/assignment.types";
-import { formatDate, humanize } from "@/lib/format";
+import { formatLocalDateTime, humanize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useJournlAccessOverview } from "../hooks/use-journl-permissions";
 import type { JournlAccessOverview } from "../types/journl-permission.types";
@@ -45,7 +45,7 @@ function ClientStatus({ c }: { c: Client }) {
         <Chip tone="warn">JournL {humanize(conn.status).toLowerCase()}</Chip>
       )}
       {conn?.status === "connected" &&
-        (conn.session_until ? <Chip tone="good">Readable until {formatDate(conn.session_until, true)}</Chip> : <Chip tone="warn">Session expired · owner must refresh</Chip>)}
+        (conn.session_until ? <Chip tone="good">Readable until {formatLocalDateTime(conn.session_until)}</Chip> : <Chip tone="warn">Session expired · owner must refresh</Chip>)}
       {c.engagement_active ? <Chip tone="good">Engagement active</Chip> : <Chip tone="warn">No active engagement</Chip>}
     </div>
   );
@@ -83,7 +83,7 @@ function ClientCard({ c, modules, onEdit }: { c: Client; modules: JournlAccessOv
                 <th className="px-5 py-2 text-left font-normal">Accountant</th>
                 <th className="px-2 py-2 text-center font-normal">JournL access</th>
                 {modules.map((m) => (
-                  <th key={m.key} className="px-2 py-2 text-center font-normal whitespace-nowrap" title={`JournL features ${m.journl_features ?? "—"}`}>{m.label}</th>
+                  <th key={m.key} className="px-2 py-2 text-center font-normal whitespace-nowrap" title={m.features.length ? `Includes: ${m.features.map((f) => f.name).join(", ")}` : "No JournL features mapped"}>{m.label}</th>
                 ))}
                 <th className="px-5 py-2" />
               </tr>
