@@ -116,7 +116,7 @@ function BusinessBody() {
                       {s.full_name}
                       {!!s.is_primary && <Badge variant="secondary">Primary</Badge>}
                     </p>
-                    <p className="text-muted-foreground text-xs">{[humanize(s.stakeholder_type), s.designation].filter(Boolean).join(" · ")}</p>
+                    <p className="text-muted-foreground text-xs">{[humanize(s.stakeholder_type), s.designation !== humanize(s.stakeholder_type) && s.designation].filter(Boolean).join(" · ")}</p>
                   </div>
                   {s.ownership_percentage != null && <span className="text-muted-foreground shrink-0 text-xs">{s.ownership_percentage}%</span>}
                 </li>
