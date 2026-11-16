@@ -1,6 +1,6 @@
-import { api } from "@/lib/api-client";
+﻿import { api } from "@/lib/api-client";
 import type { SessionUser } from "@/types/auth";
-import type { ForgotPasswordValues, LoginValues, RegisterValues, SetPasswordValues } from "../schemas/auth.schema";
+import type { ForgotPasswordValues, LoginValues, RegisterAccountantValues, RegisterValues, SetPasswordValues } from "../schemas/auth.schema";
 
 type UserResponse = { user: SessionUser };
 type MessageResponse = { message: string };
@@ -25,6 +25,18 @@ export const authService = {
       },
       noRefresh: true,
     }).then((r) => r.user),
+  registerAccountant: (values: RegisterAccountantValues) =>
+    api<MessageResponse>("/auth/register-accountant", {
+      method: "POST",
+      body: {
+        fullName: values.fullName,
+        email: values.email,
+        phone: values.phone || undefined,
+        password: values.password,
+        portal_role: values.portal_role,
+      },
+      noRefresh: true,
+    }),
   logout: () => api<void>("/auth/logout", { method: "POST", noRefresh: true }),
   forgotPassword: (values: ForgotPasswordValues) => api<MessageResponse>("/auth/forgot-password", { method: "POST", body: values, noRefresh: true }),
   resetPassword: (token: string, values: SetPasswordValues) =>

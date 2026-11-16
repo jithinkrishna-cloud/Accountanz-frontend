@@ -13,7 +13,11 @@ export default function LoginPage() {
         <>
           Don&apos;t have an account?{" "}
           <Link href="/register" className="text-primary font-medium hover:underline">
-            Create one
+            Company
+          </Link>
+          {" or "}
+          <Link href="/register/accountant" className="text-primary font-medium hover:underline">
+            Accountant
           </Link>
         </>
       }

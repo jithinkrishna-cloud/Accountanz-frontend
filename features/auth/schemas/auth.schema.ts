@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 // Mirrors backend/src/modules/auth/auth.validation.ts so users see errors before submitting.
 const password = z
@@ -35,10 +35,23 @@ export const registerSchema = z
     state: z.string().trim().max(60),
   })
   .refine(passwordsMatch, mismatch);
+
+export const registerAccountantSchema = z
+  .object({
+    fullName: z.string().trim().min(2, "Enter your full name").max(150),
+    email,
+    phone: z.string().trim().max(30),
+    password,
+    confirmPassword: z.string(),
+    portal_role: z.enum(["bookkeeper", "finance_manager", "cfo"]),
+  })
+  .refine(passwordsMatch, mismatch);
+
 export const setPasswordSchema = z.object({ password, confirmPassword: z.string() }).refine(passwordsMatch, mismatch);
 export const forgotPasswordSchema = z.object({ email });
 
 export type LoginValues = z.infer<typeof loginSchema>;
 export type RegisterValues = z.infer<typeof registerSchema>;
+export type RegisterAccountantValues = z.infer<typeof registerAccountantSchema>;
 export type SetPasswordValues = z.infer<typeof setPasswordSchema>;
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;

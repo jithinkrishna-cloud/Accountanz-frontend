@@ -1,14 +1,15 @@
 "use client";
 
-import { Pencil, Trash2, UserPlus } from "lucide-react";
+import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/lib/constants";
-import { useStaff } from "../hooks/use-staff";
+import { useStaff, useUpdateStaff } from "../hooks/use-staff";
 import type { StaffMember, StaffType } from "../types/staff.types";
 import { useSession } from "@/features/auth/hooks/use-session";
 import { DeleteStaffDialog } from "./delete-staff-dialog";
@@ -26,8 +27,22 @@ export function StaffList({ staffType }: { staffType: StaffType }) {
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [deleting, setDeleting] = useState<StaffMember | null>(null);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
   const { data: session } = useSession();
   const query = useStaff({ type: staffType, q, page });
+  const approve = useUpdateStaff(approvingId ?? 0);
+
+  const approveRegistration = async (m: StaffMember) => {
+    setApprovingId(m.user_id);
+    try {
+      await approve.mutateAsync({ status: "active", verification_status: "verified" });
+      toast.success(`${m.full_name} approved`);
+    } catch {
+      toast.error("Couldn't approve registration");
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const columns: Column<StaffMember>[] = [
     {
@@ -60,15 +75,30 @@ export function StaffList({ staffType }: { staffType: StaffType }) {
     {
       key: "actions",
       header: "",
-      className: "w-24 text-right",
-      cell: (m) => (
-        <div className="flex justify-end">
-          <Button variant="ghost" size="icon" aria-label={`Edit ${m.full_name}`} onClick={() => setEditing(m)}><Pencil className="size-4" /></Button>
-          {m.user_id !== session?.id && (
-            <Button variant="ghost" size="icon" aria-label={`Delete ${m.full_name}`} onClick={() => setDeleting(m)}><Trash2 className="size-4" /></Button>
-          )}
-        </div>
-      ),
+      className: "w-32 text-right",
+      cell: (m) => {
+        const pendingApproval = m.status === "disabled" && m.verification_status === "pending";
+        return (
+          <div className="flex justify-end">
+            {pendingApproval && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Approve ${m.full_name}`}
+                title="Approve registration"
+                disabled={approvingId === m.user_id && approve.isPending}
+                onClick={() => void approveRegistration(m)}
+              >
+                <Check className="size-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" aria-label={`Edit ${m.full_name}`} onClick={() => setEditing(m)}><Pencil className="size-4" /></Button>
+            {m.user_id !== session?.id && (
+              <Button variant="ghost" size="icon" aria-label={`Delete ${m.full_name}`} onClick={() => setDeleting(m)}><Trash2 className="size-4" /></Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

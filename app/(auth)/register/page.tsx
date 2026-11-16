@@ -9,6 +9,11 @@ export default function RegisterPage() {
       description="Register your business and get matched with a dedicated accountant."
       footer={
         <>
+          Are you an accountant?{" "}
+          <Link href="/register/accountant" className="text-primary font-medium hover:underline">
+            Register here
+          </Link>
+          {" · "}
           Already have an account?{" "}
           <Link href="/login" className="text-primary font-medium hover:underline">
             Log in
