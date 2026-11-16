@@ -1,3 +1,6 @@
+import type { BusinessType, CompanyFinancialProfile, CompanyStakeholder, CompanyTaxDetails } from "@/features/clients/types/client.types";
+import type { OnboardingServiceRequirements } from "@/features/onboarding/types/onboarding.types";
+
 export interface PortalCompany {
   id: number;
   name: string;
@@ -23,13 +26,24 @@ export interface PortalDashboard {
 export interface PortalBusiness {
   legal_name: string;
   trade_name: string | null;
+  business_type: BusinessType | null;
+  date_of_establishment: string | null;
   gstin: string | null;
   pan: string | null;
   state: string | null;
   address: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
   status: string;
   accounting_software: string;
   branches: { id: number; name: string; gstin: string | null }[];
+  /** Read-only in the portal; staff keep these up to date. */
+  tax_details: Omit<CompanyTaxDetails, "client_id" | "created_at" | "updated_at"> | null;
+  /** Personal identifiers and contact details are not exposed to the portal. */
+  stakeholders: Pick<CompanyStakeholder, "id" | "stakeholder_type" | "full_name" | "designation" | "ownership_percentage" | "is_primary">[];
+  financial_profile: Omit<CompanyFinancialProfile, "client_id" | "notes" | "created_at" | "updated_at"> | null;
+  service_requirements: Pick<OnboardingServiceRequirements, "bookkeeping" | "gst_filing" | "income_tax_filing" | "payroll" | "audit_support" | "other_services"> | null;
 }
 
 export interface PortalDocument {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Mail, MessageSquare, KeyRound } from "lucide-react";
+import { Check, ChevronRight, Mail, MessageSquare, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -10,8 +10,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
-import { formatPeriod, initials } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import type { RegistrationStatus } from "@/features/clients/types/client.types";
+import { ACCOUNTING_SOFTWARE_LABELS, MONTHS } from "@/lib/constants";
+import { formatDate, formatINR, formatPeriod, humanize, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-client-portal";
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
@@ -30,40 +32,134 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+/** Opens a new message to the accounting team about this section (the team updates the record). */
+function RequestCorrection({ section }: { section: string }) {
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link href={`/app/messages?subject=${encodeURIComponent(`Correction: ${section}`)}`}>
+        <MessageSquare className="size-4" /> Request correction
+      </Link>
+    </Button>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-muted-foreground p-5 text-sm">{children}</p>;
+}
+
+/** "ABCDE1234F · Registered", or just the status while there's no number yet. */
+function registration(number: string | null, status: RegistrationStatus | null) {
+  if (!number && !status) return null;
+  return (
+    <span>
+      {number && <span className="font-mono">{number}</span>}
+      {number && status && <span className="text-muted-foreground"> · </span>}
+      {status && <span className={number ? "text-muted-foreground" : undefined}>{humanize(status)}</span>}
+    </span>
+  );
+}
+
+const SERVICES = [
+  ["bookkeeping", "Bookkeeping"],
+  ["gst_filing", "GST filing"],
+  ["income_tax_filing", "Income tax filing"],
+  ["payroll", "Payroll"],
+  ["audit_support", "Audit support"],
+] as const;
+
 function BusinessBody() {
   const { data: b, isLoading, error, refetch } = usePortalBusiness();
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !b) return <Skeleton className="h-48 w-full rounded-xl" />;
+  const tax = b.tax_details;
+  const fin = b.financial_profile;
+  const req = b.service_requirements;
+  const services = req ? [...SERVICES.filter(([k]) => req[k]).map(([, label]) => label), ...(req.other_services ? [req.other_services] : [])] : [];
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <Card title="Company details" subtitle="Ask your accountant if anything here is out of date.">
+      <div className="space-y-6 lg:col-span-2">
+        <Card title="Company details" actions={<RequestCorrection section="Company details" />}>
           <dl className="grid gap-4 p-5 sm:grid-cols-2">
             <Fact label="Legal name" value={b.legal_name} />
             <Fact label="Trade name" value={b.trade_name} />
-            <Fact label="GSTIN" value={b.gstin && <span className="font-mono">{b.gstin}</span>} />
-            <Fact label="PAN" value={b.pan && <span className="font-mono">{b.pan}</span>} />
+            <Fact label="Business type" value={b.business_type && humanize(b.business_type)} />
+            <Fact label="Established on" value={b.date_of_establishment && formatDate(b.date_of_establishment)} />
             <Fact label="State" value={b.state} />
             <Fact label="Accounting software" value={ACCOUNTING_SOFTWARE_LABELS[b.accounting_software] ?? b.accounting_software} />
+            <Fact label="Primary contact" value={b.primary_contact_name} />
+            <Fact label="Contact email" value={b.primary_contact_email} />
+            <Fact label="Contact phone" value={b.primary_contact_phone} />
             <Fact label="Address" value={b.address} />
             <Fact label="Status" value={<StatusBadge status={b.status} />} />
           </dl>
         </Card>
+        <Card title="Tax & registrations" actions={<RequestCorrection section="Tax & registrations" />}>
+          {tax || b.pan || b.gstin ? (
+            <dl className="grid gap-4 p-5 sm:grid-cols-2">
+              <Fact label="PAN" value={registration(tax?.pan_number ?? b.pan, tax?.pan_status ?? null)} />
+              <Fact label="GSTIN" value={registration(tax?.gstin ?? b.gstin, tax?.gstin_status ?? null)} />
+              <Fact label="TAN" value={tax && registration(tax.tan_number, tax.tan_status)} />
+              <Fact label="CIN" value={tax && registration(tax.cin, tax.cin_status)} />
+              <Fact label="LLPIN" value={tax && registration(tax.llpin, tax.llpin_status)} />
+              <Fact label="MSME / Udyam" value={tax && registration(tax.msme_udyam_number, tax.msme_status)} />
+              <Fact label="Professional tax" value={tax && registration(tax.professional_tax_registration, tax.professional_tax_status)} />
+            </dl>
+          ) : <Empty>Your team hasn&apos;t recorded your registrations yet.</Empty>}
+        </Card>
+        <Card title="Owners & directors" actions={<RequestCorrection section="Owners & directors" />}>
+          {b.stakeholders.length ? (
+            <ul className="divide-y">
+              {b.stakeholders.map((s) => (
+                <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                      {s.full_name}
+                      {!!s.is_primary && <Badge variant="secondary">Primary</Badge>}
+                    </p>
+                    <p className="text-muted-foreground text-xs">{[humanize(s.stakeholder_type), s.designation].filter(Boolean).join(" · ")}</p>
+                  </div>
+                  {s.ownership_percentage != null && <span className="text-muted-foreground shrink-0 text-xs">{s.ownership_percentage}%</span>}
+                </li>
+              ))}
+            </ul>
+          ) : <Empty>No owners or directors recorded yet.</Empty>}
+        </Card>
+        <Card title="Financial profile" actions={<RequestCorrection section="Financial profile" />}>
+          {fin ? (
+            <dl className="grid gap-4 p-5 sm:grid-cols-2">
+              <Fact label="Financial year starts" value={fin.financial_year_start_month && MONTHS[fin.financial_year_start_month - 1]} />
+              <Fact label="Annual turnover" value={fin.annual_turnover != null && formatINR(fin.annual_turnover)} />
+              <Fact label="Transactions per month" value={fin.monthly_transaction_volume?.toLocaleString("en-IN")} />
+              <Fact label="Invoices per month" value={fin.monthly_invoice_count?.toLocaleString("en-IN")} />
+              <Fact label="Employees" value={fin.employee_count?.toLocaleString("en-IN")} />
+              <Fact label="Current accounting software" value={fin.current_accounting_software} />
+            </dl>
+          ) : <Empty>Your team hasn&apos;t recorded your financial profile yet.</Empty>}
+        </Card>
       </div>
-      <Card title="Branches">
-        {b.branches.length === 0 ? (
-          <p className="text-muted-foreground p-5 text-sm">No branches recorded.</p>
-        ) : (
-          <ul className="divide-y">
-            {b.branches.map((br) => (
-              <li key={br.id} className="px-5 py-3 text-sm">
-                <p className="font-medium">{br.name}</p>
-                <p className="text-muted-foreground font-mono text-xs">{br.gstin ?? "No GSTIN"}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <div className="space-y-6">
+        <Card title="Services you need" actions={<RequestCorrection section="Services you need" />}>
+          {services.length ? (
+            <ul className="space-y-2 p-5 text-sm">
+              {services.map((s) => <li key={s} className="flex items-center gap-2"><Check className="text-primary size-4 shrink-0" aria-hidden />{s}</li>)}
+            </ul>
+          ) : <Empty>Not captured yet. Your team records this while setting up your account.</Empty>}
+        </Card>
+        <Card title="Branches">
+          {b.branches.length === 0 ? (
+            <p className="text-muted-foreground p-5 text-sm">No branches recorded.</p>
+          ) : (
+            <ul className="divide-y">
+              {b.branches.map((br) => (
+                <li key={br.id} className="px-5 py-3 text-sm">
+                  <p className="font-medium">{br.name}</p>
+                  <p className="text-muted-foreground font-mono text-xs">{br.gstin ?? "No GSTIN"}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
@@ -73,7 +169,7 @@ export function ClientBusiness() {
     <CompanyGate>
       {() => (
         <>
-          <PageHeader title="My Business" description="The details we hold for your company." />
+          <PageHeader title="My Business" description="The details we hold for your company. Your accounting team keeps these up to date; use Request correction if anything is wrong." />
           <BusinessBody />
         </>
       )}

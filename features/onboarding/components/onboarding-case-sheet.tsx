@@ -13,15 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { usePackages } from "@/features/services/hooks/use-catalogue";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatINR, humanize } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useChangeStage, useSaveAssessment } from "../hooks/use-onboarding";
+import { useChangeStage, useOnboardingCase, useSaveAssessment } from "../hooks/use-onboarding";
+import { ServiceRequirementsForm } from "./service-requirements-form";
 import { assessmentFormSchema, type AssessmentFormOutput, type AssessmentFormValues } from "../schemas/onboarding.schema";
-import { COMPLEXITIES, STAGE_LABELS, STAGE_TRANSITIONS, type OnboardingCase, type OnboardingStage } from "../types/onboarding.types";
+import { COMPLEXITIES, STAGE_LABELS, STAGE_TRANSITIONS, type OnboardingCase, type OnboardingReadiness, type OnboardingStage } from "../types/onboarding.types";
 
 const PIPELINE: OnboardingStage[] = ["registered", "assessment", "proposal_sent", "accepted"];
 
@@ -40,6 +42,10 @@ const ACTION_LABEL: Partial<Record<OnboardingStage, string>> = {
   accepted: "Mark accepted",
   rejected: "Reject",
 };
+
+/** True when something edited on the client page (not in this sheet) is still missing. */
+const profileIncomplete = ({ sections: s }: OnboardingReadiness) =>
+  !(s.company_profile && s.primary_contact && s.tax_details && s.stakeholders && s.financial_profile);
 
 function StageTrack({ stage }: { stage: OnboardingStage }) {
   const current = PIPELINE.indexOf(stage);
@@ -73,7 +79,10 @@ export function OnboardingCaseSheet({ row, onOpenChange, onChanged }: Props) {
   );
 }
 
-function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: OnboardingCase) => void }) {
+function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged: (row: OnboardingCase) => void }) {
+  // List rows have no readiness or service requirements; the detail query fills them in and stays fresh after saves.
+  const detail = useOnboardingCase(listRow.id);
+  const row = detail.data ?? listRow;
   const packages = usePackages();
   const save = useSaveAssessment(row.id);
   const stage = useChangeStage(row.id);
@@ -167,7 +176,7 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
           </div>
         </dl>
 
-        {row.readiness && (
+        {row.readiness ? (
           <section className={cn("rounded-lg border px-4 py-3 text-sm", row.readiness.complete ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900")}>
             <p className="font-medium">{row.readiness.complete ? "Onboarding data complete" : "Onboarding data incomplete"}</p>
             {!row.readiness.complete && (
@@ -175,24 +184,13 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
                 {row.readiness.missing.map((m) => <li key={m}>{m}</li>)}
               </ul>
             )}
+            <Link href={`/admin/clients/${row.client_id}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium underline">
+              {profileIncomplete(row.readiness) ? "Complete the company profile" : "View company profile"} <ArrowRight className="size-3" aria-hidden />
+            </Link>
           </section>
-        )}
-
-        {row.service_requirements && (
-          <section className="rounded-lg border px-4 py-3 text-sm">
-            <p className="mb-1 font-medium">Service requirements</p>
-            <p className="text-muted-foreground text-xs">
-              {[
-                row.service_requirements.bookkeeping && "Bookkeeping",
-                row.service_requirements.gst_filing && "GST filing",
-                row.service_requirements.income_tax_filing && "Income tax filing",
-                row.service_requirements.payroll && "Payroll",
-                row.service_requirements.audit_support && "Audit support",
-                row.service_requirements.other_services && `Other: ${row.service_requirements.other_services}`,
-              ].filter(Boolean).join(", ") || "None selected"}
-            </p>
-          </section>
-        )}
+        ) : detail.isLoading ? (
+          <Skeleton className="h-20 w-full rounded-lg" />
+        ) : null}
 
         {row.engagement_id && (
           <Link
@@ -205,6 +203,10 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         )}
+
+        <Separator />
+
+        {detail.data ? <ServiceRequirementsForm row={row} locked={locked} onChanged={onChanged} /> : <Skeleton className="h-40 w-full rounded-lg" />}
 
         <Separator />
 

@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { AssessmentFormOutput, ProspectFormOutput } from "../schemas/onboarding.schema";
-import { onboardingService, type OnboardingListParams } from "../services/onboarding-service";
+import { onboardingService, type OnboardingListParams, type ServiceRequirementsInput } from "../services/onboarding-service";
 import type { OnboardingCase, OnboardingStage } from "../types/onboarding.types";
 
 const KEY = ["admin", "onboarding"] as const;
@@ -17,6 +17,21 @@ function afterChange(qc: QueryClient, row: OnboardingCase) {
   void qc.invalidateQueries({ queryKey: ["admin", "clients"] });
   void qc.invalidateQueries({ queryKey: ["admin", "engagements"] });
   void qc.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+}
+
+/** Full case, including readiness and service requirements (list rows carry neither). */
+export const useOnboardingCase = (id: number) => useQuery({ queryKey: [...KEY, "detail", id], queryFn: () => onboardingService.get(id) });
+
+/** Saving requirements returns only the requirements; refetch the case so readiness reflects the change. */
+export function useSaveServiceRequirements(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (values: ServiceRequirementsInput) => {
+      await onboardingService.saveServiceRequirements(id, values);
+      return onboardingService.get(id);
+    },
+    onSuccess: (row) => afterChange(qc, row),
+  });
 }
 
 export function useCreateProspect() {

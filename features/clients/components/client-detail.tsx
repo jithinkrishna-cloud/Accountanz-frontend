@@ -8,14 +8,30 @@ import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
-import { formatDate, humanize } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { ACCOUNTING_SOFTWARE_LABELS, MONTHS } from "@/lib/constants";
+import { formatDate, formatINR, humanize } from "@/lib/format";
 import { TEAM_ROLE_LABELS, type TeamRole } from "@/features/assignments/types/assignment.types";
 import { useClient } from "../hooks/use-clients";
 import { ClientFormDialog } from "./client-form-dialog";
-import type { ClientBranch } from "../types/client.types";
+import type { ClientBranch, CompanyStakeholder, RegistrationStatus } from "../types/client.types";
 import { BranchDialog, RemoveBranchDialog } from "./branch-dialogs";
+import { FinancialProfileDialog } from "./financial-profile-dialog";
 import { InviteClientUserDialog } from "./invite-client-user-dialog";
+import { RemoveStakeholderDialog, StakeholderDialog } from "./stakeholder-dialogs";
+import { TaxDetailsDialog } from "./tax-details-dialog";
+
+/** "ABCDE1234F · Registered", or just the status when no number is recorded yet. */
+function registration(number: string | null, status: RegistrationStatus | null) {
+  if (!number && !status) return null;
+  return (
+    <span>
+      {number && <span className="font-mono">{number}</span>}
+      {number && status && <span className="text-muted-foreground"> · </span>}
+      {status && <span className={number ? "text-muted-foreground" : undefined}>{humanize(status)}</span>}
+    </span>
+  );
+}
 
 function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -44,6 +60,10 @@ export function ClientDetailView({ id }: { id: number }) {
   const [inviting, setInviting] = useState(false);
   const [branch, setBranch] = useState<ClientBranch | null | undefined>(undefined);
   const [removing, setRemoving] = useState<ClientBranch | null>(null);
+  const [editingTax, setEditingTax] = useState(false);
+  const [editingFinancial, setEditingFinancial] = useState(false);
+  const [stakeholder, setStakeholder] = useState<CompanyStakeholder | null | undefined>(undefined);
+  const [removingStakeholder, setRemovingStakeholder] = useState<CompanyStakeholder | null>(null);
 
   const back = (
     <Link href="/admin/clients" className="text-muted-foreground mb-4 inline-flex items-center gap-1 text-sm hover:underline">
@@ -55,6 +75,14 @@ export function ClientDetailView({ id }: { id: number }) {
   if (isLoading || !client) {
     return <>{back}<Skeleton className="mb-6 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></>;
   }
+
+  const editable = client.status !== "exited";
+  const stakeholders = client.stakeholders ?? [];
+  const ownershipTotal = stakeholders.reduce((sum, s) => sum + (s.ownership_percentage ?? 0), 0);
+  const tax = client.tax_details;
+  const fin = client.financial_profile;
+  const editButton = (label: string, onClick: () => void) =>
+    editable && <Button variant="outline" size="sm" onClick={onClick}><Pencil className="size-4" /> {label}</Button>;
 
   return (
     <>
@@ -70,7 +98,7 @@ export function ClientDetailView({ id }: { id: number }) {
         }
       />
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <Section title="Business details">
             <dl className="grid gap-4 sm:grid-cols-2">
               <Fact label="Legal name" value={client.legal_name} />
@@ -88,41 +116,67 @@ export function ClientDetailView({ id }: { id: number }) {
               <Fact label="Added" value={formatDate(client.created_at)} />
             </dl>
           </Section>
-          <Section title="Tax & registrations">
-            {client.tax_details ? (
+          <Section title="Tax & registrations" aside={editButton(tax ? "Edit" : "Add", () => setEditingTax(true))}>
+            {tax ? (
               <dl className="grid gap-4 sm:grid-cols-2">
-                <Fact label="PAN" value={client.tax_details.pan_number && <span>{client.tax_details.pan_number} ({client.tax_details.pan_status ?? "—"})</span>} />
-                <Fact label="GSTIN" value={client.tax_details.gstin && <span>{client.tax_details.gstin} ({client.tax_details.gstin_status ?? "—"})</span>} />
-                <Fact label="TAN" value={client.tax_details.tan_number && <span>{client.tax_details.tan_number} ({client.tax_details.tan_status ?? "—"})</span>} />
-                <Fact label="CIN" value={client.tax_details.cin && <span>{client.tax_details.cin} ({client.tax_details.cin_status ?? "—"})</span>} />
-                <Fact label="LLPIN" value={client.tax_details.llpin && <span>{client.tax_details.llpin} ({client.tax_details.llpin_status ?? "—"})</span>} />
-                <Fact label="MSME/Udyam" value={client.tax_details.msme_udyam_number && <span>{client.tax_details.msme_udyam_number} ({client.tax_details.msme_status ?? "—"})</span>} />
-                <Fact label="Professional tax" value={client.tax_details.professional_tax_registration && <span>{client.tax_details.professional_tax_registration} ({client.tax_details.professional_tax_status ?? "—"})</span>} />
+                <Fact label="PAN" value={registration(tax.pan_number, tax.pan_status)} />
+                <Fact label="GSTIN" value={registration(tax.gstin, tax.gstin_status)} />
+                <Fact label="TAN" value={registration(tax.tan_number, tax.tan_status)} />
+                <Fact label="CIN" value={registration(tax.cin, tax.cin_status)} />
+                <Fact label="LLPIN" value={registration(tax.llpin, tax.llpin_status)} />
+                <Fact label="MSME / Udyam" value={registration(tax.msme_udyam_number, tax.msme_status)} />
+                <Fact label="Professional tax" value={registration(tax.professional_tax_registration, tax.professional_tax_status)} />
               </dl>
             ) : <p className="text-muted-foreground text-sm">No tax/registration details captured yet.</p>}
           </Section>
-          <Section title="Stakeholders">
-            {client.stakeholders?.length ? (
-              <ul className="space-y-3">
-                {client.stakeholders.map((s) => (
-                  <li key={s.id} className="text-sm">
-                    <p className="font-medium">{s.full_name} <span className="text-muted-foreground font-normal">· {humanize(s.stakeholder_type)}{s.is_primary ? " (primary)" : ""}</span></p>
-                    <p className="text-muted-foreground text-xs">{[s.designation, s.email, s.phone, s.ownership_percentage != null ? `${s.ownership_percentage}%` : null].filter(Boolean).join(" · ") || "No extra details"}</p>
-                  </li>
-                ))}
-              </ul>
+          <Section
+            title="Stakeholders"
+            aside={editable && <Button variant="outline" size="sm" onClick={() => setStakeholder(null)}><Plus className="size-4" /> Add</Button>}
+          >
+            {stakeholders.length ? (
+              <>
+                <ul className="divide-y">
+                  {stakeholders.map((s) => (
+                    <li key={s.id} className="flex items-start justify-between gap-2 py-3 text-sm first:pt-0 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium break-words">
+                          {s.full_name}
+                          <span className="text-muted-foreground font-normal">{humanize(s.stakeholder_type)}</span>
+                          {!!s.is_primary && <Badge variant="secondary">Primary</Badge>}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {[s.designation, s.ownership_percentage != null ? `${s.ownership_percentage}% ownership` : null, s.email, s.phone, s.pan_number && `PAN ${s.pan_number}`, s.din_number && `DIN ${s.din_number}`]
+                            .filter(Boolean)
+                            .join(" · ") || "No extra details"}
+                        </p>
+                      </div>
+                      {editable && (
+                        <div className="flex shrink-0">
+                          <Button variant="ghost" size="icon" className="size-8" aria-label={`Edit ${s.full_name}`} onClick={() => setStakeholder(s)}><Pencil className="size-4" /></Button>
+                          <Button variant="ghost" size="icon" className="size-8" aria-label={`Remove ${s.full_name}`} onClick={() => setRemovingStakeholder(s)}><Trash2 className="size-4" /></Button>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {ownershipTotal > 0 && (
+                  <p className="text-muted-foreground mt-3 border-t pt-3 text-xs">
+                    Ownership recorded: {Number(ownershipTotal.toFixed(2))}%{ownershipTotal < 100 ? ` (${Number((100 - ownershipTotal).toFixed(2))}% unallocated)` : ""}
+                  </p>
+                )}
+              </>
             ) : <p className="text-muted-foreground text-sm">No stakeholders recorded yet.</p>}
           </Section>
-          <Section title="Financial profile">
-            {client.financial_profile ? (
+          <Section title="Financial profile" aside={editButton(fin ? "Edit" : "Add", () => setEditingFinancial(true))}>
+            {fin ? (
               <dl className="grid gap-4 sm:grid-cols-2">
-                <Fact label="FY start month" value={client.financial_profile.financial_year_start_month} />
-                <Fact label="Annual turnover" value={client.financial_profile.annual_turnover} />
-                <Fact label="Monthly txns" value={client.financial_profile.monthly_transaction_volume} />
-                <Fact label="Employees" value={client.financial_profile.employee_count} />
-                <Fact label="Monthly invoices" value={client.financial_profile.monthly_invoice_count} />
-                <Fact label="Current software" value={client.financial_profile.current_accounting_software} />
-                <Fact label="Notes" value={client.financial_profile.notes} />
+                <Fact label="Financial year starts" value={fin.financial_year_start_month ? MONTHS[fin.financial_year_start_month - 1] : null} />
+                <Fact label="Annual turnover" value={fin.annual_turnover != null ? formatINR(fin.annual_turnover) : null} />
+                <Fact label="Transactions per month" value={fin.monthly_transaction_volume?.toLocaleString("en-IN")} />
+                <Fact label="Invoices per month" value={fin.monthly_invoice_count?.toLocaleString("en-IN")} />
+                <Fact label="Employees" value={fin.employee_count?.toLocaleString("en-IN")} />
+                <Fact label="Current software" value={fin.current_accounting_software} />
+                <Fact label="Notes" value={fin.notes} />
               </dl>
             ) : <p className="text-muted-foreground text-sm">No financial profile captured yet.</p>}
           </Section>
@@ -209,6 +263,10 @@ export function ClientDetailView({ id }: { id: number }) {
       <ClientFormDialog open={editing} onOpenChange={setEditing} client={client} />
       <BranchDialog clientId={client.id} branch={branch} onClose={() => setBranch(undefined)} />
       <RemoveBranchDialog clientId={client.id} branch={removing} onClose={() => setRemoving(null)} />
+      <TaxDetailsDialog client={client} open={editingTax} onOpenChange={setEditingTax} />
+      <FinancialProfileDialog client={client} open={editingFinancial} onOpenChange={setEditingFinancial} />
+      <StakeholderDialog clientId={client.id} stakeholder={stakeholder} all={stakeholders} onClose={() => setStakeholder(undefined)} />
+      <RemoveStakeholderDialog clientId={client.id} stakeholder={removingStakeholder} onClose={() => setRemovingStakeholder(null)} />
       <InviteClientUserDialog open={inviting} onOpenChange={setInviting} clientId={client.id} clientName={client.trade_name ?? client.legal_name} />
     </>
   );

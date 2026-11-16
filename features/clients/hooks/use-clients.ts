@@ -11,6 +11,23 @@ export const useClients = (params: ClientListParams) =>
 
 export const useClient = (id: number) => useQuery({ queryKey: [...KEY, "detail", id], queryFn: () => clientService.get(id) });
 
+/**
+ * Mutation for a client's onboarding profile (tax, stakeholders, financial profile). These endpoints return
+ * only the saved piece, and saving can change other data (PAN/GSTIN are mirrored onto the client, and
+ * onboarding readiness is derived from them), so refetch the client and any onboarding case afterwards.
+ */
+export function useClientProfileMutation<TVars, TResult>(clientId: number, mutationFn: (vars: TVars) => Promise<TResult>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: async () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "onboarding"] });
+      void qc.invalidateQueries({ queryKey: [...KEY, "list"] });
+      await qc.invalidateQueries({ queryKey: [...KEY, "detail", clientId] });
+    },
+  });
+}
+
 export function useSaveClient(id?: number) {
   const qc = useQueryClient();
   return useMutation({
