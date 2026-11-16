@@ -146,6 +146,13 @@ export interface Summary {
   byPriority: { priority: Priority; count: number }[];
   byType: { type: ItemType; count: number }[];
   activity: { id: number; item_number: number; item_title: string; actor: string | null; action: string; field: string | null; new_value: string | null; created_at: string }[];
+  /** Items in an "in progress" status, soonest due first. */
+  running: { number: number; title: string; type: ItemType; priority: Priority; status_name: string; assignee_id: number | null; assignee_name: string | null; start_date: string | null; due_date: string | null }[];
+  /** Items with a due date from 3 months back to 6 ahead (YYYY-MM-DD), for the calendar. */
+  due: { number: number; title: string; priority: Priority; status_category: StatusCategory; assignee_name: string | null; due_date: string }[];
+  /** Open and finished items per person (whole space, not filtered). */
+  byAssignee: { assignee_id: number; open: number; done: number }[];
+  activeSprint: { id: number; name: string; start_date: string | null; end_date: string | null; item_count: number; done_count: number } | null;
 }
 
 export interface ItemFilters {
