@@ -3,6 +3,10 @@ export type OnboardingStage = (typeof ONBOARDING_STAGES)[number];
 
 export const COMPLEXITIES = ["low", "medium", "high"] as const;
 export type Complexity = (typeof COMPLEXITIES)[number];
+export const BUSINESS_TYPES = ["private_limited", "public_limited", "llp", "partnership", "proprietorship", "opc"] as const;
+export type BusinessType = (typeof BUSINESS_TYPES)[number];
+export const ACCOUNTING_SOFTWARE = ["journl", "none"] as const;
+export type AccountingSoftware = (typeof ACCOUNTING_SOFTWARE)[number];
 
 /** Mirrors STAGE_TRANSITIONS in backend/src/modules/onboarding/onboarding.types.ts. */
 export const STAGE_TRANSITIONS: Record<OnboardingStage, OnboardingStage[]> = {
@@ -27,6 +31,7 @@ export interface OnboardingCase {
   client_name: string;
   legal_name: string;
   client_status: string;
+  business_type: BusinessType | null;
   gstin: string | null;
   state: string | null;
   stage: OnboardingStage;
@@ -49,6 +54,35 @@ export interface OnboardingCase {
   engagement_status: string | null;
   created_at: string;
   updated_at: string;
+  service_requirements?: OnboardingServiceRequirements | null;
+  readiness?: OnboardingReadiness | null;
+}
+
+export interface OnboardingServiceRequirements {
+  case_id: number;
+  bookkeeping: boolean | 0 | 1;
+  gst_filing: boolean | 0 | 1;
+  income_tax_filing: boolean | 0 | 1;
+  payroll: boolean | 0 | 1;
+  audit_support: boolean | 0 | 1;
+  other_services: string | null;
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OnboardingReadiness {
+  complete: boolean;
+  missing: string[];
+  sections: {
+    company_profile: boolean;
+    primary_contact: boolean;
+    tax_details: boolean;
+    stakeholders: boolean;
+    financial_profile: boolean;
+    service_requirements: boolean;
+    assessment: boolean;
+  };
 }
 
 export type StageCounts = Record<OnboardingStage, number>;

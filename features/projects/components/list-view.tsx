@@ -397,8 +397,7 @@ export function ListView() {
             />
             <div className="text-muted-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
               <span className="whitespace-nowrap">
-                {data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1}�?"
-                {Math.min(data.page * data.pageSize, data.total)} of{" "}
+                {data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1}&ndash;{Math.min(data.page * data.pageSize, data.total)} of{" "}
                 {data.total}
               </span>
               <Button

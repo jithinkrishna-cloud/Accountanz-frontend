@@ -146,6 +146,10 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
       <div className="space-y-6 p-5">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
+            <dt className="text-muted-foreground text-xs">Business type</dt>
+            <dd>{row.business_type ? humanize(row.business_type) : "—"}</dd>
+          </div>
+          <div>
             <dt className="text-muted-foreground text-xs">GSTIN</dt>
             <dd className="font-mono text-xs">{row.gstin ?? "—"}</dd>
           </div>
@@ -157,11 +161,38 @@ function CaseBody({ row, onChanged }: { row: OnboardingCase; onChanged: (row: On
             <dt className="text-muted-foreground text-xs">Client status</dt>
             <dd><StatusBadge status={row.client_status} /></dd>
           </div>
-          <div>
+          <div className="col-span-2">
             <dt className="text-muted-foreground text-xs">Assessed by</dt>
             <dd>{row.assessed_by_name ?? "—"}</dd>
           </div>
         </dl>
+
+        {row.readiness && (
+          <section className={cn("rounded-lg border px-4 py-3 text-sm", row.readiness.complete ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900")}>
+            <p className="font-medium">{row.readiness.complete ? "Onboarding data complete" : "Onboarding data incomplete"}</p>
+            {!row.readiness.complete && (
+              <ul className="mt-1 list-inside list-disc text-xs">
+                {row.readiness.missing.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {row.service_requirements && (
+          <section className="rounded-lg border px-4 py-3 text-sm">
+            <p className="mb-1 font-medium">Service requirements</p>
+            <p className="text-muted-foreground text-xs">
+              {[
+                row.service_requirements.bookkeeping && "Bookkeeping",
+                row.service_requirements.gst_filing && "GST filing",
+                row.service_requirements.income_tax_filing && "Income tax filing",
+                row.service_requirements.payroll && "Payroll",
+                row.service_requirements.audit_support && "Audit support",
+                row.service_requirements.other_services && `Other: ${row.service_requirements.other_services}`,
+              ].filter(Boolean).join(", ") || "None selected"}
+            </p>
+          </section>
+        )}
 
         {row.engagement_id && (
           <Link

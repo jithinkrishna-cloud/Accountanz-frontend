@@ -75,13 +75,56 @@ export function ClientDetailView({ id }: { id: number }) {
             <dl className="grid gap-4 sm:grid-cols-2">
               <Fact label="Legal name" value={client.legal_name} />
               <Fact label="Trade name" value={client.trade_name} />
+              <Fact label="Business type" value={client.business_type ? humanize(client.business_type) : null} />
+              <Fact label="Established on" value={client.date_of_establishment ? formatDate(client.date_of_establishment) : null} />
               <Fact label="GSTIN" value={client.gstin && <span className="font-mono">{client.gstin}</span>} />
               <Fact label="PAN" value={client.pan && <span className="font-mono">{client.pan}</span>} />
               <Fact label="State" value={client.state} />
               <Fact label="Accounting software" value={ACCOUNTING_SOFTWARE_LABELS[client.accounting_software]} />
+              <Fact label="Primary contact" value={client.primary_contact_name} />
+              <Fact label="Contact email" value={client.primary_contact_email} />
+              <Fact label="Contact phone" value={client.primary_contact_phone} />
               <Fact label="Address" value={client.address} />
               <Fact label="Added" value={formatDate(client.created_at)} />
             </dl>
+          </Section>
+          <Section title="Tax & registrations">
+            {client.tax_details ? (
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <Fact label="PAN" value={client.tax_details.pan_number && <span>{client.tax_details.pan_number} ({client.tax_details.pan_status ?? "—"})</span>} />
+                <Fact label="GSTIN" value={client.tax_details.gstin && <span>{client.tax_details.gstin} ({client.tax_details.gstin_status ?? "—"})</span>} />
+                <Fact label="TAN" value={client.tax_details.tan_number && <span>{client.tax_details.tan_number} ({client.tax_details.tan_status ?? "—"})</span>} />
+                <Fact label="CIN" value={client.tax_details.cin && <span>{client.tax_details.cin} ({client.tax_details.cin_status ?? "—"})</span>} />
+                <Fact label="LLPIN" value={client.tax_details.llpin && <span>{client.tax_details.llpin} ({client.tax_details.llpin_status ?? "—"})</span>} />
+                <Fact label="MSME/Udyam" value={client.tax_details.msme_udyam_number && <span>{client.tax_details.msme_udyam_number} ({client.tax_details.msme_status ?? "—"})</span>} />
+                <Fact label="Professional tax" value={client.tax_details.professional_tax_registration && <span>{client.tax_details.professional_tax_registration} ({client.tax_details.professional_tax_status ?? "—"})</span>} />
+              </dl>
+            ) : <p className="text-muted-foreground text-sm">No tax/registration details captured yet.</p>}
+          </Section>
+          <Section title="Stakeholders">
+            {client.stakeholders?.length ? (
+              <ul className="space-y-3">
+                {client.stakeholders.map((s) => (
+                  <li key={s.id} className="text-sm">
+                    <p className="font-medium">{s.full_name} <span className="text-muted-foreground font-normal">· {humanize(s.stakeholder_type)}{s.is_primary ? " (primary)" : ""}</span></p>
+                    <p className="text-muted-foreground text-xs">{[s.designation, s.email, s.phone, s.ownership_percentage != null ? `${s.ownership_percentage}%` : null].filter(Boolean).join(" · ") || "No extra details"}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-muted-foreground text-sm">No stakeholders recorded yet.</p>}
+          </Section>
+          <Section title="Financial profile">
+            {client.financial_profile ? (
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <Fact label="FY start month" value={client.financial_profile.financial_year_start_month} />
+                <Fact label="Annual turnover" value={client.financial_profile.annual_turnover} />
+                <Fact label="Monthly txns" value={client.financial_profile.monthly_transaction_volume} />
+                <Fact label="Employees" value={client.financial_profile.employee_count} />
+                <Fact label="Monthly invoices" value={client.financial_profile.monthly_invoice_count} />
+                <Fact label="Current software" value={client.financial_profile.current_accounting_software} />
+                <Fact label="Notes" value={client.financial_profile.notes} />
+              </dl>
+            ) : <p className="text-muted-foreground text-sm">No financial profile captured yet.</p>}
           </Section>
         </div>
         <div className="space-y-6">

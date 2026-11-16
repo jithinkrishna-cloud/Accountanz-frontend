@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/shared/form-field";
 import { PasswordInput } from "@/components/shared/password-input";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { INDIAN_STATES } from "@/lib/constants";
+import { ACCOUNTING_SOFTWARE_LABELS, INDIAN_STATES } from "@/lib/constants";
 import { applyApiError } from "@/lib/form-errors";
+import { humanize } from "@/lib/format";
 import { useSignedIn } from "../hooks/use-session";
 import { registerSchema, type RegisterValues } from "../schemas/auth.schema";
 import { authService } from "../services/auth-service";
@@ -41,7 +43,24 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "", legal_name: "", trade_name: "", gstin: "", pan: "", state: "" },
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      legal_name: "",
+      trade_name: "",
+      business_type: "",
+      date_of_establishment: "",
+      gstin: "",
+      pan: "",
+      state: "",
+      address: "",
+      primary_contact_name: "",
+      primary_contact_email: "",
+      primary_contact_phone: "",
+      accounting_software: "none",
+    },
   });
 
   const onSubmit = async (values: RegisterValues) => {
@@ -54,38 +73,57 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5" noValidate>
-      <Section step={1} title="Your company" description="The business you want us to manage accounts for.">
+      <Section step={1} title="Your company" description="The business you want us to manage accounts for. Basics now, details during onboarding.">
         <FormField id="legal_name" label="Legal name" error={errors.legal_name?.message} className="sm:col-span-2">
           <Input id="legal_name" autoComplete="organization" autoFocus placeholder="Acme Traders Private Limited" aria-invalid={!!errors.legal_name} {...register("legal_name")} />
         </FormField>
-        <FormField id="trade_name" label="Trade name" hint="Optional, if different from the legal name." error={errors.trade_name?.message}>
+        <FormField id="trade_name" label="Trade name" hint="Optional" error={errors.trade_name?.message}>
           <Input id="trade_name" placeholder="Acme" {...register("trade_name")} />
         </FormField>
-        <FormField id="state" label="State" error={errors.state?.message}>
-          <Controller
-            control={control}
-            name="state"
-            render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange}>
-                <SelectTrigger id="state" className="w-full" aria-invalid={!!errors.state}>
-                  <SelectValue placeholder="Select a state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDIAN_STATES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
+        <FormField id="business_type" label="Business type" hint="Optional" error={errors.business_type?.message}>
+          <Controller control={control} name="business_type" render={({ field }) => (
+            <Select value={field.value || undefined} onValueChange={field.onChange}>
+              <SelectTrigger id="business_type" className="w-full"><SelectValue placeholder="Select type" /></SelectTrigger>
+              <SelectContent>{(["private_limited","public_limited","llp","partnership","proprietorship","opc"] as const).map((t) => <SelectItem key={t} value={t}>{humanize(t)}</SelectItem>)}</SelectContent>
+            </Select>
+          )} />
         </FormField>
-        <FormField id="gstin" label="GSTIN" hint="Optional · 15 characters" error={errors.gstin?.message}>
+        <FormField id="state" label="State" error={errors.state?.message}>
+          <Controller control={control} name="state" render={({ field }) => (
+            <Select value={field.value || undefined} onValueChange={field.onChange}>
+              <SelectTrigger id="state" className="w-full" aria-invalid={!!errors.state}><SelectValue placeholder="Select a state" /></SelectTrigger>
+              <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            </Select>
+          )} />
+        </FormField>
+        <FormField id="date_of_establishment" label="Established on" hint="Optional" error={errors.date_of_establishment?.message}>
+          <Input id="date_of_establishment" type="date" {...register("date_of_establishment")} />
+        </FormField>
+        <FormField id="gstin" label="GSTIN" hint="Optional" error={errors.gstin?.message}>
           <Input id="gstin" className="font-mono uppercase" maxLength={15} placeholder="22AAAAA0000A1Z5" aria-invalid={!!errors.gstin} {...register("gstin")} />
         </FormField>
-        <FormField id="pan" label="PAN" hint="Optional · 10 characters" error={errors.pan?.message}>
+        <FormField id="pan" label="PAN" hint="Optional" error={errors.pan?.message}>
           <Input id="pan" className="font-mono uppercase" maxLength={10} placeholder="AAAAA0000A" aria-invalid={!!errors.pan} {...register("pan")} />
+        </FormField>
+        <FormField id="accounting_software" label="Accounting software" error={errors.accounting_software?.message}>
+          <Controller control={control} name="accounting_software" render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="accounting_software" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>{(["journl","none"] as const).map((s) => <SelectItem key={s} value={s}>{ACCOUNTING_SOFTWARE_LABELS[s]}</SelectItem>)}</SelectContent>
+            </Select>
+          )} />
+        </FormField>
+        <FormField id="primary_contact_name" label="Primary contact name" hint="Optional" error={errors.primary_contact_name?.message}>
+          <Input id="primary_contact_name" {...register("primary_contact_name")} />
+        </FormField>
+        <FormField id="primary_contact_phone" label="Primary contact phone" hint="Optional" error={errors.primary_contact_phone?.message}>
+          <Input id="primary_contact_phone" {...register("primary_contact_phone")} />
+        </FormField>
+        <FormField id="primary_contact_email" label="Primary contact email" hint="Optional" error={errors.primary_contact_email?.message} className="sm:col-span-2">
+          <Input id="primary_contact_email" type="email" {...register("primary_contact_email")} />
+        </FormField>
+        <FormField id="address" label="Address" hint="Optional" error={errors.address?.message} className="sm:col-span-2">
+          <Textarea id="address" rows={2} {...register("address")} />
         </FormField>
       </Section>
 

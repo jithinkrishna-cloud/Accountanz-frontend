@@ -1,6 +1,6 @@
-import { api, type Paged } from "@/lib/api-client";
+﻿import { api, type Paged } from "@/lib/api-client";
 import type { ClientFormOutput } from "../schemas/client.schema";
-import type { Client, ClientDetail, ClientStatus } from "../types/client.types";
+import type { Client, ClientDetail, ClientStatus, CompanyFinancialProfile, CompanyStakeholder, CompanyTaxDetails } from "../types/client.types";
 
 export interface ClientListParams {
   q?: string;
@@ -25,4 +25,12 @@ export const clientService = {
   addBranch: (id: number, body: BranchBody) => api<ClientDetail>(`/admin/clients/${id}/branches`, { method: "POST", body }),
   updateBranch: (id: number, branchId: number, body: BranchBody) => api<ClientDetail>(`/admin/clients/${id}/branches/${branchId}`, { method: "PATCH", body }),
   removeBranch: (id: number, branchId: number) => api<ClientDetail>(`/admin/clients/${id}/branches/${branchId}`, { method: "DELETE" }),
+  getTaxDetails: (id: number) => api<CompanyTaxDetails | null>(`/admin/clients/${id}/tax-details`),
+  saveTaxDetails: (id: number, body: Partial<CompanyTaxDetails>) => api<CompanyTaxDetails>(`/admin/clients/${id}/tax-details`, { method: "PUT", body }),
+  listStakeholders: (id: number) => api<CompanyStakeholder[]>(`/admin/clients/${id}/stakeholders`),
+  saveStakeholders: (id: number, stakeholders: unknown[]) => api<CompanyStakeholder[]>(`/admin/clients/${id}/stakeholders`, { method: "PUT", body: { stakeholders } }),
+  getFinancialProfile: (id: number) => api<CompanyFinancialProfile | null>(`/admin/clients/${id}/financial-profile`),
+  saveFinancialProfile: (id: number, body: Partial<CompanyFinancialProfile>) => api<CompanyFinancialProfile>(`/admin/clients/${id}/financial-profile`, { method: "PUT", body }),
 };
+
+
