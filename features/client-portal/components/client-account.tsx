@@ -1,8 +1,12 @@
 "use client";
 
-import { CreditCard } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CreditCard, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FormField } from "@/components/shared/form-field";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,13 +16,15 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ACCOUNTING_SOFTWARE_LABELS, INDIAN_STATES } from "@/lib/constants";
 import { Switch } from "@/components/ui/switch";
 import { applyApiError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
 import { formatDate, formatINR, formatPeriod, humanize } from "@/lib/format";
 import { usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
-import type { NotificationPrefs, PortalBilling, PortalCompany, PortalSettings } from "../types/client-portal.types";
+import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalCompany, PortalSettings } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { Card } from "./portal-ui";
 import { JournlConnection } from "./journl-connection";
@@ -114,58 +120,100 @@ const PREFS: { key: keyof NotificationPrefs; label: string; description: string 
   { key: "monthly_summary", label: "Monthly summary", description: "A short summary after each month closes." },
 ];
 
-function ProfileForm({ settings, onSave }: { settings: PortalSettings; onSave: () => void }) {
+// Mirrors backend portalClientUpdateSchema (owners only).
+const businessSchema = z.object({
+  trade_name: z.string().trim().max(200),
+  state: z.string(),
+  address: z.string().trim().max(500),
+});
+type BusinessValues = z.infer<typeof businessSchema>;
+
+/** Legal name, GSTIN and PAN are read-only; the owner may change trade name, state and address. */
+function BusinessDetailsCard({ business, isOwner, onSave }: { business: PortalBusiness; isOwner: boolean; onSave: () => void }) {
   const updateClient = useUpdateClient();
-  const q = usePortalBusiness();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<{
-    legal_name: string; trade_name: string; gstin: string; pan: string; state: string; address: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const business = q.data;
-  const save = async () => {
-    if (!draft) return;
+  const toValues = (b: PortalBusiness): BusinessValues => ({ trade_name: b.trade_name ?? "", state: b.state ?? "", address: b.address ?? "" });
+  const { register, control, handleSubmit, reset, setError, formState: { errors } } = useForm<BusinessValues>({
+    resolver: zodResolver(businessSchema),
+    defaultValues: toValues(business),
+  });
+
+  const cancel = () => {
+    reset(toValues(business));
+    setEditing(false);
+  };
+  const save = handleSubmit(async (v) => {
     try {
-      await updateClient.mutateAsync({
-        legal_name: draft.legal_name.trim() || undefined,
-        trade_name: draft.trade_name.trim() || null,
-        gstin: draft.gstin.trim() || null,
-        pan: draft.pan.trim() || null,
-        state: draft.state.trim() || null,
-        address: draft.address.trim() || null,
-      });
+      const updated = await updateClient.mutateAsync({ trade_name: v.trade_name || null, state: v.state || null, address: v.address || null });
+      reset(toValues(updated));
       toast.success("Business details saved");
       setEditing(false);
-      setDraft(null);
-      void q.refetch();
       onSave();
     } catch (err) {
-      applyApiError(err);
+      applyApiError(err, setError, ["trade_name", "state", "address"]);
     }
-  };
-  const startEdit = () => {
-    if (!business) return;
-    setDraft({
-      legal_name: business.legal_name ?? "",
-      trade_name: business.trade_name ?? "",
-      gstin: business.gstin ?? "",
-      pan: business.pan ?? "",
-      state: business.state ?? "",
-      address: business.address ?? "",
-    });
-    setEditing(true);
-    setError(null);
-  };
+  });
+
+  return (
+    <Card
+      title="Business details"
+      subtitle={isOwner ? "You can update the trade name, state and address. Your accounting team manages the rest." : "Only the company owner can change these."}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/app/messages?subject=${encodeURIComponent("Correction: Company details")}`}><MessageSquare className="size-4" /> Request correction</Link>
+        </Button>
+      }
+    >
+      <form id="business-form" onSubmit={save} noValidate>
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <FormField id="legal_name" label="Legal name" hint="Managed by your accounting team.">
+            <Input id="legal_name" value={business.legal_name} readOnly disabled />
+          </FormField>
+          <FormField id="trade_name" label="Trade name" error={errors.trade_name?.message}>
+            <Input id="trade_name" readOnly={!editing} aria-invalid={!!errors.trade_name} {...register("trade_name")} />
+          </FormField>
+          <FormField id="gstin" label="GSTIN" hint="Managed by your accounting team.">
+            <Input id="gstin" className="font-mono" value={business.gstin ?? ""} placeholder="—" readOnly disabled />
+          </FormField>
+          <FormField id="pan" label="PAN" hint="Managed by your accounting team.">
+            <Input id="pan" className="font-mono" value={business.pan ?? ""} placeholder="—" readOnly disabled />
+          </FormField>
+          <FormField id="state" label="State" error={errors.state?.message}>
+            <Controller control={control} name="state" render={({ field }) => (
+              <Select value={field.value || undefined} onValueChange={field.onChange} disabled={!editing}>
+                <SelectTrigger id="state" className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            )} />
+          </FormField>
+          <FormField id="address" label="Address" error={errors.address?.message}>
+            <Input id="address" readOnly={!editing} aria-invalid={!!errors.address} {...register("address")} />
+          </FormField>
+          <FormField id="software" label="Accounting software">
+            <Input id="software" value={ACCOUNTING_SOFTWARE_LABELS[business.accounting_software] ?? business.accounting_software} readOnly disabled />
+          </FormField>
+        </div>
+      </form>
+      {isOwner && (
+        <div className="flex justify-end gap-2 border-t px-5 pt-4 pb-5">
+          {editing ? (
+            <>
+              <Button type="button" variant="outline" size="sm" onClick={cancel}>Cancel</Button>
+              <SubmitButton form="business-form" size="sm" pending={updateClient.isPending}>Save changes</SubmitButton>
+            </>
+          ) : (
+            <Button type="button" size="sm" onClick={() => setEditing(true)}>Edit details</Button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ProfileForm({ settings, onSave }: { settings: PortalSettings; onSave: () => void }) {
+  const q = usePortalBusiness();
   if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
-  if (q.isLoading || !business) return <Skeleton className="h-64 w-full rounded-xl" />;
-  const baseDraft = {
-    legal_name: business.legal_name ?? "",
-    trade_name: business.trade_name ?? "",
-    gstin: business.gstin ?? "",
-    pan: business.pan ?? "",
-    state: business.state ?? "",
-    address: business.address ?? "",
-  };
+  if (q.isLoading || !q.data) return <Skeleton className="h-64 w-full rounded-xl" />;
   return (
     <div className="space-y-6">
       <Card title="Your profile" subtitle={`${settings.email} · ${settings.company} · ${settings.role === "owner" ? "Owner" : settings.can_approve ? "Member (can approve)" : "Member"}`}>
@@ -175,69 +223,7 @@ function ProfileForm({ settings, onSave }: { settings: PortalSettings; onSave: (
           <FormField id="phone" label="Phone"><Input id="phone" type="tel" defaultValue={settings.phone ?? ""} readOnly /></FormField>
         </div>
       </Card>
-      <Card title="Business details" subtitle="Your company details as registered with Accountanz.">
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <FormField id="legal_name" label="Legal name" error={error ?? undefined}>
-            <Input
-              id="legal_name"
-              defaultValue={baseDraft.legal_name}
-              onChange={(e) => { setDraft({ ...baseDraft, legal_name: e.target.value }); setError(null); }}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="trade_name" label="Trade name">
-            <Input
-              id="trade_name"
-              defaultValue={baseDraft.trade_name}
-              onChange={(e) => setDraft({ ...baseDraft, trade_name: e.target.value })}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="gstin" label="GSTIN">
-            <Input
-              id="gstin"
-              defaultValue={baseDraft.gstin}
-              onChange={(e) => setDraft({ ...baseDraft, gstin: e.target.value })}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="pan" label="PAN">
-            <Input
-              id="pan"
-              defaultValue={baseDraft.pan}
-              onChange={(e) => setDraft({ ...baseDraft, pan: e.target.value })}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="state" label="State">
-            <Input
-              id="state"
-              defaultValue={baseDraft.state}
-              onChange={(e) => setDraft({ ...baseDraft, state: e.target.value })}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="address" label="Address">
-            <Input
-              id="address"
-              defaultValue={baseDraft.address}
-              onChange={(e) => setDraft({ ...baseDraft, address: e.target.value })}
-              readOnly={!editing}
-            />
-          </FormField>
-          <FormField id="software" label="Accounting software"><Input id="software" defaultValue={business.accounting_software} readOnly /></FormField>
-        </div>
-        <div className="px-5 pt-4 pb-5 border-t border-muted flex justify-end gap-2">
-          {editing ? (
-            <>
-              <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(false); setDraft(null); }}>Cancel</Button>
-              <SubmitButton type="button" pending={updateClient.isPending} onClick={() => void save()}>Save changes</SubmitButton>
-            </>
-          ) : (
-            <Button type="button" size="sm" onClick={startEdit}>Edit details</Button>
-          )}
-        </div>
-      </Card>
+      <BusinessDetailsCard business={q.data} isOwner={settings.role === "owner"} onSave={onSave} />
     </div>
   );
 }

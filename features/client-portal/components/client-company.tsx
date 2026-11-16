@@ -138,7 +138,7 @@ function BusinessBody() {
         </Card>
       </div>
       <div className="space-y-6">
-        <Card title="Services you need" actions={<RequestCorrection section="Services you need" />}>
+        <Card title="Services" actions={<RequestCorrection section="Services" />}>
           {services.length ? (
             <ul className="space-y-2 p-5 text-sm">
               {services.map((s) => <li key={s} className="flex items-center gap-2"><Check className="text-primary size-4 shrink-0" aria-hidden />{s}</li>)}
