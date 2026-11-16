@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORY_LABELS, DOCUMENT_CATEGORIES } from "@/features/documents/types/document.types";
+import { CATEGORY_LABELS, DOCUMENT_CATEGORIES, type DocumentCategory } from "@/features/documents/types/document.types";
 import { applyApiError } from "@/lib/form-errors";
 import { useUpload } from "../hooks/use-client-portal";
 import type { PortalRequest } from "../types/client-portal.types";
@@ -16,11 +16,22 @@ import type { PortalRequest } from "../types/client-portal.types";
 const MAX_MB = 20;
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.csv,.doc,.docx,.zip";
 
+/** Requests don't carry a category, so suggest one from what was asked for (the client can still change it). */
+const CATEGORY_HINTS: [RegExp, DocumentCategory][] = [
+  [/bank|statement|passbook/i, "bank_statement"],
+  [/sales|invoice|bill to|outward/i, "sales_invoice"],
+  [/purchase|vendor|supplier|inward/i, "purchase_bill"],
+  [/receipt|payment proof|voucher/i, "receipt"],
+  [/gst|gstr|tax return/i, "gst"],
+];
+export const suggestCategory = (description: string | undefined): DocumentCategory =>
+  (description && CATEGORY_HINTS.find(([re]) => re.test(description))?.[1]) || "other";
+
 /** Fresh state every time the dialog opens (it is mounted only while open). */
 function UploadForm({ request, onDone }: { request?: PortalRequest | null; onDone: () => void }) {
   const upload = useUpload();
   const [file, setFile] = useState<File | null>(null);
-  const [category, setCategory] = useState("other");
+  const [category, setCategory] = useState<string>(suggestCategory(request?.description));
   const [period, setPeriod] = useState(request?.period ?? "");
   const [error, setError] = useState<string | null>(null);
 

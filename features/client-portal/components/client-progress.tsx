@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, MessageSquare, Stamp } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Stamp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -101,7 +101,7 @@ const stepCount = (t: PortalTask) => `${t.checklist.filter((c) => c.done).length
 
 // ───────────── Month summary and "waiting on you" ─────────────
 
-type MilestoneState = "done" | "current" | "you" | "upcoming";
+type MilestoneState = "done" | "current" | "you" | "upcoming" | "skipped";
 
 /**
  * The month as client-friendly milestones, worked out from what already exists: open document requests, the jobs'
@@ -114,6 +114,8 @@ function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[
   const stages = tasks.map((t) => STAGE_OF[t.status]);
   const openDocs = blockingRequests(requests, period).length;
   const pendingApprovals = (approvals ?? []).filter((a) => a.status === "pending").length;
+  // Approvals aren't tied to a period, so "this month's" are the ones asked for during it.
+  const monthApprovals = (approvals ?? []).filter((a) => a.created_at.slice(0, 7) === period);
   const reportsReady = (reports ?? []).some((r) => r.period === period);
   const bookkeepingDone = stages.length > 0 && stages.every((s) => s >= 2);
   const reviewDone = stages.length > 0 && stages.every((s) => s === 3);
@@ -130,11 +132,16 @@ function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[
       state: reviewDone ? "done" : stages.some((s) => s === 2) ? "current" : "upcoming",
       note: reviewDone ? "Checked" : stages.some((s) => s === 2) ? "Being checked" : "After bookkeeping",
     },
-    {
-      label: "Your approval",
-      state: pendingApprovals ? "you" : reviewDone ? "done" : "upcoming",
-      note: pendingApprovals ? `${pendingApprovals} waiting for you` : reviewDone ? "Nothing waiting" : "If anything needs your sign-off",
-    },
+    // Sign-off is only asked for when something needs it: tell "you approved" apart from "nothing was asked".
+    pendingApprovals
+      ? { label: "Your approval", state: "you", note: `${pendingApprovals} waiting for you` }
+      : monthApprovals.some((a) => a.status === "rejected") && !monthApprovals.some((a) => a.status === "approved")
+        ? { label: "Your approval", state: "current", note: "Changes requested" }
+        : monthApprovals.length
+          ? { label: "Your approval", state: "done", note: "Approved" }
+          : reviewDone
+            ? { label: "Your approval", state: "skipped", note: "None needed" }
+            : { label: "Your approval", state: "upcoming", note: "If anything needs your sign-off" },
     { label: "Reports ready", state: reportsReady ? "done" : reviewDone ? "current" : "upcoming", note: reportsReady ? "Published" : reviewDone ? "Being prepared" : "At month end" },
   ];
   const dot: Record<MilestoneState, string> = {
@@ -142,18 +149,19 @@ function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[
     current: "border-2 border-sky-500 bg-white text-sky-700",
     you: "border-2 border-amber-400 bg-amber-50 text-amber-800",
     upcoming: "border border-border bg-white text-muted-foreground",
+    skipped: "bg-muted text-muted-foreground",
   };
   return (
     <ol className="mt-4 grid grid-cols-5 gap-1" aria-label={`${formatPeriod(period)} milestones`}>
       {steps.map((s, i) => (
         <li key={s.label} className="relative flex flex-col items-center text-center">
-          {i > 0 && <span className={cn("absolute top-3 right-1/2 h-0.5 w-full -translate-x-3", steps[i - 1]!.state === "done" ? "bg-emerald-400" : "bg-border")} aria-hidden />}
+          {i > 0 && <span className={cn("absolute top-3 right-1/2 h-0.5 w-full -translate-x-3", steps[i - 1]!.state === "done" || steps[i - 1]!.state === "skipped" ? "bg-emerald-400" : "bg-border")} aria-hidden />}
           <span className={cn("relative z-10 flex size-6 items-center justify-center rounded-full text-[11px] font-semibold", dot[s.state])} aria-hidden>
-            {s.state === "done" ? <Check className="size-3.5" /> : i + 1}
+            {s.state === "done" ? <Check className="size-3.5" /> : s.state === "skipped" ? <Minus className="size-3.5" /> : i + 1}
           </span>
           <span className="mt-1.5 text-xs font-medium">{s.label}</span>
           <span className={cn("text-[11px]", s.state === "you" ? "font-medium text-amber-700" : "text-muted-foreground")}>{s.note}</span>
-          <span className="sr-only">{s.state === "done" ? "done" : s.state === "you" ? "waiting for you" : s.state === "current" ? "in progress" : "not started"}</span>
+          <span className="sr-only">{s.state === "done" ? "done" : s.state === "skipped" ? "not needed" : s.state === "you" ? "waiting for you" : s.state === "current" ? "in progress" : "not started"}</span>
         </li>
       ))}
     </ol>
