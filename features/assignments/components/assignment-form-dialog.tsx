@@ -12,12 +12,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ROLE_LABELS } from "@/lib/constants";
 import { applyApiError } from "@/lib/form-errors";
-import type { PortalRole } from "@/types/auth";
 import { useAssignmentOptions, useCreateAssignment } from "../hooks/use-assignments";
 import { assignmentFormSchema, type AssignmentFormOutput, type AssignmentFormValues } from "../schemas/assignment.schema";
 import { TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment } from "../types/assignment.types";
+import { StaffPicker } from "./staff-picker";
 
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
 
@@ -48,6 +47,8 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
     handleSubmit,
     reset,
     setError,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<AssignmentFormValues, unknown, AssignmentFormOutput>({ resolver: zodResolver(assignmentFormSchema), defaultValues: toValues(replacing, clientId) });
 
@@ -97,28 +98,28 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
               />
             </FormField>
           )}
-          <FormField id="user_id" label={replacing ? "New person" : "Accountant"} error={errors.user_id?.message} className={replacing ? "sm:col-span-2" : undefined}>
+          <FormField id="user_id" label={replacing ? "New person" : "Accountant"} error={errors.user_id?.message} className="sm:col-span-2">
             <Controller
               control={control}
               name="user_id"
-              render={({ field }) => (
-                <Select value={field.value || undefined} onValueChange={field.onChange}>
-                  <SelectTrigger id="user_id" className="w-full" aria-invalid={!!errors.user_id}>
-                    <SelectValue placeholder={options.isLoading ? "Loading…" : "Select a person"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((s) => {
-                      const verified = s.verification_status === "verified";
-                      return (
-                        <SelectItem key={s.user_id} value={String(s.user_id)} disabled={!verified}>
-                          {s.full_name} · {ROLE_LABELS[s.portal_role as PortalRole] ?? s.portal_role}
-                          {!verified && " · not verified"}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) =>
+                options.isLoading ? (
+                  <p className="text-muted-foreground text-sm">Loading accountants…</p>
+                ) : (
+                  <StaffPicker
+                    id="user_id"
+                    staff={staff}
+                    value={field.value}
+                    invalid={!!errors.user_id}
+                    onChange={(v) => {
+                      field.onChange(v);
+                      // Start the team role at the person's own role; still changeable.
+                      const p = staff.find((s) => String(s.user_id) === v);
+                      if (p && !getValues("team_role") && (TEAM_ROLES as readonly string[]).includes(p.portal_role)) setValue("team_role", p.portal_role as AssignmentFormValues["team_role"]);
+                    }}
+                  />
+                )
+              }
             />
           </FormField>
           {!replacing && (

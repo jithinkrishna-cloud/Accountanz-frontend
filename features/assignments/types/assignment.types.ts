@@ -39,6 +39,6 @@ export interface Assignment {
 }
 
 export interface AssignmentOptions {
-  staff: { user_id: number; full_name: string; email: string; portal_role: string; verification_status: string }[];
+  staff: { user_id: number; full_name: string; email: string; portal_role: string; verification_status: string; expertise: string[]; active_clients: number }[];
   clients: { id: number; name: string; status: string }[];
 }

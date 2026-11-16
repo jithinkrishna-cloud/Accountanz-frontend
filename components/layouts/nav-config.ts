@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CalendarDays,
   CircleCheck,
+  Compass,
   MessageSquare,
   ClipboardList,
   CreditCard,
@@ -28,6 +29,7 @@ import {
   UserCog,
   UsersRound,
   UserPlus,
+  UserSearch,
   Users,
   Wallet,
 } from "lucide-react";
@@ -72,6 +74,8 @@ export const NAV: Record<Portal, NavGroup[]> = {
         { label: "Onboarding", href: "/admin/onboarding", icon: UserPlus },
         { label: "Clients", href: "/admin/clients", icon: Building2 },
         { label: "Engagements", href: "/admin/engagements", icon: Handshake },
+        // Clients asking for a specific accountant from Explore in their portal.
+        { label: "Accountant Requests", href: "/admin/accountant-requests", icon: UserSearch },
         { label: "Packages", href: "/admin/packages", icon: Package },
         { label: "Services", href: "/admin/services", icon: Briefcase },
       ],
@@ -202,6 +206,11 @@ export const NAV: Record<Portal, NavGroup[]> = {
         { label: "My Business", href: "/app/business", icon: Building2 },
         { label: "My Accounting Team", href: "/app/team", icon: UsersRound },
       ],
+    },
+    {
+      // Browse Accountanz accountants and ask for one to join the team or help with a piece of work.
+      label: "Explore",
+      items: [{ label: "Accountants", href: "/app/explore", icon: Compass }],
     },
     {
       label: "Account",
