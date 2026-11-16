@@ -3,10 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 
-export type RequestKind = "join_team" | "one_off";
+export type RequestKind = "join_team" | "one_off" | "replace";
 export type RequestStatus = "pending" | "approved" | "declined" | "withdrawn";
 
-export const KIND_LABEL: Record<RequestKind, string> = { join_team: "Join our accounting team", one_off: "A one-off piece of work" };
+export const KIND_LABEL: Record<RequestKind, string> = { join_team: "Join our accounting team", one_off: "A one-off piece of work", replace: "Replace someone on our team" };
 export const STATUS_LABEL: Record<RequestStatus, string> = { pending: "Waiting for Accountanz", approved: "Approved", declined: "Declined", withdrawn: "Withdrawn" };
 
 /** An accountant as a client sees them: role and expertise only (no rate, contact details or performance numbers). */
@@ -30,6 +30,10 @@ export interface AccountantRequest {
   requested_by: number | null;
   requester_name: string | null;
   kind: RequestKind;
+  /** kind=replace: the team member being replaced. */
+  replaces_assignment_id: number | null;
+  replaces_name: string | null;
+  replaces_role: string | null;
   message: string;
   preferred_start: string | null;
   status: RequestStatus;
@@ -43,6 +47,7 @@ export interface AccountantRequest {
 
 export interface RequestBody {
   kind: RequestKind;
+  replaces_assignment_id?: number | null;
   message: string;
   preferred_start: string | null;
 }

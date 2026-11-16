@@ -12,7 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompanyGate } from "@/features/client-portal/components/company-gate";
+import { usePortalTeam } from "@/features/client-portal/hooks/use-client-portal";
 import { ROLE_INFO } from "@/features/client-portal/components/portal-ui";
 import type { PortalCompany } from "@/features/client-portal/types/client-portal.types";
 import { ApiError } from "@/lib/api-client";
@@ -60,22 +62,36 @@ function Relation({ a }: { a: ExploreAccountant }) {
 
 function RequestForm({ a, onDone, onBack }: { a: ExploreAccountant; onDone: () => void; onBack: () => void }) {
   const send = useRequestAccountant();
+  const team = usePortalTeam().data;
   const [kind, setKind] = useState<RequestKind>(a.team_roles.length ? "one_off" : "join_team");
+  const [replaces, setReplaces] = useState<string>("");
   const [message, setMessage] = useState("");
   const [start, setStart] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [replacesError, setReplacesError] = useState<string | null>(null);
   const first = a.full_name.split(" ")[0];
+  // People this accountant could take over from: anyone on the team except themselves, in a role they don't already hold.
+  const replaceable = (team ?? []).filter((m) => m.user_id !== a.id && !a.team_roles.includes(m.team_role));
+  const replacing = kind === "replace";
+  const replacedPerson = replaceable.find((m) => String(m.assignment_id) === replaces);
 
   const submit = async () => {
     setError(null);
+    setReplacesError(null);
+    if (replacing && !replaces) return setReplacesError("Choose who they should replace");
     try {
-      await send.mutateAsync({ accountantId: a.id, body: { kind, message: message.trim(), preferred_start: start || null } });
-      toast.success(`Request for ${first} sent to Accountanz`);
+      await send.mutateAsync({
+        accountantId: a.id,
+        body: { kind, replaces_assignment_id: replacing ? Number(replaces) : null, message: message.trim(), preferred_start: start || null },
+      });
+      toast.success(replacing ? `Request to replace ${replacedPerson?.full_name ?? "a team member"} with ${first} sent to Accountanz` : `Request for ${first} sent to Accountanz`);
       onDone();
     } catch (err) {
-      const fieldMsg = err instanceof ApiError ? err.fieldErrors.message?.[0] : undefined;
-      if (fieldMsg) setError(fieldMsg);
-      else applyApiError(err);
+      const fe = err instanceof ApiError ? err.fieldErrors : {};
+      if (fe.message?.[0] || fe.replaces_assignment_id?.[0]) {
+        setError(fe.message?.[0] ?? null);
+        setReplacesError(fe.replaces_assignment_id?.[0] ?? null);
+      } else applyApiError(err);
     }
   };
 
@@ -89,7 +105,7 @@ function RequestForm({ a, onDone, onBack }: { a: ExploreAccountant; onDone: () =
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-sm font-medium">What do you need?</legend>
           {(Object.keys(KIND_LABEL) as RequestKind[]).map((k) => {
-            const disabled = k === "join_team" && a.team_roles.length > 0;
+            const disabled = (k === "join_team" && a.team_roles.length > 0) || (k === "replace" && !!team && replaceable.length === 0);
             return (
               <label
                 key={k}
@@ -107,21 +123,42 @@ function RequestForm({ a, onDone, onBack }: { a: ExploreAccountant; onDone: () =
                       ? disabled
                         ? `${first} already works on your account.`
                         : `${first} works on your accounts every month.`
-                      : `${first} helps with one task, like a year-end close or a GST notice.`}
+                      : k === "replace"
+                        ? disabled
+                          ? `There's nobody on your team ${first} could take over from.`
+                          : `${first} takes over from someone on your team, in the same role.`
+                        : `${first} helps with one task, like a year-end close or a GST notice.`}
                   </span>
                 </span>
               </label>
             );
           })}
         </fieldset>
-        <FormField id="req-message" label="Tell us about the work" error={error ?? undefined} hint="What you'd like help with, and anything we should know.">
+        {replacing && (
+          <FormField id="req-replaces" label="Who should they replace?" error={replacesError ?? undefined}>
+            <Select value={replaces || undefined} onValueChange={(v) => { setReplaces(v); setReplacesError(null); }}>
+              <SelectTrigger id="req-replaces" className="w-full" aria-invalid={!!replacesError}><SelectValue placeholder="Choose a team member" /></SelectTrigger>
+              <SelectContent>
+                {replaceable.map((m) => (
+                  <SelectItem key={m.assignment_id} value={String(m.assignment_id)}>{m.full_name} · {roleLabel(m.team_role)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
+        <FormField
+          id="req-message"
+          label={replacing ? "Why would you like a change?" : "Tell us about the work"}
+          error={error ?? undefined}
+          hint={replacing ? `Only Accountanz reads this. ${replacedPerson ? replacedPerson.full_name.split(" ")[0] : "The person being replaced"} is only told their assignment ended, not why.` : "What you'd like help with, and anything we should know."}
+        >
           <Textarea
             id="req-message"
             rows={4}
             maxLength={2000}
             value={message}
             aria-invalid={!!error}
-            placeholder={`We'd like ${first} to help with our monthly GST returns and bank reconciliation.`}
+            placeholder={replacing ? `We'd like someone with more GST experience for our monthly returns.` : `We'd like ${first} to help with our monthly GST returns and bank reconciliation.`}
             onChange={(e) => setMessage(e.target.value)}
           />
         </FormField>
@@ -131,7 +168,7 @@ function RequestForm({ a, onDone, onBack }: { a: ExploreAccountant; onDone: () =
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onBack} disabled={send.isPending}>Back</Button>
-        <SubmitButton pending={send.isPending} disabled={message.trim().length < 10} onClick={() => void submit()}>
+        <SubmitButton pending={send.isPending} disabled={message.trim().length < 10 || (replacing && !replaces)} onClick={() => void submit()}>
           <Send className="size-4" aria-hidden /> Send request
         </SubmitButton>
       </DialogFooter>
@@ -217,7 +254,7 @@ function MyRequests({ company }: { company: PortalCompany }) {
             <div className="min-w-0 text-sm">
               <p>
                 <span className="font-medium">{r.accountant_name}</span>
-                <span className="text-muted-foreground"> · {KIND_LABEL[r.kind]}</span>
+                <span className="text-muted-foreground"> · {r.kind === "replace" && r.replaces_name ? `To replace ${r.replaces_name}` : KIND_LABEL[r.kind]}</span>
               </p>
               <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{r.message}</p>
               {r.decision_note && <p className="mt-1 text-xs">Reply from {r.decided_by_name ?? "Accountanz"}: {r.decision_note}</p>}

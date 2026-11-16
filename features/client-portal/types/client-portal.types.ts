@@ -90,6 +90,7 @@ export interface PortalProposal {
 }
 
 export interface PortalTeamMember {
+  assignment_id: number;
   user_id: number;
   full_name: string;
   email: string;
