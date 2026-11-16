@@ -169,7 +169,8 @@ export function JournlModulePage({ moduleKey }: { moduleKey: string }) {
   const eligible = ws.data.clients.filter((c) => c.modules.includes(moduleKey));
   const wanted = Number(params.get("client"));
   const client = eligible.find((c) => c.client_id === wanted) ?? eligible[0] ?? null;
-  const tabs = ws.data.modules.find((m) => m.key === moduleKey)?.tabs ?? [];
+  // Only the tabs whose JournL feature this person has for the chosen client (each tab needs its own feature).
+  const tabs = (ws.data.modules.find((m) => m.key === moduleKey)?.tabs ?? []).filter((t) => !client || client.views.includes(t.key));
   const activeTab = tabs.find((t) => t.key === tab)?.key ?? tabs[0]?.key ?? null;
 
   const picker = eligible.length > 1 && client && (
@@ -186,7 +187,7 @@ export function JournlModulePage({ moduleKey }: { moduleKey: string }) {
       {header}
       {!client ? (
         <Notice icon={Lock} title={`No ${meta.label} access yet`}>
-          None of your clients has granted you {meta.label} in JournL. An admin grants it under Assignments → JournL modules, and the client needs an active engagement.
+          None of your clients has granted you {meta.label} in JournL. It needs the feature granted by both an Accountanz admin and the client owner, and an active engagement.
         </Notice>
       ) : (
         <div className="grid gap-4">

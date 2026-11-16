@@ -50,7 +50,7 @@ function ModuleRow({ assignmentId, module, access, allowUnverified }: { assignme
           {policy && <span className={cn("ml-2 rounded-full px-2 py-0.5 text-xs font-normal", restricted ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>{policy}</span>}
         </p>
         <p className="text-muted-foreground text-xs">
-          {!module.verified ? "Mapped, not verified against JournL" : module.features.length ? module.features.map((f) => f.name).join(", ") : "No JournL features mapped"}
+          {!module.verified ? "Mapped, not verified against JournL" : `JournL feature ${module.journl_module_id ?? "—"}`}
           {access.effective_actions.length > 0 && <span className="text-emerald-700"> · in effect</span>}
           {access.blocked_reason && <span className="text-amber-700"> · not in effect: {access.blocked_reason}</span>}
         </p>
@@ -73,21 +73,39 @@ function ModuleRow({ assignmentId, module, access, allowUnverified }: { assignme
 }
 
 function Body({ data, catalog }: { data: AssignmentPermissions; catalog: CatalogModule[] }) {
+  // The client's own grant is the ceiling: recorded per feature when the owner allows it in their portal.
+  const grantable = catalog.filter((m) => m.default_policy !== "restricted");
+  const clientAllowed = grantable.filter((m) => {
+    const g = data.modules.find((x) => x.module_key === m.module_key)?.client_grant;
+    return g?.status === "active" && g.allowed_actions.length > 0;
+  }).length;
+  const areas = [...new Map(catalog.map((m) => [m.group_key, m.group_label])).entries()];
   return (
     <div className="grid gap-4">
       <ul className="bg-muted/40 grid gap-2 rounded-lg border p-3 sm:grid-cols-2">
         <Gate ok={data.assignment_active} label="Assignment active today" />
         <Gate ok={data.engagement_active} label="Client has an active engagement" />
-        <Gate ok={data.journl_access} label="JournL access on" hint={data.journl_access ? undefined : "Turn on under Edit dates & access; modules take effect only while it's on."} />
-        <Gate ok={null} label="Client's own grant" hint="Decided and enforced in JournL." />
+        <Gate ok={data.journl_access} label="JournL access on" hint={data.journl_access ? undefined : "Turn on under Edit dates & access; features take effect only while it's on."} />
+        <Gate
+          ok={clientAllowed > 0}
+          label="Client's own grant"
+          hint={`${clientAllowed} of ${grantable.length} features allowed by the client owner (Settings → JournL Access in their portal).`}
+        />
       </ul>
-      {!data.allow_unverified && <p className="text-muted-foreground text-xs">Only modules and actions verified against JournL can be granted here.</p>}
-      <ul className="divide-y">
-        {catalog.map((m) => {
-          const access = data.modules.find((x) => x.module_key === m.module_key);
-          return access ? <ModuleRow key={m.module_key} assignmentId={data.assignment_id} module={m} access={access} allowUnverified={data.allow_unverified} /> : null;
-        })}
-      </ul>
+      {!data.allow_unverified && <p className="text-muted-foreground text-xs">Only features and actions verified against JournL can be granted here.</p>}
+      {areas.map(([key, label]) => (
+        <section key={key} aria-labelledby={`area-${key}`}>
+          <h3 id={`area-${key}`} className="text-muted-foreground border-b pb-1.5 text-xs font-medium tracking-wide uppercase">{label}</h3>
+          <ul className="divide-y">
+            {catalog
+              .filter((m) => m.group_key === key)
+              .map((m) => {
+                const access = data.modules.find((x) => x.module_key === m.module_key);
+                return access ? <ModuleRow key={m.module_key} assignmentId={data.assignment_id} module={m} access={access} allowUnverified={data.allow_unverified} /> : null;
+              })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
@@ -101,9 +119,9 @@ export function ModulePermissionsDialog({ assignment, onClose }: { assignment: {
     <Dialog open={!!assignment} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>JournL modules: {assignment?.full_name}</DialogTitle>
+          <DialogTitle>JournL features: {assignment?.full_name}</DialogTitle>
           <DialogDescription>
-            What {assignment?.full_name} may use in {assignment?.client_name}&apos;s JournL. Modules map to JournL&apos;s own features and are read-only for now (bookkeepers see them under Accounting — JournL). Changes are saved immediately and audited.
+            What {assignment?.full_name} may use in {assignment?.client_name}&apos;s JournL. Each is one of JournL&apos;s own features, read-only for now (bookkeepers see them under Accounting — JournL). The client owner must allow it too. Changes are saved immediately and audited.
           </DialogDescription>
         </DialogHeader>
         {error ? (

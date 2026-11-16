@@ -63,8 +63,8 @@ export function JournlSubnav() {
         </div>
       ) : modules.length === 0 ? (
         <p className="text-muted-foreground px-3 py-2 text-xs">
-          No JournL modules granted yet. An admin grants them under Assignments
-          → JournL modules.
+          No JournL access granted yet. Features need an admin grant under Assignments
+          → JournL features, and the client owner&apos;s.
         </p>
       ) : (
         <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5">

@@ -10,6 +10,8 @@ export interface JournlWorkspaceClient {
   session_until: string | null;
   /** Module keys this person may read for this client today. */
   modules: string[];
+  /** View (tab) keys this person may open for this client: each needs its own JournL feature. */
+  views: string[];
 }
 
 export interface JournlWorkspace {

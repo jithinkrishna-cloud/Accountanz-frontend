@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { AssignmentPermissions, Catalog, ClientAssignmentPermission, JournlAccessOverview } from "../types/journl-permission.types";
+import type { AssignmentPermissions, Catalog, ClientAccessActivity, ClientAssignmentPermission, JournlAccessOverview } from "../types/journl-permission.types";
 
 export const journlPermissionService = {
   catalog: () => api<Catalog>("/admin/journl-permissions/catalog"),
@@ -11,6 +11,7 @@ export const journlPermissionService = {
   // Client-side: /api/app/journl-permissions
   clientCatalog: () => api<Catalog>("/app/journl-permissions/catalog"),
   clientTeam: () => api<{ items: ClientAssignmentPermission[] }>("/app/journl-permissions/team").then((r) => r.items),
+  clientActivity: (assignmentId: number) => api<{ items: ClientAccessActivity[] }>(`/app/journl-permissions/assignments/${assignmentId}/activity`).then((r) => r.items),
   clientSetModule: (assignmentId: number, moduleKey: string, actions: string[]) =>
     api<AssignmentPermissions>(`/app/journl-permissions/assignments/${assignmentId}/modules/${moduleKey}`, { method: "PUT", body: { actions, grantSource: "client" } }),
 };

@@ -104,7 +104,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> Edit dates & access</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL modules</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL features</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setReplacing(a)}><ArrowRightLeft className="size-4" /> Hand over to someone else</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setEnding(a)}><UserMinus className="size-4" /> End assignment</DropdownMenuItem>

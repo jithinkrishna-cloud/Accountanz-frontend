@@ -18,7 +18,11 @@ export interface JournlFeature {
 
 export interface CatalogModule {
   module_key: string;
+  /** The JournL feature (one permission per feature). */
   label: string;
+  /** Its area (Sales, Purchases, ...): display group and staff workspace page. */
+  group_key: string;
+  group_label: string;
   default_policy: ModulePolicy;
   journl_module_id: string | null;
   /** What this module opens in JournL, by name. */
@@ -82,6 +86,8 @@ export interface ClientModulePermission {
   label: string;
   client_granted: boolean;
   client_actions: string[];
+  /** Accountanz's side of the grant: access needs both keys. */
+  accountanz_actions: string[];
   effective: boolean;
   reason: string | null;
 }
@@ -93,6 +99,19 @@ export interface ClientAssignmentPermission {
   full_name: string;
   team_role: string;
   modules: ClientModulePermission[];
+}
+
+/** One JournL access change for an accountant on the company (from the audit log). */
+export interface ClientAccessActivity {
+  id: number;
+  /** Epoch milliseconds. */
+  at: number;
+  /** "You", or the person's name. */
+  actor: string;
+  /** Whose key changed: the client's own grant or Accountanz's. */
+  side: "client" | "accountanz";
+  feature: string;
+  change: "allowed" | "removed";
 }
 
 /** Admin overview: per client, the JournL connection/session and each assigned person's module access. */
@@ -110,7 +129,8 @@ export interface JournlAccessOverview {
       full_name: string;
       team_role: string;
       journl_access: boolean;
-      modules: Record<string, { granted: boolean; effective: boolean; reason: string | null }>;
+      /** Per area: how many of its features are granted, and whether any is in effect. */
+      modules: Record<string, { granted: boolean; effective: boolean; reason: string | null; granted_count: number; total: number }>;
     }[];
   }[];
 }

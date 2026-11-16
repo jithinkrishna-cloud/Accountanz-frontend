@@ -51,12 +51,22 @@ function ClientStatus({ c }: { c: Client }) {
   );
 }
 
-function ModuleCell({ m }: { m?: { granted: boolean; effective: boolean; reason: string | null } }) {
+/** One area for one person: icon for the state, and how many of the area's features are granted. */
+function ModuleCell({ m }: { m?: { granted: boolean; effective: boolean; reason: string | null; granted_count: number; total: number } }) {
   if (!m?.granted) return <Minus className="text-muted-foreground/50 mx-auto size-4" aria-label="Not granted" />;
-  if (m.effective) return <Check className="mx-auto size-4 text-emerald-600" aria-label="Can read" />;
+  const count = <span className="text-muted-foreground block text-center text-[10px] tabular-nums">{m.granted_count}/{m.total}</span>;
+  if (m.effective) {
+    return (
+      <span title={`${m.granted_count} of ${m.total} features granted`}>
+        <Check className="mx-auto size-4 text-emerald-600" aria-label={`Can read ${m.granted_count} of ${m.total} features`} />
+        {count}
+      </span>
+    );
+  }
   return (
-    <span title={m.reason ?? "Granted, not in effect"} className="flex justify-center">
-      <CircleDashed className="size-4 text-amber-600" aria-label={`Granted, not in effect: ${m.reason ?? ""}`} />
+    <span title={m.reason ?? "Granted, not in effect"} className="block">
+      <CircleDashed className="mx-auto size-4 text-amber-600" aria-label={`${m.granted_count} of ${m.total} granted, not in effect: ${m.reason ?? ""}`} />
+      {count}
     </span>
   );
 }
@@ -101,7 +111,7 @@ function ClientCard({ c, modules, onEdit }: { c: Client; modules: JournlAccessOv
                   ))}
                   <td className="px-5 py-2.5 text-right">
                     <Button size="sm" variant="ghost" onClick={() => onEdit({ id: p.assignment_id, full_name: p.full_name, client_name: c.client_name })}>
-                      <KeyRound className="size-4" aria-hidden /> Modules
+                      <KeyRound className="size-4" aria-hidden /> Features
                     </Button>
                   </td>
                 </tr>
@@ -124,7 +134,7 @@ export function JournlAccessOverviewView() {
   const header = (
     <PageHeader
       title="JournL Access"
-      description="Each client's JournL connection and session, and which JournL modules each assigned accountant can read today."
+      description="Each client's JournL connection and session, and which JournL features each assigned accountant can read today, by area."
       actions={<Button asChild variant="outline"><Link href="/admin/integrations"><PlugZap className="size-4" aria-hidden /> Integrations</Link></Button>}
     />
   );
