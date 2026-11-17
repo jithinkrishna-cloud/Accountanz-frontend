@@ -44,6 +44,22 @@ export function useChangeEngagementStatus(id: number) {
   });
 }
 
+export function useChangePackage(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { package_id: number; monthly_fee: number | null; note: string | null }) => engagementService.changePackage(id, body),
+    onSuccess: (row) => afterChange(qc, row),
+  });
+}
+
+export function useDecidePackageChange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, ...body }: { requestId: number; decision: "approved" | "declined"; monthly_fee: number | null; note: string | null }) => engagementService.decidePackageChange(requestId, body),
+    onSuccess: (row) => afterChange(qc, row),
+  });
+}
+
 export function useUploadAgreement(id: number) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (file: File) => engagementService.uploadAgreement(id, file), onSuccess: (row) => afterChange(qc, row) });

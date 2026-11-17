@@ -18,6 +18,12 @@ export const engagementService = {
   update: (id: number, values: Omit<EngagementFormOutput, "client_id">) => api<Engagement>(`/admin/engagements/${id}`, { method: "PATCH", body: values }),
   changeStatus: (id: number, to: EngagementStatus) =>
     api<{ engagement: Engagement; invoice: IssuedInvoice | null }>(`/admin/engagements/${id}/status`, { method: "POST", body: { to } }),
+  /** Staff move the engagement to another package directly. */
+  changePackage: (id: number, body: { package_id: number; monthly_fee: number | null; note: string | null }) =>
+    api<Engagement>(`/admin/engagements/${id}/package-change`, { method: "POST", body }),
+  /** Approve or decline the client's package change request. */
+  decidePackageChange: (requestId: number, body: { decision: "approved" | "declined"; monthly_fee: number | null; note: string | null }) =>
+    api<{ engagement: Engagement }>(`/admin/engagements/package-changes/${requestId}/decision`, { method: "POST", body }).then((r) => r.engagement),
   uploadAgreement: (id: number, file: File) => {
     const body = new FormData();
     body.append("file", file);

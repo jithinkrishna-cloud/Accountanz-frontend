@@ -1,11 +1,27 @@
 "use client";
 
-import { closestCorners, DndContext, DragOverlay, PointerSensor, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  getFirstCollision,
+  pointerWithin,
+  PointerSensor,
+  rectIntersection,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, ChevronRight, ListTree } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyState, ErrorState } from "@/components/shared/states";
@@ -142,6 +158,8 @@ export function BoardView() {
   const [dragging, setDragging] = useState<Item | null>(null);
   /** Optimistic placement while the move request is in flight. */
   const [pending, setPending] = useState<{ number: number; status_id: number; rank: number } | null>(null);
+  /** While dragging across columns, the card moves into the column under the pointer so that column makes room. */
+  const [preview, setPreview] = useState<{ number: number; status_id: number; rank: number } | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   /** Subtasks show inside their parent's card, unless you ask for the Subtask type. */
@@ -154,23 +172,88 @@ export function BoardView() {
   }, [items.data]);
 
   const byStatus = useMemo(() => {
+    const placed = pending ?? preview;
     const list = (items.data?.items ?? [])
       .filter((i) => showSubtaskCards || i.type !== "subtask")
-      .map((i) => (pending && i.number === pending.number ? { ...i, status_id: pending.status_id, rank: pending.rank } : i));
+      .map((i) => (placed && i.number === placed.number ? { ...i, status_id: placed.status_id, rank: placed.rank } : i));
     const map = new Map<number, Item[]>(space.statuses.map((s) => [s.id, []]));
     for (const i of list) map.get(i.status_id)?.push(i);
     for (const arr of map.values()) arr.sort((a, b) => a.rank - b.rank || a.number - b.number);
     return map;
-  }, [items.data, pending, space.statuses, showSubtaskCards]);
+  }, [items.data, pending, preview, space.statuses, showSubtaskCards]);
+
+  /**
+   * Which column/card the pointer is over. Moving a card into another column changes both columns' sizes, and plain
+   * corner/rect detection then briefly picks the old column again, so the card bounced between the two (flicker).
+   * Here the pointer decides the column, and right after a column change the target is held until layout settles.
+   * (Pattern from dnd-kit's multiple-containers example.)
+   */
+  const lastOverId = useRef<UniqueIdentifier | null>(null);
+  const movedColumn = useRef(false);
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      const pointerHits = pointerWithin(args);
+      let overId = getFirstCollision(pointerHits.length > 0 ? pointerHits : rectIntersection(args), "id");
+      if (overId != null) {
+        const overCol = String(overId).startsWith("col-") ? Number(String(overId).slice(4)) : null;
+        // Over a column: pick the nearest card in it, so the drop position follows the pointer.
+        const cards = overCol != null ? new Set((byStatus.get(overCol) ?? []).map((i) => i.number as UniqueIdentifier)) : null;
+        if (cards && cards.size > 0) {
+          overId = closestCenter({ ...args, droppableContainers: args.droppableContainers.filter((c) => cards.has(c.id)) })[0]?.id ?? overId;
+        }
+        lastOverId.current = overId;
+        return [{ id: overId }];
+      }
+      // Nothing under the pointer (e.g. mid-way while columns re-layout): keep the last target instead of jumping.
+      if (movedColumn.current) lastOverId.current = args.active.id;
+      return lastOverId.current != null ? [{ id: lastOverId.current }] : [];
+    },
+    [byStatus],
+  );
+  // The column change has been rendered: collisions can follow the pointer again.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      movedColumn.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [byStatus]);
+
+  /** The column a card is shown in right now (including where it's being dragged). */
+  const shownStatusOf = (n: number) => {
+    for (const [statusId, list] of byStatus) if (list.some((i) => i.number === n)) return statusId;
+    return null;
+  };
 
   const onDragStart = (e: DragStartEvent) => setDragging(items.data?.items.find((i) => i.number === e.active.id) ?? null);
+
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    if (!over || active.id === over.id) return;
+    const overId = String(over.id);
+    const target = overId.startsWith("col-") ? Number(overId.slice(4)) : shownStatusOf(Number(over.id));
+    const current = shownStatusOf(Number(active.id));
+    // Reordering within a column is animated by the sortable list itself; only a column change needs a re-render.
+    if (target == null || target === current) return;
+    const column = byStatus.get(target) ?? [];
+    const overItem = column.find((i) => i.number === over.id);
+    const rank = overItem ? overItem.rank - 0.5 : (column.at(-1)?.rank ?? 0) + 1024;
+    movedColumn.current = true;
+    setPreview({ number: Number(active.id), status_id: target, rank });
+  };
+
+  const onDragCancel = () => {
+    setDragging(null);
+    setPreview(null);
+  };
 
   const onDragEnd = async (e: DragEndEvent) => {
     setDragging(null);
     const item = items.data?.items.find((i) => i.number === e.active.id);
-    if (!item || !e.over) return;
+    if (!item || !e.over) {
+      setPreview(null);
+      return;
+    }
     const overId = String(e.over.id);
-    const statusId = overId.startsWith("col-") ? Number(overId.slice(4)) : (items.data?.items.find((i) => i.number === e.over!.id)?.status_id ?? item.status_id);
+    const statusId = (overId.startsWith("col-") ? Number(overId.slice(4)) : shownStatusOf(Number(e.over.id))) ?? item.status_id;
     const original = byStatus.get(statusId) ?? [];
     const column = original.filter((i) => i.number !== item.number);
     let index = overId.startsWith("col-") ? column.length : column.findIndex((i) => i.number === e.over!.id);
@@ -180,9 +263,15 @@ export function BoardView() {
     if (!overId.startsWith("col-") && from >= 0 && from < original.findIndex((i) => i.number === e.over!.id)) index += 1;
     const prev = column[index - 1] ?? null;
     const next = column[index] ?? null;
-    if (from >= 0 && original[from - 1]?.number === prev?.number && original[from + 1]?.number === next?.number) return; // not moved
+    // Not moved: same column as saved, same neighbours. (A preview into another column always counts as a move.)
+    if (statusId === item.status_id && from >= 0 && original[from - 1]?.number === prev?.number && original[from + 1]?.number === next?.number) {
+      setPreview(null);
+      return;
+    }
     const rank = prev && next ? (prev.rank + next.rank) / 2 : prev ? prev.rank + 1024 : next ? next.rank - 1024 : item.rank;
+    // Hand the preview over to the pending placement in the same render, so the card never shows in its old column.
     setPending({ number: item.number, status_id: statusId, rank });
+    setPreview(null);
     try {
       await move.mutateAsync({ n: item.number, status_id: statusId, prev_number: prev?.number ?? null, next_number: next?.number ?? null });
     } catch (err) {
@@ -216,7 +305,7 @@ export function BoardView() {
       ) : !items.data ? (
         <Skeleton className="h-96 w-full" />
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={() => setDragging(null)}>
+        <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={onDragCancel}>
           <div className="flex gap-3 overflow-x-auto pb-4">
             {space.statuses.map((s) => {
               const list = byStatus.get(s.id) ?? [];

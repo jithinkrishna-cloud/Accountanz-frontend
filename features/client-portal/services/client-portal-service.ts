@@ -39,6 +39,8 @@ export const clientPortalService = {
   proposal: () => api<{ proposal: PortalProposal | null }>("/app/proposal").then((r) => r.proposal),
   acceptProposal: () => api<{ proposal: PortalProposal | null }>("/app/proposal/accept", { method: "POST" }).then((r) => r.proposal),
   choosePackage: (id: number) => api<PortalPackages>(`/app/packages/${id}/choose`, { method: "POST" }),
+  requestPackageChange: (body: { package_id: number; message: string | null }) => api<unknown>("/app/package-changes", { method: "POST", body }),
+  withdrawPackageChange: (id: number) => api<unknown>(`/app/package-changes/${id}/withdraw`, { method: "POST" }),
   disconnectJournl: () => api<{ items: PortalSoftware[] }>("/app/software/journl/disconnect", { method: "POST" }).then((r) => r.items),
   documents: () => items<PortalDocument>("/app/documents"),
   upload: (file: File, meta: { category: string; period?: string; request_id?: number }) => {

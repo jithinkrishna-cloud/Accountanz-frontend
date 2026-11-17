@@ -84,11 +84,20 @@ export const useDeleteSprint = (key: string) => useSpaceMutation(key, (id: numbe
 
 export const useCreateItem = (key: string) => useSpaceMutation(key, (b: NewItem) => s.createItem(key, b));
 export const useUpdateItem = (key: string) => useSpaceMutation(key, (v: { n: number; patch: ItemPatch }) => s.updateItem(key, v.n, v.patch));
-export const useMoveItem = (key: string) =>
-  useSpaceMutation(key, (v: { n: number; status_id?: number; sprint_id?: number | null; prev_number?: number | null; next_number?: number | null }) => {
-    const { n, ...body } = v;
-    return s.moveItem(key, n, body);
+/**
+ * Unlike the other space mutations, a move waits for the refetch before it settles: the board holds the card in
+ * its new spot until then, and letting go any earlier makes it snap back to the old column for a moment.
+ */
+export function useMoveItem(key: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { n: number; status_id?: number; sprint_id?: number | null; prev_number?: number | null; next_number?: number | null }) => {
+      const { n, ...body } = v;
+      return s.moveItem(key, n, body);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: PK.space(key) }),
   });
+}
 export const useDeleteItem = (key: string) => useSpaceMutation(key, (n: number) => s.deleteItem(key, n));
 
 export const useAddComment = (key: string, n: number) => useSpaceMutation(key, (body: string) => s.addComment(key, n, body));

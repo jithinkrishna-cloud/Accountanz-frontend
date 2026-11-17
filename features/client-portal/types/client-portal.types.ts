@@ -223,4 +223,19 @@ export interface PortalPackages {
   items: PortalPackage[];
   /** The client's engagement that hasn't ended, if any. */
   current: { id: number; status: "draft" | "sent" | "accepted" | "active"; package_id: number; package_name: string } | null;
+  /** The company's open package change request, or one answered in the last week. */
+  pending_change: PortalPackageChange | null;
+}
+
+/** Once the agreement has gone out, a different package is asked for; the team approves or declines. */
+export interface PortalPackageChange {
+  id: number;
+  from_package_name: string;
+  to_package_id: number;
+  to_package_name: string;
+  message: string | null;
+  status: "pending" | "approved" | "declined" | "withdrawn";
+  decision_note: string | null;
+  decided_at: string | null;
+  created_at: string;
 }

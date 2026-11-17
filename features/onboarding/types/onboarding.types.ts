@@ -11,7 +11,8 @@ export type AccountingSoftware = (typeof ACCOUNTING_SOFTWARE)[number];
 /** Mirrors STAGE_TRANSITIONS in backend/src/modules/onboarding/onboarding.types.ts. */
 export const STAGE_TRANSITIONS: Record<OnboardingStage, OnboardingStage[]> = {
   registered: ["assessment", "rejected"],
-  assessment: ["proposal_sent", "rejected"],
+  // assessment → accepted only confirms a package the client chose in their portal (package_source = "client").
+  assessment: ["proposal_sent", "accepted", "rejected"],
   proposal_sent: ["accepted", "assessment", "rejected"],
   accepted: [],
   rejected: ["assessment"],
@@ -42,6 +43,8 @@ export interface OnboardingCase {
   suggested_package_id: number | null;
   suggested_package_name: string | null;
   suggested_monthly_fee: number | null;
+  /** Who picked the package: staff in the assessment, or the client in their portal. */
+  package_source: "team" | "client" | null;
   /** Shown to the client with the proposal (notes stay internal). */
   proposal_message: string | null;
   proposal_sent_at: string | null;
@@ -52,6 +55,13 @@ export interface OnboardingCase {
   owner_logins: number;
   engagement_id: number | null;
   engagement_status: string | null;
+  engagement_package_id: number | null;
+  engagement_package_name: string | null;
+  engagement_monthly_fee: number | null;
+  /** An open package change request on that engagement, if any. */
+  pending_change_id: number | null;
+  pending_change_package_name: string | null;
+  pending_change_source: "client" | "team" | null;
   created_at: string;
   updated_at: string;
   service_requirements?: OnboardingServiceRequirements | null;

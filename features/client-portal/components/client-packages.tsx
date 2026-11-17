@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCircle2, Info, Sparkles } from "lucide-react";
+import { ArrowRightLeft, Check, CheckCircle2, Clock, Info, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -9,10 +9,11 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { applyApiError } from "@/lib/form-errors";
-import { formatINR } from "@/lib/format";
-import { useChoosePackage, usePortalPackages, usePortalProposal } from "../hooks/use-client-portal";
-import type { PortalCompany, PortalPackage, PortalPackages } from "../types/client-portal.types";
+import { formatDate, formatINR } from "@/lib/format";
+import { useChoosePackage, usePortalPackages, usePortalProposal, useRequestPackageChange, useWithdrawPackageChange } from "../hooks/use-client-portal";
+import type { PortalCompany, PortalPackage, PortalPackageChange, PortalPackages } from "../types/client-portal.types";
 import { ProposalCard } from "./client-proposal";
 import { TeamIncluded } from "./portal-ui";
 import { CompanyGate } from "./company-gate";
@@ -21,10 +22,82 @@ const CYCLE: Record<PortalPackage["billing_cycle"], string> = { monthly: "Billed
 
 const STAGE: Record<NonNullable<PortalPackages["current"]>["status"], string> = {
   draft: "Your team is preparing your agreement. You can still switch package.",
-  sent: "Your agreement has been sent to you. Message your team to change package.",
+  sent: "Your agreement has been sent to you. To move to another package, request a change below.",
   accepted: "You accepted the agreement. Your team will activate your service shortly.",
-  active: "This is your active service. Message your team to change package.",
+  active: "This is your active service. To move to another package, request a change below.",
 };
+
+/** The company's package change request: waiting for the team, or recently answered. */
+function ChangeBanner({ change }: { change: PortalPackageChange }) {
+  const withdraw = useWithdrawPackageChange();
+  const onWithdraw = async () => {
+    try {
+      await withdraw.mutateAsync(change.id);
+      toast.success("Request withdrawn");
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  if (change.status === "pending") {
+    return (
+      <div role="status" className="mb-6 flex flex-wrap items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <p className="min-w-0 flex-1">
+          You asked to move from <span className="font-medium">{change.from_package_name}</span> to <span className="font-medium">{change.to_package_name}</span> on {formatDate(change.created_at)}. Your team will review it and confirm the new fee.
+        </p>
+        <Button variant="outline" size="sm" disabled={withdraw.isPending} onClick={() => void onWithdraw()}>Withdraw</Button>
+      </div>
+    );
+  }
+  const approved = change.status === "approved";
+  return (
+    <p role="status" className={`mb-6 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm ${approved ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+      {approved ? <Check className="mt-0.5 size-4 shrink-0" aria-hidden /> : <X className="mt-0.5 size-4 shrink-0" aria-hidden />}
+      <span>
+        Your request to move to <span className="font-medium">{change.to_package_name}</span> was {approved ? "approved" : "declined"}
+        {change.decided_at ? ` on ${formatDate(change.decided_at)}` : ""}.{change.decision_note ? ` “${change.decision_note}”` : ""}
+      </span>
+    </p>
+  );
+}
+
+function RequestChangeDialog({ pkg, from, onClose }: { pkg: PortalPackage | null; from: string; onClose: () => void }) {
+  const request = useRequestPackageChange();
+  const [message, setMessage] = useState("");
+  const confirm = async () => {
+    if (!pkg) return;
+    try {
+      await request.mutateAsync({ package_id: pkg.id, message: message.trim() || null });
+      toast.success(`Request sent. Your team will confirm the move to ${pkg.name}.`);
+      setMessage("");
+      onClose();
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  return (
+    <Dialog open={!!pkg} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {pkg && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Move from {from} to {pkg.name}?</DialogTitle>
+              <DialogDescription>
+                {pkg.name} lists at {formatINR(pkg.monthly_fee)} a month + GST. Your team reviews the request and confirms the fee. Nothing changes until they approve it, and the new package is billed from your next invoice.
+              </DialogDescription>
+            </DialogHeader>
+            <label htmlFor="change-message" className="text-sm font-medium">Anything your team should know? <span className="text-muted-foreground font-normal">(optional)</span></label>
+            <Textarea id="change-message" rows={3} maxLength={1000} value={message} placeholder="We're adding payroll for our new branch from next month." onChange={(e) => setMessage(e.target.value)} />
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <SubmitButton type="button" pending={request.isPending} onClick={confirm}>Send request</SubmitButton>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function CurrentBanner({ current }: { current: NonNullable<PortalPackages["current"]> }) {
   return (
@@ -37,10 +110,13 @@ function CurrentBanner({ current }: { current: NonNullable<PortalPackages["curre
   );
 }
 
-function PackageCard({ pkg, current, isOwner, recommended, proposalOpen, onChoose }: { pkg: PortalPackage; current: PortalPackages["current"]; isOwner: boolean; recommended: boolean; proposalOpen: boolean; onChoose: (p: PortalPackage) => void }) {
+function PackageCard({ pkg, current, pending, isOwner, recommended, proposalOpen, onChoose, onRequest }: { pkg: PortalPackage; current: PortalPackages["current"]; pending: PortalPackageChange | null; isOwner: boolean; recommended: boolean; proposalOpen: boolean; onChoose: (p: PortalPackage) => void; onRequest: (p: PortalPackage) => void }) {
   const isCurrent = current?.package_id === pkg.id;
   // While a proposal is open, the client accepts it (above) rather than picking from the catalogue.
   const locked = proposalOpen || (!!current && current.status !== "draft");
+  // Once the agreement has gone out, another package is requested and the team approves it.
+  const canRequest = isOwner && !proposalOpen && !!current && current.status !== "draft" && !pending;
+  const requested = pending?.to_package_id === pkg.id;
   return (
     <article className={`bg-card flex flex-col rounded-xl border p-5 shadow-xs ${isCurrent || recommended ? "border-primary ring-primary/20 ring-2" : ""}`}>
       <div className="flex items-start justify-between gap-3">
@@ -80,8 +156,12 @@ function PackageCard({ pkg, current, isOwner, recommended, proposalOpen, onChoos
       <div className="mt-auto pt-5">
         {isCurrent ? (
           <Button variant="outline" className="w-full" disabled>Selected</Button>
+        ) : requested ? (
+          <Button variant="outline" className="w-full" disabled><Clock className="size-4" /> Change requested</Button>
         ) : isOwner && !locked ? (
           <Button className="w-full" onClick={() => onChoose(pkg)}>{current ? "Switch to this package" : "Choose this package"}</Button>
+        ) : canRequest ? (
+          <Button variant="outline" className="w-full" onClick={() => onRequest(pkg)}><ArrowRightLeft className="size-4" /> Request this package</Button>
         ) : null}
       </div>
     </article>
@@ -127,7 +207,9 @@ function PackagesBody({ company }: { company: PortalCompany }) {
   const proposal = usePortalProposal().data;
   const proposalOpen = proposal?.stage === "proposal_sent";
   const [choosing, setChoosing] = useState<PortalPackage | null>(null);
+  const [requesting, setRequesting] = useState<PortalPackage | null>(null);
   const isOwner = company.role === "owner";
+  const pending = data?.pending_change?.status === "pending" ? data.pending_change : null;
 
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !data) {
@@ -142,6 +224,7 @@ function PackagesBody({ company }: { company: PortalCompany }) {
     <>
       <ProposalCard className="mb-6" />
       {data.current && !proposal && <CurrentBanner current={data.current} />}
+      {data.pending_change && <ChangeBanner change={data.pending_change} />}
       {proposalOpen ? (
         <p className="text-muted-foreground mb-4 text-sm">All our packages are below for reference. To go with something else, message your team.</p>
       ) : (
@@ -152,11 +235,12 @@ function PackagesBody({ company }: { company: PortalCompany }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.items.map((p) => (
-            <PackageCard key={p.id} pkg={p} current={data.current} isOwner={isOwner} recommended={proposalOpen && proposal?.package_id === p.id} proposalOpen={proposalOpen} onChoose={setChoosing} />
+            <PackageCard key={p.id} pkg={p} current={data.current} pending={pending} isOwner={isOwner} recommended={proposalOpen && proposal?.package_id === p.id} proposalOpen={proposalOpen} onChoose={setChoosing} onRequest={setRequesting} />
           ))}
         </div>
       )}
       <ChooseDialog pkg={choosing} hasDraft={data.current?.status === "draft"} onClose={() => setChoosing(null)} />
+      <RequestChangeDialog pkg={requesting} from={data.current?.package_name ?? ""} onClose={() => setRequesting(null)} />
     </>
   );
 }

@@ -47,7 +47,7 @@ export function useSaveAssessment(id: number) {
 export function useChangeStage(id: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ to, reason }: { to: OnboardingStage; reason?: string }) => onboardingService.changeStage(id, to, reason),
+    mutationFn: ({ to, reason, overrideReason }: { to: OnboardingStage; reason?: string; overrideReason?: string }) => onboardingService.changeStage(id, to, reason, overrideReason),
     onSuccess: (row) => afterChange(qc, row),
   });
 }

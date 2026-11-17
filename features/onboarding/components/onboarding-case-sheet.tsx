@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Info, Send, TriangleAlert, X } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Check, Info, Send, TriangleAlert, UserCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { usePackages } from "@/features/services/hooks/use-catalogue";
+import { ApiError } from "@/lib/api-client";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatINR, humanize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -88,7 +89,16 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
   const stage = useChangeStage(row.id);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
-  const locked = row.stage === "accepted";
+  // Sending a proposal on incomplete onboarding data needs a reason (soft gate; the server enforces it too).
+  const [overriding, setOverriding] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const dataIncomplete = !!row.readiness && row.readiness.missing.some((m) => !m.startsWith("Assessment"));
+  // The engagement is the live record. Once it has been accepted or activated there is nothing left to assess or
+  // propose here: a different package goes through a package change on the engagement.
+  const engagementOpen = !!row.engagement_id && row.engagement_status !== "ended";
+  const committed = engagementOpen && (row.engagement_status === "accepted" || row.engagement_status === "active");
+  const locked = row.stage === "accepted" || committed;
+  const clientChose = row.package_source === "client" && (row.stage === "registered" || row.stage === "assessment");
 
   const {
     register,
@@ -117,11 +127,25 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
       toast.error("Save the assessment first");
       return;
     }
+    if (to === "proposal_sent" && dataIncomplete && !overriding) {
+      setOverriding(true);
+      return;
+    }
+    if (to === "proposal_sent" && overriding && overrideReason.trim().length < 5) {
+      toast.error("Say why it's going out with incomplete data");
+      return;
+    }
     try {
-      const updated = await stage.mutateAsync({ to, reason: to === "rejected" ? reason : undefined });
+      const updated = await stage.mutateAsync({
+        to,
+        reason: to === "rejected" ? reason : undefined,
+        overrideReason: to === "proposal_sent" && overriding ? overrideReason.trim() : undefined,
+      });
       onChanged(updated);
       setRejecting(false);
       setReason("");
+      setOverriding(false);
+      setOverrideReason("");
       toast.success(
         to === "accepted"
           ? "Accepted. A draft engagement is ready."
@@ -130,11 +154,14 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
             : `Moved to ${STAGE_LABELS[to].toLowerCase()}`,
       );
     } catch (err) {
+      // The server found something missing that this screen didn't know about yet: refresh the checklist.
+      if (err instanceof ApiError && err.status === 409 && to === "proposal_sent") void detail.refetch();
       applyApiError(err);
     }
   }
 
-  const nextStages = STAGE_TRANSITIONS[row.stage];
+  // From assessment, "accepted" only confirms the client's own choice; nothing moves once the engagement is committed.
+  const nextStages = committed ? [] : STAGE_TRANSITIONS[row.stage].filter((s) => !(row.stage === "assessment" && s === "accepted" && row.package_source !== "client"));
   const activePackages = packages.data?.filter((p) => p.is_active || p.id === row.suggested_package_id) ?? [];
 
   return (
@@ -153,6 +180,12 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
       </SheetHeader>
 
       <div className="space-y-6 p-5">
+        {committed && row.stage !== "accepted" && (
+          <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            This client already has an {row.engagement_status} engagement on {row.engagement_package_name}. This case will be marked accepted on that package.
+          </p>
+        )}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
             <dt className="text-muted-foreground text-xs">Business type</dt>
@@ -195,13 +228,38 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
         {row.engagement_id && (
           <Link
             href={`/admin/engagements?open=${row.engagement_id}`}
-            className="bg-accent/60 hover:bg-accent flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-colors"
+            className="bg-accent/60 hover:bg-accent block rounded-lg border px-4 py-3 text-sm transition-colors"
           >
-            <span>
-              Engagement #{row.engagement_id} · <span className="font-medium">{humanize(row.engagement_status ?? "")}</span>
+            <span className="flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="text-muted-foreground block text-xs">Engagement #{row.engagement_id}</span>
+                <span className="font-medium">{row.engagement_package_name}</span>
+                {row.engagement_monthly_fee != null && <span className="text-muted-foreground tabular-nums"> · {formatINR(row.engagement_monthly_fee)}/mo</span>}
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <StatusBadge status={row.engagement_status ?? ""} label={humanize(row.engagement_status ?? "")} />
+                <ArrowRight className="size-4" aria-hidden />
+              </span>
             </span>
-            <ArrowRight className="size-4" aria-hidden />
+            {row.pending_change_id && (
+              <span className="mt-2 flex items-center gap-1.5 text-xs text-sky-800">
+                <ArrowRightLeft className="size-3.5" aria-hidden />
+                {row.pending_change_source === "client" ? "Client asked" : "Change pending"} to move to {row.pending_change_package_name}. Review it on the engagement.
+              </span>
+            )}
+            {row.stage === "accepted" && row.engagement_package_id && row.suggested_package_id && row.engagement_package_id !== row.suggested_package_id && (
+              <span className="text-muted-foreground mt-2 block text-xs">Changed since onboarding (accepted on {row.suggested_package_name}).</span>
+            )}
           </Link>
+        )}
+
+        {clientChose && (
+          <p className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <UserCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              The client chose <span className="font-medium">{row.suggested_package_name}</span> in their portal. It&apos;s filled in below: check the fee and confirm their choice. No separate proposal is needed.
+            </span>
+          </p>
         )}
 
         <Separator />
@@ -214,7 +272,13 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
           <div className="mb-3">
             <h3 id="assessment-heading" className="font-medium">Assessment</h3>
             <p className="text-muted-foreground text-xs">
-              {locked ? "Locked after acceptance. Change the engagement instead." : "Needed before a proposal can go out."}
+              {committed
+                ? `The client is already on ${row.engagement_package_name} (engagement ${row.engagement_status}). Change the package from the engagement.`
+                : locked
+                  ? "Locked after acceptance. Change the package from the engagement."
+                  : row.package_source === "client"
+                    ? "The client's own choice. Complexity is optional; the package and fee are needed."
+                    : "Needed before a proposal can go out."}
             </p>
           </div>
           <form id="assessment-form" onSubmit={onSave} className="grid gap-4 sm:grid-cols-2" noValidate>
@@ -313,7 +377,29 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   No portal login for this company yet. The proposal can be sent, but they won&apos;t see it online until you invite the owner from Clients.
                 </p>
               )}
-              {rejecting ? (
+              {row.stage === "assessment" && dataIncomplete && !overriding && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  Onboarding data is incomplete (see the list above). Complete it before sending, or send anyway with a reason.
+                </p>
+              )}
+              {overriding ? (
+                <div className="space-y-3 rounded-lg border border-amber-300 p-4">
+                  <p className="text-sm font-medium">Send with incomplete data?</p>
+                  <ul className="text-muted-foreground list-inside list-disc text-xs">
+                    {row.readiness?.missing.filter((m) => !m.startsWith("Assessment")).map((m) => <li key={m}>{m}</li>)}
+                  </ul>
+                  <FormField id="override-reason" label="Why send it now?" hint="Recorded in the audit log with what's missing.">
+                    <Input id="override-reason" autoFocus value={overrideReason} maxLength={500} placeholder="Client wants the quote today; GST details follow next week." onChange={(e) => setOverrideReason(e.target.value)} />
+                  </FormField>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setOverriding(false); setOverrideReason(""); }}>Cancel</Button>
+                    <Button size="sm" disabled={stage.isPending || overrideReason.trim().length < 5} onClick={() => void move("proposal_sent")}>
+                      <Send className="size-4" /> Send anyway
+                    </Button>
+                  </div>
+                </div>
+              ) : rejecting ? (
                 <div className="space-y-3 rounded-lg border p-4">
                   <FormField id="reject-reason" label="Reason (optional)" hint="Recorded in the audit log.">
                     <Input id="reject-reason" autoFocus value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
@@ -333,7 +419,11 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                         <Button key={s} size="sm" variant={backwards ? "outline" : "default"} disabled={stage.isPending} onClick={() => void move(s)}>
                           {s === "accepted" && <Check className="size-4" />}
                           {s === "proposal_sent" && <Send className="size-4" />}
-                          {backwards ? (row.stage === "rejected" ? "Reopen" : "Back to assessment") : s === "accepted" ? "Mark accepted (agreed offline)" : ACTION_LABEL[s]}
+                          {backwards
+                            ? row.stage === "rejected" ? "Reopen" : "Back to assessment"
+                            : s === "accepted"
+                              ? row.stage === "assessment" ? "Confirm client's choice" : "Mark accepted (agreed offline)"
+                              : ACTION_LABEL[s]}
                         </Button>
                       );
                     })}

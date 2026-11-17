@@ -98,7 +98,7 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }
             id="package_id"
             label="Package"
             error={errors.package_id?.message}
-            hint={packageLocked ? "The package can only change while the engagement is a draft." : undefined}
+            hint={packageLocked ? "Once sent, use “Change package” on the engagement so the change is recorded." : undefined}
             className="sm:col-span-2"
           >
             <Controller

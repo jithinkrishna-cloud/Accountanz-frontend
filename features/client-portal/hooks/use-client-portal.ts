@@ -130,3 +130,13 @@ export function useChoosePackage() {
     },
   });
 }
+
+export function useRequestPackageChange() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.requestPackageChange, onSuccess: () => void qc.invalidateQueries({ queryKey: K("packages") }) });
+}
+
+export function useWithdrawPackageChange() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: s.withdrawPackageChange, onSuccess: () => void qc.invalidateQueries({ queryKey: K("packages") }) });
+}

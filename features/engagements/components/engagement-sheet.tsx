@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, Download, FileText, Pencil, Upload } from "lucide-react";
+import { ArrowRightLeft, Check, Circle, Download, FileText, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { useChangeEngagementStatus, useEngagement, useUploadAgreement } from "..
 import { agreementUrl } from "../services/engagement-service";
 import { ENGAGEMENT_TRANSITIONS, type Engagement, type EngagementStatus } from "../types/engagement.types";
 import { EngagementFormDialog } from "./engagement-form-dialog";
+import { ChangePackageDialog, PendingPackageChange } from "./package-change-panel";
 
 const CYCLE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 } as const;
 const MAX_MB = 10;
@@ -80,6 +81,7 @@ function Body({ row }: { row: Engagement }) {
   const upload = useUploadAgreement(row.id);
   const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
+  const [changingPackage, setChangingPackage] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
 
   const next = ENGAGEMENT_TRANSITIONS[row.status];
@@ -126,14 +128,24 @@ function Body({ row }: { row: Engagement }) {
       </SheetHeader>
 
       <div className="space-y-6 p-5">
+        <PendingPackageChange row={row} />
+
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="font-medium">Terms</h3>
-            {row.status !== "ended" && (
-              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                <Pencil className="size-3.5" /> Edit
-              </Button>
-            )}
+            <div className="flex gap-1">
+              {/* A draft's package is edited directly; after that it changes through a recorded package change. */}
+              {row.status !== "ended" && row.status !== "draft" && !row.pending_change_id && (
+                <Button variant="ghost" size="sm" onClick={() => setChangingPackage(true)}>
+                  <ArrowRightLeft className="size-3.5" /> Change package
+                </Button>
+              )}
+              {row.status !== "ended" && (
+                <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="size-3.5" /> Edit
+                </Button>
+              )}
+            </div>
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <Detail label="Package">{row.package_name}</Detail>
@@ -241,6 +253,7 @@ function Body({ row }: { row: Engagement }) {
       </div>
 
       <EngagementFormDialog open={editing} onOpenChange={setEditing} engagement={row} />
+      <ChangePackageDialog row={row} open={changingPackage} onOpenChange={setChangingPackage} />
     </>
   );
 }

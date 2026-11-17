@@ -26,6 +26,13 @@ export interface Engagement {
   agreement_file_name: string | null;
   invoice_count: number;
   first_invoice_number: string | null;
+  /** An open package change request (from the client), if any. */
+  pending_change_id: number | null;
+  pending_change_source: "client" | "team" | null;
+  pending_change_package_id: number | null;
+  pending_change_package_name: string | null;
+  pending_change_message: string | null;
+  pending_change_at: string | null;
   created_at: string;
   updated_at: string;
 }
