@@ -32,13 +32,34 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 
 const amount = (n: number) => (n ? formatINR(n, true) : "—");
 
-function TrialBalance({ groups }: { groups: NonNullable<JournlOverview["trial_balance"]["data"]> }) {
+/**
+ * A trial balance that balances only because of a Suspense adjustment is NOT resolved: always warn while any Suspense
+ * ledger holds money, and warn if the check itself failed. Never hidden in print.
+ */
+function SuspenseWarning({ suspense }: { suspense: JournlOverview["trial_balance"]["suspense"] }) {
+  if (!suspense) return null;
+  const text =
+    "error" in suspense
+      ? "Couldn't check Suspense adjustments, so this trial balance may be balanced using Suspense. Treat it as unresolved."
+      : `Balanced using Suspense — ${suspense.ledgers
+          .map((l) => `${formatINR(l.unresolved_paise / 100, true)} ${l.side === "dr" ? "Dr" : "Cr"} on ${l.ledger}`)
+          .join(", ")} unresolved (${suspense.corrections.map((c) => `${c.ref}, approved by ${c.approved_by}`).join("; ")}). Suspense still holds this; the underlying errors are not fixed.`;
+  return (
+    <p role="status" className="mb-3 flex items-start gap-2 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{text}</span>
+    </p>
+  );
+}
+
+function TrialBalance({ groups, suspense }: { groups: NonNullable<JournlOverview["trial_balance"]["data"]>; suspense: JournlOverview["trial_balance"]["suspense"] }) {
   const [open, setOpen] = useState<number | null>(null);
   const totals = groups.reduce((t, g) => ({ debit: t.debit + g.debit, credit: t.credit + g.credit }), { debit: 0, credit: 0 });
   if (!groups.length) return <p className="text-muted-foreground text-sm">No balances in this period.</p>;
   const difference = Math.round((totals.debit - totals.credit) * 100) / 100;
   return (
     <>
+    <SuspenseWarning suspense={suspense} />
     {difference !== 0 && (
       <p role="status" className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
         <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -120,7 +141,7 @@ function Overview({ data }: { data: JournlOverview }) {
       </Block>
 
       <Block title="Trial balance (closing)" section={data.trial_balance}>
-        {(groups) => <TrialBalance groups={groups} />}
+        {(groups) => <TrialBalance groups={groups} suspense={data.trial_balance.suspense} />}
       </Block>
 
       <Block title="Recent vouchers" section={data.vouchers}>

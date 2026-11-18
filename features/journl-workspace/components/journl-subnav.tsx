@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useAwaitingCount } from "@/features/journl-corrections/api";
 import { usePathname } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,24 @@ export function useGrantedModules() {
 }
 
 /** The JournL area's own navigation: only the modules an admin has granted. A column on desktop, a scrolling row on mobile. */
+function CorrectionsLink({ active }: { active: boolean }) {
+  const awaiting = useAwaitingCount().data?.count ?? 0;
+  return (
+    <Link
+      href="/team/journl/corrections"
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "mt-1 flex items-center gap-2.5 rounded-lg border-t px-3 py-2 text-sm",
+        active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      <BookOpen className="size-4 shrink-0" aria-hidden />
+      Corrections
+      {awaiting > 0 && <span className="bg-primary text-primary-foreground ml-auto rounded-full px-1.5 text-xs">{awaiting}</span>}
+    </Link>
+  );
+}
+
 export function JournlSubnav() {
   const pathname = usePathname();
   const { modules, isLoading } = useGrantedModules();
@@ -93,6 +112,7 @@ export function JournlSubnav() {
           })}
         </ul>
       )}
+      <CorrectionsLink active={pathname === "/team/journl/corrections"} />
     </nav>
   );
 }
