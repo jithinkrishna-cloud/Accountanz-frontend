@@ -130,9 +130,21 @@ function BalanceTable({ before, after, diffBefore, diffAfter }: { before: Previe
 function LedgerPicker({ clientId, value, onChange }: { clientId: number; value: LedgerHit | null; onChange: (l: LedgerHit) => void }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<LedgerHit[]>([]);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   useEffect(() => {
-    if (q.trim().length < 2) return setHits([]);
-    const t = setTimeout(() => correctionService.ledgers(clientId, q).then((r) => setHits(r.items)).catch(() => setHits([])), 300);
+    if (q.trim().length < 2) {
+      setHits([]);
+      setLookupError(null);
+      return;
+    }
+    const t = setTimeout(
+      () =>
+        correctionService
+          .ledgers(clientId, q)
+          .then((r) => { setHits(r.items); setLookupError(null); })
+          .catch((e) => { setHits([]); setLookupError(errorText(e)); }),
+      300,
+    );
     return () => clearTimeout(t);
   }, [q, clientId]);
   return (
@@ -145,6 +157,7 @@ function LedgerPicker({ clientId, value, onChange }: { clientId: number; value: 
           ))}
         </ul>
       )}
+      {lookupError && q && <p role="alert" className="text-destructive text-xs">{lookupError}</p>}
     </div>
   );
 }
@@ -214,6 +227,7 @@ function NewCorrectionDialog({ clientId, mode, onClose, onCreated }: { clientId:
                     <SelectTrigger className="w-56"><SelectValue placeholder="Choose a branch" /></SelectTrigger>
                     <SelectContent>{branches.data?.items.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
                   </Select>
+                  {branches.error && <p role="alert" className="text-destructive max-w-56 text-xs">{errorText(branches.error)}</p>}
                 </div>
               </div>
               <div className="grid gap-2">
