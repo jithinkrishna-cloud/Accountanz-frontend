@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Mail, MessageSquare, KeyRound } from "lucide-react";
+import { Check, ChevronRight, Mail, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -19,7 +19,7 @@ import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-c
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
 import { STAGE_OF, StagePill, isLate, shortDate } from "./client-progress";
 import { CompanyGate } from "./company-gate";
-import { JournlConnection } from "./journl-connection";
+import { BizpoleConnection } from "./bizpole-connection";
 import { Card, ListBody } from "./portal-ui";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
@@ -237,7 +237,7 @@ function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
   );
 }
 
-function MemberDialog({ member, tasks, period, onClose, canManageJournl }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void; canManageJournl: boolean }) {
+function MemberDialog({ member, tasks, period, onClose }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void }) {
   const jobs = member ? jobsFor(member, tasks) : [];
   const role = member ? ROLE[member.team_role] : null;
   const status = member ? areaStatus(member, tasks) : null;
@@ -295,13 +295,6 @@ function MemberDialog({ member, tasks, period, onClose, canManageJournl }: { mem
                 <span className="truncate">{member.email}</span>
               </a>
               <DialogFooter className="gap-2">
-                {canManageJournl && (
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/app/settings?tab=journl&user=${member.user_id}&role=${member.team_role}`}>
-                      <KeyRound className="size-4" aria-hidden /> Manage JournL access
-                    </Link>
-                  </Button>
-                )}
                 <Button asChild size="sm"><Link href={`/app/messages?to=${member.user_id}`}><MessageSquare className="size-4" /> Message {member.full_name.split(" ")[0]}</Link></Button>
               </DialogFooter>
             </div>
@@ -312,7 +305,7 @@ function MemberDialog({ member, tasks, period, onClose, canManageJournl }: { mem
   );
 }
 
-function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
+function TeamBody() {
   const q = usePortalTeam();
   const tasks = usePortalTasks();
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -353,7 +346,7 @@ function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
           )}
         </ListBody>
       </Card>
-      <MemberDialog member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} canManageJournl={canManageJournl} />
+      <MemberDialog member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} />
     </>
   );
 }
@@ -361,10 +354,10 @@ function TeamBody({ canManageJournl }: { canManageJournl: boolean }) {
 export function ClientTeam() {
   return (
     <CompanyGate>
-      {({ role }) => (
+      {() => (
         <>
           <PageHeader title="My Accounting Team" description="Who looks after your accounts at Accountanz." />
-          <TeamBody canManageJournl={role === "owner"} />
+          <TeamBody />
         </>
       )}
     </CompanyGate>
@@ -377,7 +370,7 @@ export function ClientSoftware() {
       {(company) => (
         <>
           <PageHeader title="Accounting Software" description="Where your books live." />
-          <JournlConnection company={company} />
+          <BizpoleConnection company={company} />
         </>
       )}
     </CompanyGate>

@@ -104,8 +104,8 @@ export function IntegrationList() {
         }
       />
       <p className="text-muted-foreground -mt-3 mb-4 max-w-3xl text-xs">
-        Clients connect from their portal with <span className="text-foreground font-medium">Sign in with JournL</span>: JournL confirms the company is theirs, and Accountanz can
-        read the books for 8 hours per sign-in. The owner refreshes it from the same page. Which accountant can read which module is set under JournL Access.
+        These are existing JournL sign-in connections. New clients connect from their portal under{" "}
+        <span className="text-foreground font-medium">Settings → Integrations → Bizpole Books</span> with a connection code. Which accountant can read which module is set under JournL Access.
       </p>
       <div className="bg-card min-w-0 overflow-hidden rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
@@ -119,7 +119,7 @@ export function IntegrationList() {
           isLoading={query.isLoading}
           error={query.error}
           onRetry={() => void query.refetch()}
-          empty={{ title: q || status ? "No connections match" : "No client has connected JournL yet", description: q || status ? undefined : "Owners connect from their portal: Accounting Software → Sign in with JournL." }}
+          empty={{ title: q || status ? "No connections match" : "No client has connected JournL yet", description: q || status ? undefined : "New clients connect Bizpole Books from their portal: Settings → Integrations." }}
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />
       </div>

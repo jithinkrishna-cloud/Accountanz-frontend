@@ -26,10 +26,9 @@ import { cn } from "@/lib/utils";
 import { formatDate, formatINR, formatPeriod, humanize } from "@/lib/format";
 import { usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
 import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalCompany, PortalSettings } from "../types/client-portal.types";
+import { BizpoleConnection } from "./bizpole-connection";
 import { CompanyGate } from "./company-gate";
 import { Card } from "./portal-ui";
-import { JournlConnection } from "./journl-connection";
-import { ClientJournlAccessGrid } from "@/features/journl-permissions/components/client-journl-access-grid";
 
 // ───────────── Service & Billing ─────────────
 
@@ -261,31 +260,14 @@ function NotificationsForm({ settings }: { settings: PortalSettings }) {
   );
 }
 
-function JournlAccessTab({ company, focus }: { company: PortalCompany; focus: { userId: number; teamRole: string } | null }) {
-  return (
-    <div className="space-y-6">
-      <JournlConnection company={company} />
-      <Card
-        title="Team access"
-        subtitle={company.role === "owner" ? "Choose which parts of your JournL books each accountant can see." : "Which parts of your JournL books each accountant can see."}
-      >
-        <ClientJournlAccessGrid isOwner={company.role === "owner"} focus={focus} />
-      </Card>
-    </div>
-  );
-}
-
-type SettingsTab = "profile" | "journl" | "notifications";
-const SETTINGS_TABS: SettingsTab[] = ["profile", "journl", "notifications"];
+type SettingsTab = "profile" | "integrations" | "notifications";
+const SETTINGS_TABS: SettingsTab[] = ["profile", "integrations", "notifications"];
 
 function SettingsBody({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = usePortalSettings();
-  // ?tab=journl&user=<id>&role=<team role>: "Manage JournL access" on the team page lands on that person's row.
   const params = useSearchParams();
   const requested = params.get("tab") as SettingsTab | null;
   const [tab, setTab] = useState<SettingsTab>(requested && SETTINGS_TABS.includes(requested) ? requested : "profile");
-  const focusUser = Number(params.get("user"));
-  const focus = focusUser && params.get("role") ? { userId: focusUser, teamRole: params.get("role")! } : null;
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !data) return <Skeleton className="h-64 w-full rounded-xl" />;
   return (
@@ -298,10 +280,10 @@ function SettingsBody({ company }: { company: PortalCompany }) {
           Profile
         </button>
         <button
-          onClick={() => setTab("journl")}
-          className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "journl" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
+          onClick={() => setTab("integrations")}
+          className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "integrations" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
         >
-          JournL Access
+          Integrations
         </button>
         <button
           onClick={() => setTab("notifications")}
@@ -311,7 +293,7 @@ function SettingsBody({ company }: { company: PortalCompany }) {
         </button>
       </div>
       {tab === "profile" && <ProfileForm settings={data} onSave={() => void refetch()} />}
-      {tab === "journl" && <JournlAccessTab company={company} focus={focus} />}
+      {tab === "integrations" && <BizpoleConnection company={company} />}
       {tab === "notifications" && <NotificationsForm settings={data} />}
     </div>
   );
@@ -322,7 +304,7 @@ export function ClientSettings() {
     <CompanyGate>
       {(company) => (
         <>
-          <PageHeader title="Settings" description="Your profile, JournL access and notification preferences." />
+          <PageHeader title="Settings" description="Your profile, integrations and notification preferences." />
           <SettingsBody company={company} />
         </>
       )}

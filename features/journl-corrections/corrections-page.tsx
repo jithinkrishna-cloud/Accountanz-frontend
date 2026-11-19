@@ -131,12 +131,10 @@ function LedgerPicker({ clientId, value, onChange }: { clientId: number; value: 
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<LedgerHit[]>([]);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  // Short queries search nothing; results and errors are only shown for the query that produced them (below).
+  const searching = q.trim().length >= 2;
   useEffect(() => {
-    if (q.trim().length < 2) {
-      setHits([]);
-      setLookupError(null);
-      return;
-    }
+    if (q.trim().length < 2) return;
     const t = setTimeout(
       () =>
         correctionService
@@ -150,14 +148,14 @@ function LedgerPicker({ clientId, value, onChange }: { clientId: number; value: 
   return (
     <div className="relative grid gap-1">
       <Input value={value && !q ? `${value.name} (#${value.id})` : q} placeholder="Search ledger" onChange={(e) => setQ(e.target.value)} />
-      {hits.length > 0 && q && (
+      {hits.length > 0 && searching && (
         <ul className="bg-popover absolute top-10 z-50 max-h-56 w-full overflow-auto rounded-md border shadow">
           {hits.map((h) => (
             <li key={h.id}><button type="button" className="hover:bg-accent w-full px-3 py-1.5 text-left text-sm" onClick={() => { onChange(h); setQ(""); setHits([]); }}>{h.name} <span className="text-muted-foreground">· {h.group_name} · #{h.id}</span></button></li>
           ))}
         </ul>
       )}
-      {lookupError && q && <p role="alert" className="text-destructive text-xs">{lookupError}</p>}
+      {lookupError && searching && <p role="alert" className="text-destructive text-xs">{lookupError}</p>}
     </div>
   );
 }
