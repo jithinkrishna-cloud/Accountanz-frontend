@@ -1,17 +1,9 @@
-"use client";
+import { Bricolage_Grotesque } from "next/font/google";
+import { LandingPage } from "@/features/landing/landing-page";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { FullPageLoader } from "@/components/shared/states";
-import { useSession } from "@/features/auth/hooks/use-session";
-import { PORTAL_HOME } from "@/lib/constants";
+const display = Bricolage_Grotesque({ variable: "--font-display", subsets: ["latin"], weight: ["600", "700", "800"] });
 
-/** Sends visitors to their portal, or to login when signed out. */
+/** Public home page. Signed-in visitors see "Open your portal" instead of sign-in links. */
 export default function Home() {
-  const { data: user, isPending } = useSession();
-  const router = useRouter();
-  useEffect(() => {
-    if (!isPending) router.replace(user ? PORTAL_HOME[user.portal] : "/login");
-  }, [isPending, user, router]);
-  return <FullPageLoader />;
+  return <LandingPage fontClass={display.variable} />;
 }
