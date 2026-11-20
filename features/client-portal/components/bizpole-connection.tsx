@@ -94,7 +94,7 @@ function Note({ tone = "muted", icon: Icon = Info, children }: { tone?: "muted" 
 }
 
 const SAME_PRODUCT =
-  "Bizpole Books and JournL are the same accounting product. Connect it here with a connection code: no password is shared, and your books stay in your own account.";
+  "JournL and JournL are the same accounting product. Connect it here with a connection code: no password is shared, and your books stay in your own account.";
 
 /** "Connection code required" → "Connecting": the owner creates a code in Bizpole and pastes it here. */
 function CodeEntry({ onCancel, again }: { onCancel?: () => void; again?: boolean }) {
@@ -108,7 +108,7 @@ function CodeEntry({ onCancel, again }: { onCancel?: () => void; again?: boolean
     try {
       const view = await connect.mutateAsync(code.trim());
       setCode(""); // the code is single-use; don't keep it around
-      toast.success(view.connection?.status === "pending" ? "Code accepted. Choose which company to connect." : "Bizpole Books connected.");
+      toast.success(view.connection?.status === "pending" ? "Code accepted. Choose which company to connect." : "JournL connected.");
     } catch (err) {
       const fe = err instanceof ApiError ? err.fieldErrors.code?.[0] : undefined;
       if (fe && err instanceof ApiError) setFieldError(err.message);
@@ -119,7 +119,7 @@ function CodeEntry({ onCancel, again }: { onCancel?: () => void; again?: boolean
   return (
     <form onSubmit={submit} className="grid gap-4">
       <ol className="text-muted-foreground list-decimal space-y-1 pl-5 text-sm">
-        <li>Open Bizpole Books and go to <span className="text-foreground font-medium">System → Integrations</span>.</li>
+        <li>Open JournL and go to <span className="text-foreground font-medium">System → Integrations</span>.</li>
         <li>Click <span className="text-foreground font-medium">Create connection code</span> for Accountanz and choose the company to share.</li>
         <li>Copy the code and paste it below. It works once and expires after 10 minutes.</li>
       </ol>
@@ -156,7 +156,7 @@ function CompanyPicker({ companies }: { companies: CompanyChoice[] }) {
     e.preventDefault();
     try {
       await choose.mutateAsync(picked);
-      toast.success("Bizpole Books connected.");
+      toast.success("JournL connected.");
     } catch (err) {
       applyApiError(err);
     }
@@ -189,8 +189,8 @@ function DisconnectDialog({ open, onOpenChange, pendingChoice }: { open: boolean
   async function run() {
     try {
       const r = await disconnect.mutateAsync(undefined);
-      if (r.revoked_at_bizpole) toast.success("Bizpole Books disconnected. Accountanz no longer has access.");
-      else toast.warning("Disconnected in Accountanz, but Bizpole Books didn't confirm. Also remove Accountanz in Bizpole Books → System → Integrations.");
+      if (r.revoked_at_bizpole) toast.success("JournL disconnected. Accountanz no longer has access.");
+      else toast.warning("Disconnected in Accountanz, but JournL didn't confirm. Also remove Accountanz in JournL → System → Integrations.");
       onOpenChange(false);
     } catch (err) {
       applyApiError(err);
@@ -200,9 +200,9 @@ function DisconnectDialog({ open, onOpenChange, pendingChoice }: { open: boolean
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{pendingChoice ? "Cancel this connection?" : "Disconnect Bizpole Books?"}</DialogTitle>
+          <DialogTitle>{pendingChoice ? "Cancel this connection?" : "Disconnect JournL?"}</DialogTitle>
           <DialogDescription>
-            Accountanz will delete its access tokens and ask Bizpole Books to revoke the connection. Your accountants will no longer be able to read your Bizpole Books data through Accountanz. Your books in Bizpole Books are not changed.
+            Accountanz will delete its access tokens and ask JournL to revoke the connection. Your accountants will no longer be able to read your JournL data through Accountanz. Your books in JournL are not changed.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -239,20 +239,20 @@ function Body({ view, isOwner }: { view: BizpoleView; isOwner: boolean }) {
         <div className="flex items-start gap-4">
           <BizpoleMark />
           <div>
-            <p className="font-medium">Connect Bizpole Books</p>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">Give your Accountanz team read-only access to your Bizpole Books company: ledgers, parties, vouchers, stock and totals. Accountanz can&apos;t change anything in your books.</p>
+            <p className="font-medium">Connect JournL</p>
+            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">Give your Accountanz team read-only access to your JournL company: ledgers, parties, vouchers, stock and totals. Accountanz can&apos;t change anything in your books.</p>
           </div>
         </div>
         <Note>{SAME_PRODUCT}</Note>
         {!view.available ? (
-          <Note>Bizpole Books connections aren&apos;t available yet. Your team will let you know when they are.</Note>
+          <Note>JournL connections aren&apos;t available yet. Your team will let you know when they are.</Note>
         ) : !isOwner ? (
-          <Note>Only your company owner can connect Bizpole Books.</Note>
+          <Note>Only your company owner can connect JournL.</Note>
         ) : entering ? (
           <CodeEntry onCancel={() => setEntering(false)} />
         ) : (
           <div>
-            <Button onClick={() => setEntering(true)}><KeyRound className="size-4" aria-hidden /> Connect Bizpole Books</Button>
+            <Button onClick={() => setEntering(true)}><KeyRound className="size-4" aria-hidden /> Connect JournL</Button>
           </div>
         )}
       </div>
@@ -269,7 +269,7 @@ function Body({ view, isOwner }: { view: BizpoleView; isOwner: boolean }) {
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <BizpoleMark />
           <div className="min-w-0">
-            <p className="font-medium">Bizpole Books</p>
+            <p className="font-medium">JournL</p>
             <p className="text-muted-foreground text-sm">{c.company_name ?? (c.status === "pending" ? "Company not chosen yet" : "No company linked")}</p>
           </div>
         </div>
@@ -292,19 +292,19 @@ function Body({ view, isOwner }: { view: BizpoleView; isOwner: boolean }) {
         </dl>
       )}
 
-      {c.status === "connected" && <Note tone="ok" icon={CheckCircle2}>Connected, read-only. Your Accountanz team can read this company&apos;s books; nothing is written to Bizpole Books.</Note>}
+      {c.status === "connected" && <Note tone="ok" icon={CheckCircle2}>Connected, read-only. Your Accountanz team can read this company&apos;s books; nothing is written to JournL.</Note>}
       {c.status === "connected" && c.gstin_warning && <Note tone="warn" icon={TriangleAlert}>{c.gstin_warning}</Note>}
-      {c.status === "pending" && (isOwner ? <CompanyPicker companies={c.companies} /> : <Note>Your company owner is choosing which Bizpole Books company to connect.</Note>)}
-      {c.status === "error" && <Note tone="danger" icon={TriangleAlert}>{c.last_error ?? "Accountanz couldn't read this Bizpole Books company."} Reconnect with a new code if this continues.</Note>}
-      {c.status === "revoked" && <Note tone="danger" icon={TriangleAlert}>Access was revoked in Bizpole Books, or the connection expired. Create a new connection code in Bizpole Books to reconnect.</Note>}
-      {c.status === "disconnected" && <Note>Disconnected. Your team no longer has access to Bizpole Books through Accountanz.</Note>}
+      {c.status === "pending" && (isOwner ? <CompanyPicker companies={c.companies} /> : <Note>Your company owner is choosing which JournL company to connect.</Note>)}
+      {c.status === "error" && <Note tone="danger" icon={TriangleAlert}>{c.last_error ?? "Accountanz couldn't read this JournL company."} Reconnect with a new code if this continues.</Note>}
+      {c.status === "revoked" && <Note tone="danger" icon={TriangleAlert}>Access was revoked in JournL, or the connection expired. Create a new connection code in JournL to reconnect.</Note>}
+      {c.status === "disconnected" && <Note>Disconnected. Your team no longer has access to JournL through Accountanz.</Note>}
 
       {canReconnect && (entering ? <CodeEntry again onCancel={() => setEntering(false)} /> : (
         <div>
           <Button variant="outline" onClick={() => setEntering(true)}><KeyRound className="size-4" aria-hidden /> {c.status === "disconnected" ? "Connect again" : "Reconnect"}</Button>
         </div>
       ))}
-      {!isOwner && c.status !== "connected" && c.status !== "pending" && <Note>Only your company owner can reconnect Bizpole Books.</Note>}
+      {!isOwner && c.status !== "connected" && c.status !== "pending" && <Note>Only your company owner can reconnect JournL.</Note>}
 
       <Note>{SAME_PRODUCT}</Note>
       <DisconnectDialog open={confirming} onOpenChange={setConfirming} pendingChoice={c.status === "pending"} />
@@ -312,11 +312,11 @@ function Body({ view, isOwner }: { view: BizpoleView; isOwner: boolean }) {
   );
 }
 
-/** Client Settings → Integrations: the Bizpole Books partner connection (read-only, separate from JournL). */
+/** Client Settings → Integrations: the JournL partner connection (read-only, separate from JournL). */
 export function BizpoleConnection({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = useBizpole();
   return (
-    <Card title="Bizpole Books" subtitle="Read-only access for your Accountanz team, linked with a connection code from Bizpole Books.">
+    <Card title="JournL" subtitle="Read-only access for your Accountanz team, linked with a connection code from JournL.">
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : isLoading || !data ? (

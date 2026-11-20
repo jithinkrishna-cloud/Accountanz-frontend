@@ -148,7 +148,7 @@ function VoucherStage() {
 
 /* ───────────────────────── Content ───────────────────────── */
 
-const PROMISES = ["Works in your own Bizpole Books", "GST filed only after you approve", "A team of three on every account"];
+const PROMISES = ["Works in your own JournL", "GST filed only after you approve", "A team of three on every account"];
 
 const SERVICES = [
   { name: "Monthly bookkeeping", text: "Every sale, purchase, expense, receipt and payment recorded, with bank accounts reconciled and the month closed." },
@@ -171,7 +171,7 @@ const CHECKLIST = [
 
 const STEPS = [
   { who: "You", what: "Upload bills, invoices and bank statements from your portal." },
-  { who: "Your bookkeeper", what: "Posts every entry in your Bizpole Books." },
+  { who: "Your bookkeeper", what: "Posts every entry in your JournL." },
   { who: "Your finance manager", what: "Reviews the entries and reconciles bank and party balances." },
   { who: "You approve", what: "GST returns are prepared and wait for your approval before filing." },
   { who: "Your CFO", what: "Sends the month's profit and loss, balance sheet and cash position." },
@@ -198,11 +198,11 @@ const ROLES = [
 const FAQS = [
   {
     q: "Do I need to change my accounting software?",
-    a: "No. Your books stay in your own Bizpole Books account. You link it to Accountanz once with a connection code, and your team works from there.",
+    a: "No. Your books stay in your own JournL account. You link it to Accountanz once with a connection code, and your team works from there.",
   },
   {
-    q: "Can Accountanz see my Bizpole Books password?",
-    a: "No. You create a connection code inside Bizpole Books and enter it in Accountanz. No password is shared, and you can disconnect any time from your settings.",
+    q: "Can Accountanz see my JournL password?",
+    a: "No. You create a connection code inside JournL and enter it in Accountanz. No password is shared, and you can disconnect any time from your settings.",
   },
   {
     q: "What do I have to do each month?",
@@ -218,7 +218,7 @@ const FAQS = [
   },
   {
     q: "How do I get started?",
-    a: "Create an account, tell us about your business and choose a package. Then link your Bizpole Books and upload the current month's documents.",
+    a: "Create an account, tell us about your business and choose a package. Then link your JournL and upload the current month's documents.",
   },
 ];
 
@@ -373,7 +373,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
                 <span>closed every month.</span>
               </h1>
               <p className="lp-lede">
-                Accountanz gives your business a bookkeeper, a finance manager and a CFO. Link your Bizpole Books so they can see your accounts, and
+                Accountanz gives your business a bookkeeper, a finance manager and a CFO. Link your JournL so they can see your accounts, and
                 send your bills and statements through the portal. They reconcile your bank, prepare your GST for your approval and send you a report
                 every month.
               </p>
@@ -468,10 +468,10 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
           <div className="lp-wrap lp-yours">
             <Head
               title="Your books stay in your account"
-              sub="Create a connection code in Bizpole Books and enter it in Accountanz. Your team reads your books from there. Nothing is copied out, and no password is shared."
+              sub="Create a connection code in JournL and enter it in Accountanz. Your team reads your books from there. Nothing is copied out, and no password is shared."
             />
             <div className="lp-code">
-              <p className="lp-codeLabel">Connection code from Bizpole Books</p>
+              <p className="lp-codeLabel">Connection code from JournL</p>
               <div className="lp-codeValue lp-display">BPC-7KQ2M-4XV9T-…</div>
               <ul className="lp-facts">
                 <li><Tick />Read-only access for your Accountanz team</li>
@@ -504,7 +504,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
         {/* Closing */}
         <section className="lp-band lp-band-ink">
           <div className="lp-wrap lp-closing">
-            <Head center title="Start with this month's books" sub="Create an account, choose a package and link your Bizpole Books. Your team takes it from there." />
+            <Head center title="Start with this month's books" sub="Create an account, choose a package and link your JournL. Your team takes it from there." />
             {ctas}
           </div>
         </section>

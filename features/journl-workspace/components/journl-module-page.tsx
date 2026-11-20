@@ -205,7 +205,7 @@ export function JournlModulePage({ moduleKey }: { moduleKey: string }) {
           {!client.connected ? (
             <Notice icon={PlugZap} title="JournL isn't connected">This client hasn&apos;t connected JournL yet. The owner does it from their portal (Accounting Software).</Notice>
           ) : !client.session_until ? (
-            <Notice icon={PlugZap} title="JournL session expired">JournL sessions last 8 hours and can no longer be refreshed from the portal. Ask the client owner to connect Bizpole Books instead (Settings → Integrations).</Notice>
+            <Notice icon={PlugZap} title="JournL session expired">JournL sessions last 8 hours and can no longer be refreshed from the portal. Ask the client owner to connect JournL instead (Settings → Integrations).</Notice>
           ) : moduleKey === "financial_reports" ? (
             <div className="bg-card rounded-xl border shadow-xs">
               <JournlOverviewPanel
