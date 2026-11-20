@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { useSession } from "@/features/auth/hooks/use-session";
 import { PORTAL_HOME } from "@/lib/constants";
 import "./landing.css";
+import { LandingFooter, LandingHeader } from "./landing-chrome";
 import { usePublicPackages, ROLE_NAME, type PublicPackage } from "./landing-data";
 import { LandingExplore } from "./landing-explore";
 import { LandingStory } from "./landing-story";
@@ -360,31 +361,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
 
   return (
     <div className={`lp-page ${fontClass}`}>
-      <header className="lp-header">
-        <div className="lp-bar">
-          <Link href="/" className="lp-brand">
-            <span className="lp-mark" aria-hidden>A</span>
-            Accountanz
-          </Link>
-          <nav className="lp-nav" aria-label="Sections">
-            <a href="#how">How it works</a>
-            <a href="#services">Services</a>
-            <a href="#accountants">Accountants</a>
-            <a href="#packages">Packages</a>
-            <a href="#faq">Questions</a>
-          </nav>
-          <div className="lp-barLinks">
-            {portal ? (
-              <Link href={portal} className="lp-btn lp-btnPrimary lp-btnSmall">Open your portal</Link>
-            ) : (
-              <>
-                <Link href="/login" className="lp-btn lp-btnGhost lp-btnSmall lp-hide-sm">Sign in</Link>
-                <Link href="/register" className="lp-btn lp-btnPrimary lp-btnSmall">Create an account</Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <LandingHeader portal={portal} />
 
       <main>
         {/* Hero */}
@@ -533,26 +510,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
         </section>
       </main>
 
-      <footer className="lp-footer">
-        <div className="lp-wrap lp-foot">
-          <div>
-            <Link href="/" className="lp-brand">
-              <span className="lp-mark" aria-hidden>A</span>
-              Accountanz
-            </Link>
-            <p className="lp-foot-note">Managed accounting for growing businesses in India.</p>
-          </div>
-          <nav className="lp-foot-links" aria-label="Footer">
-            <a href="#how">How it works</a>
-            <a href="#services">Services</a>
-            <a href="#accountants">Accountants</a>
-            <a href="#packages">Packages</a>
-            <a href="#faq">Questions</a>
-            <Link href="/login">Sign in</Link>
-          </nav>
-          <p className="lp-foot-copy">© 2026 Accountanz</p>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

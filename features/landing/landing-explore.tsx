@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
-import { ROLE_NAME, usePublicAccountants } from "./landing-data";
+import { ROLE_NAME, usePublicAccountants, type PublicAccountant } from "./landing-data";
 
 const FILTERS = [
   { key: "all", label: "Everyone" },
@@ -11,7 +11,7 @@ const FILTERS = [
   { key: "cfo", label: "CFOs" },
 ] as const;
 
-const initials = (name: string) =>
+export const initials = (name: string) =>
   name
     .split(/\s+/)
     .filter(Boolean)
@@ -19,7 +19,38 @@ const initials = (name: string) =>
     .map((p) => p[0]!.toUpperCase())
     .join("");
 
-const since = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
+export const since = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
+
+/** Profile card linking to /accountants/[slug]. */
+export function AccountantCard({ a, i = 0 }: { a: PublicAccountant; i?: number }) {
+  return (
+    <li className={`lp-person lp-role-${a.role}`} style={{ "--i": i } as CSSProperties}>
+      <Link href={`/accountants/${a.slug}`} className="lp-person-link" aria-label={`${a.full_name}, ${ROLE_NAME[a.role] ?? a.role}. View profile`}>
+        <div className="lp-person-band" aria-hidden>
+          <span className="lp-verified">✓ Verified</span>
+        </div>
+        <div className="lp-person-body">
+          <span className="lp-avatar lp-display" aria-hidden>
+            {initials(a.full_name)}
+          </span>
+          <h3 className="lp-person-name">{a.full_name}</h3>
+          <p className="lp-person-role">{ROLE_NAME[a.role] ?? a.role}</p>
+          {a.expertise.length > 0 && (
+            <ul className="lp-chips" aria-label="Expertise">
+              {a.expertise.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <p className="lp-person-since">
+          <span>Since {since(a.member_since)}</span>
+          <strong className="lp-view">View profile</strong>
+        </p>
+      </Link>
+    </li>
+  );
+}
 
 /** Public showcase of Accountanz's verified accountants (name, role, expertise, start date only). */
 export function LandingExplore({ portal }: { portal: string | null }) {
@@ -62,29 +93,7 @@ export function LandingExplore({ portal }: { portal: string | null }) {
         ) : (
           <ul key={filter} className="lp-people">
             {shown.map((a, i) => (
-              <li key={`${a.full_name}-${a.role}`} className={`lp-person lp-role-${a.role}`} style={{ "--i": i } as CSSProperties}>
-                <div className="lp-person-band" aria-hidden>
-                  <span className="lp-verified">✓ Verified</span>
-                </div>
-                <div className="lp-person-body">
-                  <span className="lp-avatar lp-display" aria-hidden>
-                    {initials(a.full_name)}
-                  </span>
-                  <h3 className="lp-person-name">{a.full_name}</h3>
-                  <p className="lp-person-role">{ROLE_NAME[a.role] ?? a.role}</p>
-                  {a.expertise.length > 0 && (
-                    <ul className="lp-chips" aria-label="Expertise">
-                      {a.expertise.map((x) => (
-                        <li key={x}>{x}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <p className="lp-person-since">
-                  <span>With Accountanz since</span>
-                  <strong>{since(a.member_since)}</strong>
-                </p>
-              </li>
+              <AccountantCard key={a.slug} a={a} i={i} />
             ))}
           </ul>
         )}

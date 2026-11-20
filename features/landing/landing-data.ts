@@ -5,6 +5,8 @@ import { api } from "@/lib/api-client";
 
 /** From GET /api/public/accountants: what anyone may see about an accountant. */
 export interface PublicAccountant {
+  /** URL segment for /accountants/[slug], e.g. "meera-joshi-3". */
+  slug: string;
   full_name: string;
   role: string;
   expertise: string[];
@@ -29,6 +31,14 @@ export const usePublicAccountants = () =>
     queryKey: ["public", "accountants"],
     queryFn: () => api<{ items: PublicAccountant[] }>("/public/accountants").then((r) => r.items),
     staleTime: FIVE_MIN,
+  });
+
+export const usePublicAccountant = (slug: string) =>
+  useQuery({
+    queryKey: ["public", "accountant", slug],
+    queryFn: () => api<PublicAccountant>(`/public/accountants/${encodeURIComponent(slug)}`),
+    staleTime: FIVE_MIN,
+    retry: false,
   });
 
 export const usePublicPackages = () =>
