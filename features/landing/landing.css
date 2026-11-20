@@ -448,7 +448,8 @@
   background: var(--teal);
 }
 .lp-chapter {
-  min-height: 64vh;
+  /* Same height as .lp-story-sticky, so the active chapter's text sits level with the visual. */
+  min-height: 76vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -457,8 +458,7 @@
 }
 .lp-chapter-on {
   opacity: 1;
-}
-.lp-when {
+}.lp-when {
   margin-bottom: 12px !important;
   font-size: 15px;
   font-weight: 600;
