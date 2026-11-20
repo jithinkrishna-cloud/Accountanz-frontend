@@ -951,85 +951,138 @@
 }
 .lp-people {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
 }
 .lp-person {
   --accent: var(--teal);
+  --accent-2: #4cc2ad;
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 26px;
   background: var(--sheet);
   border: 1px solid var(--rule);
-  border-radius: 18px;
+  border-radius: 22px;
   overflow: hidden;
+  box-shadow: 0 1px 2px rgba(19, 33, 74, 0.04), 0 12px 30px -24px rgba(19, 33, 74, 0.35);
   animation: lp-rise 0.5s cubic-bezier(0.2, 0.7, 0.1, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
-}
-.lp-person::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 4px;
-  background: var(--accent);
+  animation-delay: calc(var(--i, 0) * 70ms);
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.1, 1), box-shadow 0.3s;
 }
 .lp-person:hover {
-  transform: translateY(-4px);
-  border-color: transparent;
-  box-shadow: 0 24px 50px -30px rgba(19, 33, 74, 0.45);
+  transform: translateY(-6px);
+  box-shadow: 0 2px 4px rgba(19, 33, 74, 0.04), 0 30px 60px -30px rgba(19, 33, 74, 0.5);
 }
 .lp-role-finance_manager,
 .lp-role-reviewer {
-  --accent: #3b6fd8;
+  --accent: #2f5fc4;
+  --accent-2: #7aa2f0;
 }
 .lp-role-cfo {
-  --accent: var(--ink);
+  --accent: #13214a;
+  --accent-2: #4a5f9e;
+}
+.lp-person-band {
+  position: relative;
+  height: 96px;
+  background:
+    radial-gradient(circle at 85% -20%, rgba(255, 255, 255, 0.28) 0 30%, transparent 31%),
+    radial-gradient(circle at 10% 140%, rgba(255, 255, 255, 0.16) 0 35%, transparent 36%),
+    linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.lp-verified {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.lp-person-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px 22px;
+  flex: 1;
 }
 .lp-avatar {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 84px;
+  height: 84px;
+  margin-top: -42px;
+  border-radius: 50%;
+  border: 4px solid var(--sheet);
   background: color-mix(in srgb, var(--accent) 12%, white);
   color: var(--accent);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 800;
+  box-shadow: 0 10px 24px -14px rgba(19, 33, 74, 0.6);
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+.lp-person:hover .lp-avatar {
+  transform: scale(1.06);
 }
 .lp-person-name {
-  margin-top: 18px !important;
-  font-size: 19px;
+  margin-top: 14px !important;
+  font-size: 20px;
   font-weight: 700;
 }
 .lp-person-role {
-  margin-top: 4px !important;
-  font-size: 14px;
-  font-weight: 600;
+  margin-top: 8px !important;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, white);
   color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
 }
 .lp-chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
-  margin-top: 16px !important;
+  margin-top: 18px !important;
 }
 .lp-chips li {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   background: var(--paper);
   border: 1px solid var(--rule);
   font-size: 13px;
 }
 .lp-person-since {
-  margin-top: auto !important;
-  padding-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
   font-size: 13px;
   color: var(--ink-soft);
 }
+.lp-person-since strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 960px) {
+  .lp-people {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .lp-people {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .lp-person-skel {
-  min-height: 230px;
+  min-height: 300px;
   background: linear-gradient(100deg, #eef2f8 30%, #f7f9fc 50%, #eef2f8 70%) 0 0 / 300% 100%;
   animation: lp-shimmer 1.4s linear infinite;
 }

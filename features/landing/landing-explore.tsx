@@ -63,19 +63,27 @@ export function LandingExplore({ portal }: { portal: string | null }) {
           <ul key={filter} className="lp-people">
             {shown.map((a, i) => (
               <li key={`${a.full_name}-${a.role}`} className={`lp-person lp-role-${a.role}`} style={{ "--i": i } as CSSProperties}>
-                <span className="lp-avatar lp-display" aria-hidden>
-                  {initials(a.full_name)}
-                </span>
-                <h3 className="lp-person-name">{a.full_name}</h3>
-                <p className="lp-person-role">{ROLE_NAME[a.role] ?? a.role}</p>
-                {a.expertise.length > 0 && (
-                  <ul className="lp-chips" aria-label="Expertise">
-                    {a.expertise.map((x) => (
-                      <li key={x}>{x}</li>
-                    ))}
-                  </ul>
-                )}
-                <p className="lp-person-since">With Accountanz since {since(a.member_since)}</p>
+                <div className="lp-person-band" aria-hidden>
+                  <span className="lp-verified">✓ Verified</span>
+                </div>
+                <div className="lp-person-body">
+                  <span className="lp-avatar lp-display" aria-hidden>
+                    {initials(a.full_name)}
+                  </span>
+                  <h3 className="lp-person-name">{a.full_name}</h3>
+                  <p className="lp-person-role">{ROLE_NAME[a.role] ?? a.role}</p>
+                  {a.expertise.length > 0 && (
+                    <ul className="lp-chips" aria-label="Expertise">
+                      {a.expertise.map((x) => (
+                        <li key={x}>{x}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <p className="lp-person-since">
+                  <span>With Accountanz since</span>
+                  <strong>{since(a.member_since)}</strong>
+                </p>
               </li>
             ))}
           </ul>
