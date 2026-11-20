@@ -1443,3 +1443,273 @@
     transition-delay: 0ms !important;
   }
 }
+
+/* ── Card as a link ── */
+.lp-person-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+}
+.lp-view {
+  color: var(--accent) !important;
+  transition: transform 0.25s;
+}
+.lp-person:hover .lp-view {
+  transform: translateX(3px);
+}
+
+/* ── Accountant profile page ── */
+/* :where keeps the default weaker than the .lp-role-* colours. */
+:where(.lp-profile-hero) {
+  --accent: var(--teal);
+  --accent-2: #4cc2ad;
+}
+.lp-profile-hero {
+  position: relative;
+  background: var(--paper);
+}
+.lp-profile-band {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 260px;
+  background:
+    radial-gradient(circle at 88% -30%, rgba(255, 255, 255, 0.25) 0 32%, transparent 33%),
+    radial-gradient(circle at 6% 150%, rgba(255, 255, 255, 0.16) 0 40%, transparent 41%),
+    linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.lp-profile-top {
+  position: relative;
+  padding-top: 32px;
+  padding-bottom: 0;
+}
+.lp-crumbs {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.lp-crumbs a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.lp-crumbs a:hover {
+  text-decoration: underline;
+}
+.lp-profile-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  margin-top: 100px;
+  padding: 32px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px -36px rgba(19, 33, 74, 0.45);
+  animation: lp-rise 0.6s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+.lp-avatar-lg {
+  width: 128px;
+  height: 128px;
+  margin-top: -96px;
+  font-size: 40px;
+  border-width: 6px;
+}
+.lp-profile-name {
+  font-size: clamp(30px, 3.6vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.lp-profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.lp-profile-tags .lp-person-role {
+  margin-top: 0 !important;
+}
+.lp-verified-inline {
+  position: static;
+  background: var(--teal-wash);
+  color: var(--teal-dark);
+}
+.lp-profile-summary {
+  margin-top: 14px !important;
+  font-size: 17px;
+  color: var(--ink-soft);
+  max-width: 34em;
+}
+.lp-profile-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+.lp-profile-since {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.lp-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 56px;
+  align-items: start;
+  padding-top: 64px;
+}
+.lp-profile-main {
+  display: grid;
+  gap: 48px;
+}
+.lp-profile-block .lp-h3 {
+  margin-bottom: 18px !important;
+}
+.lp-chips-lg {
+  justify-content: flex-start;
+  margin-top: 0 !important;
+}
+.lp-chips-lg li {
+  padding: 8px 16px;
+  font-size: 15px;
+  background: var(--sheet);
+}
+.lp-profile-list {
+  display: grid;
+  gap: 12px;
+}
+.lp-profile-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.lp-profile-list .lp-tick {
+  margin-top: 1px;
+}
+.lp-howto {
+  display: grid;
+  gap: 4px;
+  border-left: 2px solid var(--rule);
+  margin-left: 15px !important;
+}
+.lp-howto li {
+  display: flex;
+  gap: 18px;
+  padding: 10px 0 18px;
+  margin-left: -17px;
+}
+.lp-howto-n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.lp-howto strong {
+  display: block;
+  font-size: 16px;
+}
+.lp-howto p {
+  margin-top: 4px !important;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.lp-profile-side {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 16px;
+}
+.lp-side-card {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  padding: 24px;
+}
+.lp-side-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 14px !important;
+}
+.lp-side-pkgs {
+  display: grid;
+  gap: 12px;
+}
+.lp-side-pkgs li {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.lp-side-pkg-name {
+  font-weight: 700;
+}
+.lp-side-pkg-price {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal-dark);
+}
+.lp-side-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal-dark);
+}
+.lp-side-note p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.lp-profile-skel {
+  min-height: 320px;
+  border-radius: 24px;
+}
+.lp-profile-missing {
+  text-align: center;
+}
+.lp-profile-missing .lp-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+.lp-profile-missing .lp-ctas {
+  justify-content: center;
+  margin-top: 28px;
+}
+@media (max-width: 960px) {
+  .lp-profile-card {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .lp-profile-tags {
+    justify-content: center;
+  }
+  .lp-profile-summary {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .lp-profile-actions {
+    justify-items: center;
+  }
+  .lp-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-profile-side {
+    position: static;
+  }
+}
