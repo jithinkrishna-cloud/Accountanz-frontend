@@ -412,24 +412,41 @@
 .lp-story-intro .lp-head {
   margin-bottom: 0;
 }
+/* Desktop: the stage (active chapter's text + its visual) is pinned in the middle of the screen; the chapter list
+   underneath is invisible and only drives which chapter is active as you scroll. */
 .lp-story-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 72px;
+  grid-template-columns: minmax(0, 1fr);
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--gutter) 64px;
 }
+.lp-story-stage,
+.lp-chapters {
+  grid-area: 1 / 1;
+}
 .lp-story-stage {
-  order: 2;
+  z-index: 1;
+}
+.lp-chapters {
+  opacity: 0;
+  pointer-events: none;
 }
 .lp-story-sticky {
   position: sticky;
   top: 12vh;
   height: 76vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 72px;
+  align-items: center;
+}
+.lp-story-now {
+  animation: lp-rise 0.5s both;
+}
+.lp-story-vis {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 28px;
 }
 .lp-story-progress {
@@ -447,17 +464,38 @@
 .lp-story-progress .lp-on {
   background: var(--teal);
 }
-.lp-chapter {
-  /* Same height as .lp-story-sticky, so the active chapter's text sits level with the visual. */
-  min-height: 76vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  opacity: 0.25;
-  transition: opacity 0.5s;
+.lp-story-progress > span {
+  position: relative;
+  cursor: pointer;
+  outline-offset: 6px;
 }
-.lp-chapter-on {
-  opacity: 1;
+.lp-story-progress > span::after {
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+}
+.lp-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--teal);
+  transform-origin: left;
+  animation: lp-fill 7s linear both;
+}
+.lp-story-sticky:hover .lp-fill,
+.lp-story-paused .lp-fill {
+  animation-play-state: paused;
+}
+@keyframes lp-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.lp-chapter {
+  /* Scroll distance per chapter on desktop. */
+  min-height: 70vh;
 }.lp-when {
   margin-bottom: 12px !important;
   font-size: 15px;
@@ -1372,12 +1410,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .lp-story-body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
     padding-top: 24px;
   }
   .lp-story-stage {
     display: none;
+  }
+  .lp-chapters {
+    opacity: 1;
+    pointer-events: auto;
   }
   .lp-chapter {
     min-height: 0;
@@ -1441,6 +1481,10 @@
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
+  }
+  /* No auto-play with reduced motion: the active bar shows full and only scrolling or clicking changes chapter. */
+  .lp-page .lp-fill {
+    animation-name: none !important;
   }
 }
 

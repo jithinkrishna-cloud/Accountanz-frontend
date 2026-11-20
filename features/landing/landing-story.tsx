@@ -131,42 +131,23 @@ export function LandingStory() {
     return () => io.disconnect();
   }, []);
 
-  // Desktop: when scrolling stops near a chapter, glide it to the middle of the screen, level with the visual.
+  // Auto-play only while the story is on screen (the progress fill's CSS animation is paused otherwise).
+  const section = useRef<HTMLElement | null>(null);
+  const [inView, setInView] = useState(false);
   useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 961px)");
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let timer = 0;
-    let settling = false;
-    const settle = () => {
-      if (!desktop.matches || still.matches) return;
-      const mid = window.innerHeight / 2;
-      let best: { off: number } | null = null;
-      for (const el of refs.current) {
-        if (!el) continue;
-        const r = el.getBoundingClientRect();
-        const off = r.top + r.height / 2 - mid;
-        if (!best || Math.abs(off) < Math.abs(best.off)) best = { off };
-      }
-      // Only nearby chapters (within a third of the screen), and not when already centred.
-      if (!best || Math.abs(best.off) < 4 || Math.abs(best.off) > window.innerHeight / 3) return;
-      settling = true;
-      window.scrollBy({ top: best.off, behavior: "smooth" });
-      window.setTimeout(() => (settling = false), 700);
-    };
-    const onScroll = () => {
-      if (settling) return;
-      window.clearTimeout(timer);
-      timer = window.setTimeout(settle, 160);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.clearTimeout(timer);
-    };
+    const el = section.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: "-40% 0px -40% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   return (
-    <section className="lp-band lp-band-white lp-story" aria-labelledby="lp-story-title">
+    <section
+      ref={section}
+      className={`lp-band lp-band-white lp-story ${inView ? "" : "lp-story-paused"}`}
+      aria-labelledby="lp-story-title"
+    >
       <div className="lp-wrap lp-story-intro">
         <div className="lp-head">
           <h2 id="lp-story-title" className="lp-h2 lp-display">One month with Accountanz</h2>
@@ -174,13 +155,26 @@ export function LandingStory() {
         </div>
       </div>
       <div className="lp-story-body">
-        <div className="lp-story-stage">
+        {/* Desktop: pinned copy of the active chapter (the list below is the readable source; this is aria-hidden). */}
+        <div className="lp-story-stage" aria-hidden>
           <div className="lp-story-sticky">
-            <Visual key={active} n={active} />
-            <div className="lp-story-progress" aria-hidden>
-              {CHAPTERS.map((c, i) => (
-                <span key={c.when} className={i <= active ? "lp-on" : undefined} />
-              ))}
+            <div key={active} className="lp-story-now">
+              <p className="lp-when">{CHAPTERS[active].when}</p>
+              <h3 className="lp-chapter-title lp-display">{CHAPTERS[active].title}</h3>
+              <p className="lp-chapter-body">{CHAPTERS[active].body}</p>
+              <p className="lp-why">{CHAPTERS[active].why}</p>
+            </div>
+            <div className="lp-story-vis">
+              <Visual key={active} n={active} />
+              {/* Each bar fills over the chapter's time; when the active one is full, the next chapter starts.
+                  Scrolling still picks the chapter, and clicking a bar jumps to it. Hover pauses. */}
+              <div className="lp-story-progress">
+                {CHAPTERS.map((c, i) => (
+                  <span key={c.when} className={i < active ? "lp-on" : undefined} onClick={() => setActive(i)}>
+                    {i === active && <span className="lp-fill" onAnimationEnd={() => setActive((a) => (a + 1) % CHAPTERS.length)} />}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -192,7 +186,7 @@ export function LandingStory() {
                 refs.current[i] = el;
               }}
               data-i={i}
-              className={`lp-chapter ${i === active ? "lp-chapter-on" : ""}`}
+              className="lp-chapter"
             >
               <p className="lp-when">{c.when}</p>
               <h3 className="lp-chapter-title lp-display">{c.title}</h3>
