@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { useSession } from "@/features/auth/hooks/use-session";
 import { PORTAL_HOME } from "@/lib/constants";
 import "./landing.css";
+import { usePublicPackages, ROLE_NAME, type PublicPackage } from "./landing-data";
+import { LandingExplore } from "./landing-explore";
 import { LandingStory } from "./landing-story";
 
 /* ───────────────────────── Hero voucher ───────────────────────── */
@@ -192,25 +194,6 @@ const ROLES = [
   },
 ];
 
-const PACKAGES = [
-  {
-    name: "Monthly Bookkeeping",
-    for: "For businesses that want clean books and GST done on time.",
-    includes: ["Monthly bookkeeping", "GST filing (GSTR-1 and GSTR-3B)"],
-    scope: ["Up to 500 transactions a month", "Two bank accounts", "GST returns filed by the 20th"],
-    team: "Bookkeeper and finance manager",
-    featured: false,
-  },
-  {
-    name: "Growth Compliance",
-    for: "For growing teams that also need payroll and monthly reports.",
-    includes: ["Monthly bookkeeping", "GST filing (GSTR-1 and GSTR-3B)", "Payroll processing", "Monthly financial reports"],
-    scope: ["Up to 1,200 transactions a month", "Multiple branches", "Quarterly review call with your CFO"],
-    team: "Bookkeeper, finance manager and CFO",
-    featured: true,
-  },
-];
-
 const FAQS = [
   {
     q: "Do I need to change my accounting software?",
@@ -287,6 +270,75 @@ function Tick() {
   );
 }
 
+const CYCLE: Record<PublicPackage["billing_cycle"], string> = { monthly: "a month", quarterly: "a month, billed quarterly", yearly: "a month, billed yearly" };
+const scopeLines = (notes: string | null) =>
+  (notes ?? "")
+    .split(/\.\s+|\.$/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+const teamText = (roles: string[]) => {
+  const names = roles.map((r) => (ROLE_NAME[r] ?? r).toLowerCase().replace(/^cfo$/, "CFO"));
+  if (!names.length) return "";
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  return list.charAt(0).toUpperCase() + list.slice(1);
+};
+
+function Packages({ portal }: { portal: string | null }) {
+  const { data, isLoading, error } = usePublicPackages();
+  if (error) return <p className="lp-empty">Packages couldn&apos;t be loaded. Refresh the page, or sign in to see them in your portal.</p>;
+  if (isLoading || !data)
+    return (
+      <div className="lp-packages" aria-busy>
+        <div className="lp-pkg lp-person-skel" />
+        <div className="lp-pkg lp-person-skel" />
+      </div>
+    );
+  if (data.length === 0) return <p className="lp-empty">Packages are being updated. Create an account and we&apos;ll suggest one for you.</p>;
+  return (
+    <div className="lp-packages">
+      {data.map((p, i) => {
+        const featured = data.length > 1 && i === data.length - 1;
+        return (
+          <article key={p.name} className={`lp-pkg ${featured ? "lp-pkg-featured" : ""}`}>
+            <h3 className="lp-pkg-name lp-display">{p.name}</h3>
+            {p.description && <p className="lp-pkg-for">{p.description}</p>}
+            <p className="lp-price">
+              <span className="lp-price-n lp-display">₹{p.monthly_fee.toLocaleString("en-IN")}</span> {CYCLE[p.billing_cycle]}
+            </p>
+            {p.services.length > 0 && (
+              <>
+                <p className="lp-pkg-label">Included</p>
+                <ul className="lp-pkg-list">
+                  {p.services.map((x) => (
+                    <li key={x}>
+                      <Tick />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {scopeLines(p.scope_notes).length > 0 && (
+              <>
+                <p className="lp-pkg-label">Scope</p>
+                <ul className="lp-pkg-scope">
+                  {scopeLines(p.scope_notes).map((x) => (
+                    <li key={x}>{x}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {p.team_roles.length > 0 && <p className="lp-pkg-team">Your team: {teamText(p.team_roles)}</p>}
+            <Link href={portal ?? "/register"} className={`lp-btn ${featured ? "lp-btnTeal" : "lp-btnPrimary"} lp-pkg-cta`}>
+              {portal ? "Open your portal" : `Start with ${p.name}`}
+            </Link>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ───────────────────────── Page ───────────────────────── */
 
 export function LandingPage({ fontClass }: { fontClass: string }) {
@@ -317,6 +369,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
           <nav className="lp-nav" aria-label="Sections">
             <a href="#how">How it works</a>
             <a href="#services">Services</a>
+            <a href="#accountants">Accountants</a>
             <a href="#packages">Packages</a>
             <a href="#faq">Questions</a>
           </nav>
@@ -422,42 +475,19 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
           </div>
         </section>
 
+        {/* Explore accountants */}
+        <LandingExplore portal={portal} />
+
         {/* Packages */}
-        <section id="packages" className="lp-band">
+        <section id="packages" className="lp-band lp-band-white">
           <div className="lp-wrap">
             <Head title="Choose how much we handle" sub="Pick a package when you create your account. You can move to another package later from your portal." />
-            <div className="lp-packages">
-              {PACKAGES.map((p) => (
-                <article key={p.name} className={`lp-pkg ${p.featured ? "lp-pkg-featured" : ""}`}>
-                  <h3 className="lp-pkg-name lp-display">{p.name}</h3>
-                  <p className="lp-pkg-for">{p.for}</p>
-                  <p className="lp-pkg-label">Included</p>
-                  <ul className="lp-pkg-list">
-                    {p.includes.map((x) => (
-                      <li key={x}>
-                        <Tick />
-                        {x}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="lp-pkg-label">Scope</p>
-                  <ul className="lp-pkg-scope">
-                    {p.scope.map((x) => (
-                      <li key={x}>{x}</li>
-                    ))}
-                  </ul>
-                  <p className="lp-pkg-team">Your team: {p.team}</p>
-                  <Link href={portal ?? "/register"} className={`lp-btn ${p.featured ? "lp-btnTeal" : "lp-btnPrimary"} lp-pkg-cta`}>
-                    {portal ? "Open your portal" : `Start with ${p.name}`}
-                  </Link>
-                </article>
-              ))}
-            </div>
+            <Packages portal={portal} />
           </div>
         </section>
 
         {/* Your books stay yours */}
-        <section className="lp-band lp-band-white">
+        <section className="lp-band">
           <div className="lp-wrap lp-yours">
             <Head
               title="Your books stay in your account"
@@ -477,7 +507,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="lp-band">
+        <section id="faq" className="lp-band lp-band-white">
           <div className="lp-wrap lp-faq-wrap">
             <Head title="Questions owners ask" />
             <div className="lp-faq">
@@ -515,6 +545,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
           <nav className="lp-foot-links" aria-label="Footer">
             <a href="#how">How it works</a>
             <a href="#services">Services</a>
+            <a href="#accountants">Accountants</a>
             <a href="#packages">Packages</a>
             <a href="#faq">Questions</a>
             <Link href="/login">Sign in</Link>

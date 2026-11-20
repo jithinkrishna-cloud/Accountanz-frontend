@@ -29,7 +29,7 @@ export function LandingExplore({ portal }: { portal: string | null }) {
   const count = (key: string) => (data ?? []).filter((a) => key === "all" || a.role === key || (key === "finance_manager" && a.role === "reviewer")).length;
 
   return (
-    <section id="accountants" className="lp-band lp-band-white">
+    <section id="accountants" className="lp-band">
       <div className="lp-wrap">
         <div className="lp-explore-head">
           <div className="lp-head">
@@ -82,9 +82,13 @@ export function LandingExplore({ portal }: { portal: string | null }) {
         )}
 
         <div className="lp-explore-cta">
-          <Link href={portal ? "/app/explore" : "/register"} className="lp-btn lp-btnPrimary">
-            {portal ? "Explore accountants in your portal" : "Create an account to choose your team"}
-          </Link>
+          {portal?.startsWith("/app") ? (
+            <Link href="/app/explore" className="lp-btn lp-btnPrimary">Explore accountants in your portal</Link>
+          ) : portal ? (
+            <Link href={portal} className="lp-btn lp-btnPrimary">Open your portal</Link>
+          ) : (
+            <Link href="/register" className="lp-btn lp-btnPrimary">Create an account to choose your team</Link>
+          )}
         </div>
       </div>
     </section>
