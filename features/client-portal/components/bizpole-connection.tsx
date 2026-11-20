@@ -94,7 +94,7 @@ function Note({ tone = "muted", icon: Icon = Info, children }: { tone?: "muted" 
 }
 
 const SAME_PRODUCT =
-  "JournL and JournL are the same accounting product. Connect it here with a connection code: no password is shared, and your books stay in your own account.";
+  "Connect JournL here with a connection code: no password is shared, and your books stay in your own account.";
 
 /** "Connection code required" → "Connecting": the owner creates a code in Bizpole and pastes it here. */
 function CodeEntry({ onCancel, again }: { onCancel?: () => void; again?: boolean }) {
@@ -312,7 +312,7 @@ function Body({ view, isOwner }: { view: BizpoleView; isOwner: boolean }) {
   );
 }
 
-/** Client Settings → Integrations: the JournL partner connection (read-only, separate from JournL). */
+/** Client Settings → Integrations: the JournL partner connection (read-only). */
 export function BizpoleConnection({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = useBizpole();
   return (
