@@ -17,6 +17,7 @@ import { useAssignmentOptions, useCreateAssignment } from "../hooks/use-assignme
 import { assignmentFormSchema, type AssignmentFormOutput, type AssignmentFormValues } from "../schemas/assignment.schema";
 import { TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment } from "../types/assignment.types";
 import { StaffPicker } from "./staff-picker";
+import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
 
@@ -144,7 +145,7 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
           <FormField id="valid_to" label="Ends" error={errors.valid_to?.message} hint="Leave empty for no end date.">
             <Input id="valid_to" type="date" aria-invalid={!!errors.valid_to} {...register("valid_to")} />
           </FormField>
-          <Controller
+          {JOURNL_INTEGRATION && <Controller
             control={control}
             name="journl_access"
             render={({ field }) => (
@@ -156,7 +157,7 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
                 </div>
               </div>
             )}
-          />
+          />}
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

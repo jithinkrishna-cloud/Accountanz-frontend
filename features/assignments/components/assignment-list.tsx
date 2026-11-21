@@ -20,6 +20,7 @@ import { JOURNL_ACCESS_LABELS, PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type 
 import { AssignmentEditDialog } from "./assignment-edit-dialog";
 import { AssignmentFormDialog } from "./assignment-form-dialog";
 import { AssignGroupDialog } from "@/features/staff-groups/components/assign-group-dialog";
+import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const ALL = "all";
 
@@ -100,7 +101,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
         </div>
       ),
     },
-    {
+    ...(!JOURNL_INTEGRATION ? [] : [{
       key: "journl",
       header: "JournL",
       hideOnMobile: true,
@@ -110,7 +111,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
           {JOURNL_ACCESS_LABELS[a.journl_access_state]}
         </span>
       ),
-    },
+    } satisfies Column<Assignment>]),
     {
       key: "actions",
       header: "",
@@ -124,8 +125,8 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> Edit dates & access</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL features</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> {JOURNL_INTEGRATION ? "Edit dates & access" : "Edit dates"}</DropdownMenuItem>
+              {JOURNL_INTEGRATION && <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL features</DropdownMenuItem>}
               <DropdownMenuItem onSelect={() => setReplacing(a)}><ArrowRightLeft className="size-4" /> Hand over to someone else</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setEnding(a)}><UserMinus className="size-4" /> End assignment</DropdownMenuItem>

@@ -34,6 +34,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { JOURNL_INTEGRATION, JOURNL_INTEGRATION_HREFS } from "@/lib/features";
 import type { Portal } from "@/types/auth";
 
 export interface NavItem {
@@ -58,7 +59,7 @@ export const PORTAL_LABEL: Record<Portal, string> = {
  * team  = my day → my clients' books → review & close → deliver → talk;
  * app   = what's waiting on the client → their books → contact → their company → account.
  */
-export const NAV: Record<Portal, NavGroup[]> = {
+const ALL_NAV: Record<Portal, NavGroup[]> = {
   admin: [
     {
       label: "Overview",
@@ -232,3 +233,13 @@ export const NAV: Record<Portal, NavGroup[]> = {
     },
   ],
 };
+
+/** The sidebars, without the JournL integration links while that integration is off (see lib/features.ts). */
+export const NAV: Record<Portal, NavGroup[]> = JOURNL_INTEGRATION
+  ? ALL_NAV
+  : (Object.fromEntries(
+      Object.entries(ALL_NAV).map(([portal, groups]) => [
+        portal,
+        groups.map((g) => ({ ...g, items: g.items.filter((i) => !JOURNL_INTEGRATION_HREFS.includes(i.href)) })).filter((g) => g.items.length > 0),
+      ]),
+    ) as Record<Portal, NavGroup[]>);

@@ -19,6 +19,7 @@ import { formatDate, humanize, formatLocalDateTime } from "@/lib/format";
 import { JournlDataSheet, type JournlDataSource } from "@/features/integrations/components/journl-data-sheet";
 import { useClientOverview } from "../hooks/use-workspace";
 import { workspaceService } from "../services/workspace-service";
+import { JOURNL_INTEGRATION } from "@/lib/features";
 
 type Action = "request" | "upload" | "message" | "meeting" | "approval" | "report" | null;
 
@@ -54,7 +55,7 @@ export function ClientOverviewView({ id }: { id: number }) {
   if (error) return <>{back}<ErrorState error={error} onRetry={() => void refetch()} /></>;
   if (isLoading || !data) return <>{back}<Skeleton className="mb-6 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></>;
 
-  const { client, engagement, team, contacts, summary, journl, journl_connection: jc } = data;
+  const { client, engagement, team, contacts, summary, journl, journl_connection: jc, journl_link } = data;
   const myModules = journl.flatMap((p) => p.modules.filter((m) => m.effective_actions.length > 0));
   const journlOn = journl.some((p) => p.journl_access);
   return (
@@ -123,6 +124,12 @@ export function ClientOverviewView({ id }: { id: number }) {
               ))}
             </ul>
           </Card>
+          {!JOURNL_INTEGRATION ? (
+            <Card title="JournL books">
+              <p className="text-muted-foreground text-sm">Work on this client&apos;s books in JournL, signed in with your own JournL login for the client.</p>
+              <OpenInJournl link={journl_link} className="mt-3" />
+            </Card>
+          ) : (
           <Card title="JournL books">
             {!jc || jc.status !== "connected" ? (
               <p className="text-muted-foreground text-sm">The client hasn&apos;t connected JournL yet. They do it from their portal (Accounting Software).</p>
@@ -160,7 +167,8 @@ export function ClientOverviewView({ id }: { id: number }) {
               </>
             )}
           </Card>
-          {journl.length > 0 && (
+          )}
+          {JOURNL_INTEGRATION && journl.length > 0 && (
             <Card title="My JournL access">
               {!journlOn ? (
                 <p className="text-muted-foreground text-sm">JournL access is off for your assignment. An admin can turn it on.</p>

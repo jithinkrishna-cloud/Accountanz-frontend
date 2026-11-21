@@ -21,6 +21,7 @@ import { TEAM_ROLE_LABELS, TEAM_ROLES, type TeamRole } from "@/features/assignme
 import { applyApiError } from "@/lib/form-errors";
 import { useSaveStaffGroup } from "../hooks/use-staff-groups";
 import type { StaffGroup } from "../services/staff-group-service";
+import { JOURNL_INTEGRATION } from "@/lib/features";
 
 // Mirrors backend staffGroupBodySchema.
 const schema = z.object({
@@ -164,12 +165,12 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
                     )} />
                     {rowErr?.team_role && <p className="text-destructive text-xs">{rowErr.team_role.message}</p>}
                   </div>
-                  <Controller control={control} name={`members.${i}.journl_access`} render={({ field }) => (
+                  {!JOURNL_INTEGRATION ? <span aria-hidden /> : <Controller control={control} name={`members.${i}.journl_access`} render={({ field }) => (
                     <div className="flex h-9 items-center gap-2">
                       <Checkbox id={`member-journl-${i}`} checked={field.value} onCheckedChange={(c) => field.onChange(c === true)} />
                       <Label htmlFor={`member-journl-${i}`} className="font-normal">JournL</Label>
                     </div>
-                  )} />
+                  )} />}
                   <Button type="button" variant="ghost" size="icon" onClick={() => { members.remove(i); setPicking(null); }} disabled={members.fields.length === 1} aria-label={`Remove member ${i + 1}`}>
                     <Trash2 className="size-4" />
                   </Button>

@@ -14,7 +14,7 @@ const CHAPTERS: Chapter[] = [
   {
     when: "1 November",
     title: "She sends the paperwork, not the books.",
-    body: "Anitha photographs the bills and uploads the bank statement from her Accountanz portal. Her books stay in her own JournL account. She linked it once with a connection code, and no password was shared.",
+    body: "Anitha photographs the bills and uploads the bank statement from her Accountanz portal. Her books stay in her own JournL account. She added her Accountanz team as users there once, each with their own login, so no password was shared.",
     why: "You keep ownership of your books. Your accountants work in them; nothing is copied out.",
   },
   {
@@ -57,7 +57,7 @@ function Visual({ n }: { n: number }) {
             {d}
           </div>
         ))}
-        <div className="lp-link">Kochi Spices linked from JournL</div>
+        <div className="lp-link">Accountanz team added in JournL</div>
       </div>
     );
   if (n === 2)

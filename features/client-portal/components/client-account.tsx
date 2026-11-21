@@ -29,6 +29,7 @@ import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalCompany, P
 import { BizpoleConnection } from "./bizpole-connection";
 import { CompanyGate } from "./company-gate";
 import { Card } from "./portal-ui";
+import { JOURNL_INTEGRATION } from "@/lib/features";
 
 // ───────────── Service & Billing ─────────────
 
@@ -261,7 +262,8 @@ function NotificationsForm({ settings }: { settings: PortalSettings }) {
 }
 
 type SettingsTab = "profile" | "integrations" | "notifications";
-const SETTINGS_TABS: SettingsTab[] = ["profile", "integrations", "notifications"];
+// Integrations holds only the JournL connection, so it's hidden while the JournL integration is off.
+const SETTINGS_TABS: SettingsTab[] = JOURNL_INTEGRATION ? ["profile", "integrations", "notifications"] : ["profile", "notifications"];
 
 function SettingsBody({ company }: { company: PortalCompany }) {
   const { data, isLoading, error, refetch } = usePortalSettings();
@@ -279,12 +281,14 @@ function SettingsBody({ company }: { company: PortalCompany }) {
         >
           Profile
         </button>
+        {JOURNL_INTEGRATION && (
         <button
           onClick={() => setTab("integrations")}
           className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "integrations" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
         >
           Integrations
         </button>
+        )}
         <button
           onClick={() => setTab("notifications")}
           className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", tab === "notifications" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-muted-foreground")}
@@ -293,7 +297,7 @@ function SettingsBody({ company }: { company: PortalCompany }) {
         </button>
       </div>
       {tab === "profile" && <ProfileForm settings={data} onSave={() => void refetch()} />}
-      {tab === "integrations" && <BizpoleConnection company={company} />}
+      {JOURNL_INTEGRATION && tab === "integrations" && <BizpoleConnection company={company} />}
       {tab === "notifications" && <NotificationsForm settings={data} />}
     </div>
   );
@@ -304,7 +308,7 @@ export function ClientSettings() {
     <CompanyGate>
       {(company) => (
         <>
-          <PageHeader title="Settings" description="Your profile, integrations and notification preferences." />
+          <PageHeader title="Settings" description={JOURNL_INTEGRATION ? "Your profile, integrations and notification preferences." : "Your profile and notification preferences."} />
           <SettingsBody company={company} />
         </>
       )}

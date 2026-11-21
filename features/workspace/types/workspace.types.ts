@@ -55,6 +55,7 @@ export interface ClientOverview {
   /** The viewer's own JournL module permissions, one per active assignment (empty for admins). */
   journl: AssignmentPermissions[];
   /** The client's JournL connection; `session_until` is set while its books can be read. */
+  journl_link: JournlLinkState;
   journl_connection: { status: string; org_id: string | null; org_name: string | null; session_until: string | null; link: JournlLinkState } | null;
 }
 

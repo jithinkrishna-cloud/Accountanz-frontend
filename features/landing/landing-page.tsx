@@ -198,11 +198,11 @@ const ROLES = [
 const FAQS = [
   {
     q: "Do I need to change my accounting software?",
-    a: "No. Your books stay in your own JournL account. You link it to Accountanz once with a connection code, and your team works from there.",
+    a: "No. Your books stay in your own JournL account. You add your Accountanz team as users in JournL, and they work there with their own logins.",
   },
   {
     q: "Can Accountanz see my JournL password?",
-    a: "No. You create a connection code inside JournL and enter it in Accountanz. No password is shared, and you can disconnect any time from your settings.",
+    a: "No. Each person on your team signs in to JournL with their own login. You add them in JournL, choose what they can do, and can remove them at any time.",
   },
   {
     q: "What do I have to do each month?",
@@ -218,7 +218,7 @@ const FAQS = [
   },
   {
     q: "How do I get started?",
-    a: "Create an account, tell us about your business and choose a package. Then link your JournL and upload the current month's documents.",
+    a: "Create an account, tell us about your business and choose a package. Then add your team as users in your JournL and upload the current month's documents.",
   },
 ];
 
@@ -373,7 +373,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
                 <span>closed every month.</span>
               </h1>
               <p className="lp-lede">
-                Accountanz gives your business a bookkeeper, a finance manager and a CFO. Link your JournL so they can see your accounts, and
+                Accountanz gives your business a bookkeeper, a finance manager and a CFO. Add them as users in your JournL so they can work on your accounts, and
                 send your bills and statements through the portal. They reconcile your bank, prepare your GST for your approval and send you a report
                 every month.
               </p>
@@ -468,16 +468,16 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
           <div className="lp-wrap lp-yours">
             <Head
               title="Your books stay in your account"
-              sub="Create a connection code in JournL and enter it in Accountanz. Your team reads your books from there. Nothing is copied out, and no password is shared."
+              sub="Add your team as users in JournL, under System → Users. They sign in with their own logins, so no password is shared and nothing is copied out of JournL."
             />
             <div className="lp-code">
-              <p className="lp-codeLabel">Connection code from JournL</p>
-              <div className="lp-codeValue lp-display">BPC-7KQ2M-4XV9T-…</div>
+              <p className="lp-codeLabel">In JournL: System → Users</p>
+              <div className="lp-codeValue lp-display">+ Add accountant</div>
               <ul className="lp-facts">
-                <li><Tick />Read-only access for your Accountanz team</li>
-                <li><Tick />You choose which company to share</li>
-                <li><Tick />Disconnect any time from your settings</li>
-                <li><Tick />Every time your team views your books, it&apos;s recorded</li>
+                <li><Tick />Each person has their own JournL login</li>
+                <li><Tick />You choose what each person can do</li>
+                <li><Tick />Remove anyone at any time in JournL</li>
+                <li><Tick />JournL&apos;s audit log shows who changed what</li>
               </ul>
             </div>
           </div>
@@ -504,7 +504,7 @@ export function LandingPage({ fontClass }: { fontClass: string }) {
         {/* Closing */}
         <section className="lp-band lp-band-ink">
           <div className="lp-wrap lp-closing">
-            <Head center title="Start with this month's books" sub="Create an account, choose a package and link your JournL. Your team takes it from there." />
+            <Head center title="Start with this month's books" sub="Create an account, choose a package and add your team in JournL. They take it from there." />
             {ctas}
           </div>
         </section>
