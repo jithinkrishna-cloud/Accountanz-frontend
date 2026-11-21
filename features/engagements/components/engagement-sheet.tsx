@@ -179,7 +179,14 @@ function Body({ row }: { row: Engagement }) {
           {hasAgreement ? (
             <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
               <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden />
-              <p className="min-w-0 flex-1 truncate text-sm">{row.agreement_file_name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">{row.agreement_file_name}</p>
+                {row.agreement_uploaded_at && (
+                  <p className="text-muted-foreground text-xs">
+                    Uploaded{row.agreement_uploaded_by_name ? ` by ${row.agreement_uploaded_by_name}` : ""} on {formatDate(row.agreement_uploaded_at, true)}
+                  </p>
+                )}
+              </div>
               <Button variant="outline" size="sm" asChild>
                 <a href={agreementUrl(row.id)} download>
                   <Download className="size-3.5" /> Download

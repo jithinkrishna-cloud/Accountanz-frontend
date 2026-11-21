@@ -59,7 +59,7 @@ export function ProspectFormDialog({ open, onOpenChange, onCreated }: Props) {
   const onSubmit = handleSubmit(async (values) => {
     try {
       const row = await create.mutateAsync(values);
-      toast.success("Prospect added");
+      toast.success("Lead added");
       onOpenChange(false);
       onCreated?.(row);
     } catch (err) {
@@ -71,7 +71,7 @@ export function ProspectFormDialog({ open, onOpenChange, onCreated }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>New prospect</DialogTitle>
+          <DialogTitle>New lead</DialogTitle>
           <DialogDescription>Adds the business as a lead and opens its onboarding case.</DialogDescription>
         </DialogHeader>
         <form id="prospect-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
@@ -132,7 +132,7 @@ export function ProspectFormDialog({ open, onOpenChange, onCreated }: Props) {
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <SubmitButton form="prospect-form" pending={create.isPending}>Add prospect</SubmitButton>
+          <SubmitButton form="prospect-form" pending={create.isPending}>Add lead</SubmitButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

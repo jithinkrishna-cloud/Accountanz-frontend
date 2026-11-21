@@ -113,7 +113,7 @@ export function EngagementList({ initialOpenId }: { initialOpenId?: number }) {
           empty={
             q || status !== "all"
               ? { title: "No engagements match", description: "Try a different search or status." }
-              : { title: "No engagements yet", description: "Accepting a proposal in Prospects opens one, or create it here.", action: <Button size="sm" onClick={() => setCreating(true)}>New engagement</Button> }
+              : { title: "No engagements yet", description: "Accepting a proposal in Leads opens one, or create it here.", action: <Button size="sm" onClick={() => setCreating(true)}>New engagement</Button> }
           }
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />

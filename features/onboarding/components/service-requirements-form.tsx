@@ -1,17 +1,20 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FormField } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { applyApiError } from "@/lib/form-errors";
+import { splitList } from "@/lib/format";
 import { useSaveServiceRequirements } from "../hooks/use-onboarding";
 import type { OnboardingCase, OnboardingServiceRequirements } from "../types/onboarding.types";
 
@@ -44,6 +47,62 @@ const toValues = (r: OnboardingServiceRequirements | null | undefined): Values =
   other_services: r?.other_services ?? "",
   notes: r?.notes ?? "",
 });
+
+
+function OtherServicesInput({ id, value, onChange, disabled }: { id: string; value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const [draft, setDraft] = useState("");
+  const items = splitList(value);
+
+  // Typing "ROC filings, Virtual CFO" adds both; duplicates (any case) are skipped.
+  const add = () => {
+    const next = [...items];
+    for (const s of splitList(draft)) if (!next.some((i) => i.toLowerCase() === s.toLowerCase())) next.push(s);
+    setDraft("");
+    if (next.length !== items.length) onChange(next.join(", "));
+  };
+  const remove = (s: string) => onChange(items.filter((i) => i !== s).join(", "));
+
+  return (
+    <div className="grid gap-2">
+      {items.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5" aria-label="Other services added">
+          {items.map((s) => (
+            <li key={s} className="bg-muted inline-flex items-center gap-1 rounded-md py-1 pr-1 pl-2.5 text-sm">
+              {s}
+              {!disabled && (
+                <button type="button" onClick={() => remove(s)} aria-label={`Remove ${s}`} className="text-muted-foreground hover:text-foreground rounded p-0.5">
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {disabled && items.length === 0 && <p className="text-muted-foreground text-sm">None</p>}
+      {!disabled && (
+        <div className="flex gap-2">
+          <Input
+            id={id}
+            value={draft}
+            placeholder="e.g. ROC filings"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
+            }}
+            // Don't lose a typed service if Save is clicked without pressing +.
+            onBlur={add}
+          />
+          <Button type="button" variant="outline" size="icon" onClick={add} disabled={!draft.trim()} aria-label="Add service">
+            <Plus className="size-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ServiceRequirementsForm({ row, locked, onChanged }: { row: OnboardingCase; locked: boolean; onChanged: (row: OnboardingCase) => void }) {
   const save = useSaveServiceRequirements(row.id);
@@ -81,8 +140,10 @@ export function ServiceRequirementsForm({ row, locked, onChanged }: { row: Onboa
               )} />
             ))}
           </div>
-          <FormField id="req-other" label="Other services" hint="Optional" error={errors.other_services?.message}>
-            <Input id="req-other" placeholder="e.g. ROC filings, virtual CFO" {...register("other_services")} />
+          <FormField id="req-other" label="Other services" hint={locked ? undefined : "Optional. Press Enter or + to add each one."} error={errors.other_services?.message}>
+            <Controller control={control} name="other_services" render={({ field }) => (
+              <OtherServicesInput id="req-other" value={field.value} onChange={field.onChange} disabled={locked} />
+            )} />
           </FormField>
           <FormField id="req-notes" label="Internal notes" hint="Only Accountanz staff see these." error={errors.notes?.message}>
             <Textarea id="req-notes" rows={2} {...register("notes")} />

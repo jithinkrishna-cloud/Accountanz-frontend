@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { RegistrationStatus } from "@/features/clients/types/client.types";
 import { ACCOUNTING_SOFTWARE_LABELS, MONTHS } from "@/lib/constants";
-import { formatDate, formatINR, formatPeriod, humanize, initials } from "@/lib/format";
+import { formatDate, formatINR, formatPeriod, humanize, initials, splitList } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-client-portal";
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
@@ -73,7 +73,7 @@ function BusinessBody() {
   const tax = b.tax_details;
   const fin = b.financial_profile;
   const req = b.service_requirements;
-  const services = req ? [...SERVICES.filter(([k]) => req[k]).map(([, label]) => label), ...(req.other_services ? [req.other_services] : [])] : [];
+  const services = req ? [...SERVICES.filter(([k]) => req[k]).map(([, label]) => label), ...splitList(req.other_services)] : [];
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">

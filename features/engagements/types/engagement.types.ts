@@ -24,6 +24,8 @@ export interface Engagement {
   end_date: string | null;
   renewal_date: string | null;
   agreement_file_name: string | null;
+  agreement_uploaded_at: string | null;
+  agreement_uploaded_by_name: string | null;
   invoice_count: number;
   first_invoice_number: string | null;
   /** An open package change request (from the client), if any. */

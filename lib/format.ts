@@ -41,3 +41,7 @@ export const formatIsoDateTime = (iso: string) => new Date(iso).toLocaleString("
 /** A meeting's start and end in the viewer's own timezone. */
 export const formatMeetingTime = (startUtc: string, endUtc: string) =>
   `${formatLocalDateTime(startUtc)} – ${parseUtc(endUtc).toLocaleTimeString("en-IN", { timeStyle: "short" })}`;
+
+/** A comma-separated list stored as one text field ("ROC filings, Virtual CFO") → its trimmed, non-empty items. */
+export const splitList = (v: string | null | undefined) =>
+  (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);

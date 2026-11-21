@@ -68,16 +68,22 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
-      // One business record moving through the pipeline: Prospects (lead → proposal) → Engagements
-      // (contract → activate) → Clients (served). Then the catalogue (services → packages).
+      // One business record moving through the pipeline: Leads (first contact → accepted proposal) → Engagements
+      // (signed agreement → activate) → Clients (served).
       label: "Clients",
       items: [
-        // Named "Prospects" (not "Onboarding") so it isn't confused with the client status "onboarding".
-        { label: "Prospects", href: "/admin/onboarding", icon: UserPlus },
+        // Named "Leads" (not "Onboarding"): matches the client status "lead" and avoids the "onboarding" status.
+        { label: "Leads", href: "/admin/onboarding", icon: UserPlus },
         { label: "Engagements", href: "/admin/engagements", icon: Handshake },
         { label: "Clients", href: "/admin/clients", icon: Building2 },
         // Clients asking for a specific accountant from Explore in their portal.
         { label: "Accountant Requests", href: "/admin/accountant-requests", icon: UserSearch },
+      ],
+    },
+    {
+      // The catalogue clients buy from: building blocks first (services → packages).
+      label: "Configuration",
+      items: [
         { label: "Services", href: "/admin/services", icon: Briefcase },
         { label: "Packages", href: "/admin/packages", icon: Package },
       ],

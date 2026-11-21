@@ -17,7 +17,7 @@ import { ProspectFormDialog } from "./prospect-form-dialog";
 const columns: Column<OnboardingCase>[] = [
   {
     key: "prospect",
-    header: "Prospect",
+    header: "Lead",
     cell: (c) => (
       <div className="min-w-0">
         <p className="truncate font-medium">{c.client_name}</p>
@@ -65,9 +65,9 @@ export function OnboardingList() {
   return (
     <>
       <PageHeader
-        title="Prospects"
-        description="Every prospective client, from registration to a signed proposal."
-        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New prospect</Button>}
+        title="Leads"
+        description="Businesses you are trying to win, from first contact to an accepted proposal."
+        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New lead</Button>}
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6" role="tablist" aria-label="Filter by stage">
@@ -83,7 +83,7 @@ export function OnboardingList() {
               stage === f ? "border-primary ring-primary/20 ring-2" : "hover:bg-accent/50",
             )}
           >
-            <p className="text-muted-foreground text-xs">{f === "all" ? "All prospects" : STAGE_LABELS[f]}</p>
+            <p className="text-muted-foreground text-xs">{f === "all" ? "All leads" : STAGE_LABELS[f]}</p>
             <p className="mt-1 text-xl font-semibold tabular-nums">{(f === "all" ? total : counts?.[f]) ?? "—"}</p>
           </button>
         ))}
@@ -103,8 +103,8 @@ export function OnboardingList() {
           onRowClick={setSelected}
           empty={
             q || stage !== "all"
-              ? { title: "No prospects match", description: "Try a different search or stage." }
-              : { title: "No prospects yet", description: "Add the first business you're talking to.", action: <Button size="sm" onClick={() => setCreating(true)}>New prospect</Button> }
+              ? { title: "No leads match", description: "Try a different search or stage." }
+              : { title: "No leads yet", description: "Add the first business you're talking to.", action: <Button size="sm" onClick={() => setCreating(true)}>New lead</Button> }
           }
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />

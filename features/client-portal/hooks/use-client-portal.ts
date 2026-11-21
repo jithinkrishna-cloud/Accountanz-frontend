@@ -99,7 +99,7 @@ export function useUpdateSettings() {
 export const usePortalPackages = () => useQuery({ queryKey: K("packages"), queryFn: s.packages });
 export const usePortalProposal = () => useQuery({ queryKey: K("proposal"), queryFn: s.proposal });
 
-/** Accepting moves the company to onboarding and opens a draft engagement, so refresh what shows that. */
+/** Accepting moves the company to onboarding and opens an accepted engagement, so refresh what shows that. */
 export function useAcceptProposal() {
   const qc = useQueryClient();
   return useMutation({

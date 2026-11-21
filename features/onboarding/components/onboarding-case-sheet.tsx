@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, ArrowRightLeft, Check, Info, Send, TriangleAlert, UserCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -110,6 +110,13 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
     getValues,
     formState: { errors, isDirty },
   } = useForm<AssessmentFormValues, unknown, AssessmentFormOutput>({ resolver: zodResolver(assessmentFormSchema), defaultValues: toValues(row) });
+  // Show the chosen package's list price next to a fee that differs from it (a discount or premium).
+  const [watchedPackage, watchedFee] = useWatch({ control, name: ["suggested_package_id", "suggested_monthly_fee"] });
+  const listPrice = packages.data?.find((p) => String(p.id) === watchedPackage)?.monthly_fee;
+  const feeHint =
+    listPrice != null && watchedFee?.trim() && Number(watchedFee) !== Number(listPrice)
+      ? `Before GST. Package list price: ${formatINR(listPrice)}.`
+      : "Before GST.";
 
   useEffect(() => reset(toValues(row)), [row, reset]);
 
@@ -148,9 +155,13 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
       setOverrideReason("");
       toast.success(
         to === "accepted"
-          ? "Accepted. A draft engagement is ready."
+          ? "Accepted. The engagement is ready: upload the signed agreement, then activate."
           : to === "proposal_sent"
-            ? updated.owner_logins > 0 ? "Proposal sent. The owner has been emailed and can accept it in their portal." : "Proposal marked as sent. The company has no portal login, so nobody was emailed."
+            ? updated.owner_logins > 0
+              ? "Proposal sent. The owner has been emailed and can accept it in their portal."
+              : updated.owner_invites > 0
+                ? "Proposal marked as sent. The owner will see it once they set their password and sign in."
+                : "Proposal marked as sent. The company has no portal login, so nobody was emailed."
             : `Moved to ${STAGE_LABELS[to].toLowerCase()}`,
       );
     } catch (err) {
@@ -309,10 +320,14 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                       value={field.value || undefined}
                       disabled={locked}
                       onValueChange={(v) => {
-                        field.onChange(v);
-                        // Start the fee at the package's list price; the admin can still adjust it.
+                        // The fee follows the package's list price: when it's empty or still the previous package's
+                        // price. A fee the admin typed (e.g. a discount) is kept; the hint below shows the list price.
+                        const prev = packages.data?.find((p) => String(p.id) === field.value);
                         const pkg = packages.data?.find((p) => String(p.id) === v);
-                        if (pkg && !getValues("suggested_monthly_fee")) setValue("suggested_monthly_fee", String(pkg.monthly_fee), { shouldDirty: true });
+                        const fee = getValues("suggested_monthly_fee").trim();
+                        const isListPrice = !fee || (prev && Number(fee) === Number(prev.monthly_fee));
+                        field.onChange(v);
+                        if (pkg && isListPrice) setValue("suggested_monthly_fee", String(pkg.monthly_fee), { shouldDirty: true });
                       }}
                     >
                       <SelectTrigger id="suggested_package_id" className="w-full">
@@ -329,7 +344,7 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   )}
                 />
               </FormField>
-              <FormField id="suggested_monthly_fee" label="Proposed monthly fee (₹)" error={errors.suggested_monthly_fee?.message} hint="Before GST." className="sm:col-span-2">
+              <FormField id="suggested_monthly_fee" label="Proposed monthly fee (₹)" error={errors.suggested_monthly_fee?.message} hint={feeHint} className="sm:col-span-2">
                 <Input id="suggested_monthly_fee" inputMode="decimal" aria-invalid={!!errors.suggested_monthly_fee} {...register("suggested_monthly_fee")} />
               </FormField>
               <FormField id="proposal_message" label="Message to the client" hint="Shown with the proposal in their portal and email." error={errors.proposal_message?.message} className="sm:col-span-2">
@@ -368,13 +383,17 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   <Send className="mt-0.5 size-4 shrink-0" aria-hidden />
                   {row.owner_logins > 0
                     ? `Sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. Waiting for the client to accept it in their portal. If they agree by phone or in a meeting, mark it accepted.`
-                    : `Marked sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. This company has no portal login, so they can't see it online: invite the owner from Clients, or mark it accepted once they agree.`}
+                    : row.owner_invites > 0
+                      ? `Marked sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. The owner is invited but hasn't set their password yet; they'll see it once they sign in. If they agree by phone, mark it accepted.`
+                      : `Marked sent${row.proposal_sent_at ? ` ${formatDate(row.proposal_sent_at, true)}` : ""}. This company has no portal login, so they can't see it online: invite the owner from Clients, or mark it accepted once they agree.`}
                 </p>
               )}
               {row.stage === "assessment" && row.owner_logins === 0 && (
                 <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  No portal login for this company yet. The proposal can be sent, but they won&apos;t see it online until you invite the owner from Clients.
+                  {row.owner_invites > 0
+                    ? "The owner is invited but hasn't set their password yet. You can send the proposal now; they'll see it in their portal once they sign in."
+                    : "No portal login for this company yet. The proposal can be sent, but they won't see it online until you invite the owner from Clients."}
                 </p>
               )}
               {row.stage === "assessment" && dataIncomplete && !overriding && (
@@ -406,7 +425,7 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   </FormField>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => setRejecting(false)}>Cancel</Button>
-                    <Button variant="destructive" size="sm" disabled={stage.isPending} onClick={() => void move("rejected")}>Reject prospect</Button>
+                    <Button variant="destructive" size="sm" disabled={stage.isPending} onClick={() => void move("rejected")}>Reject lead</Button>
                   </div>
                 </div>
               ) : (
@@ -435,7 +454,7 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                 </div>
               )}
               {row.stage === "proposal_sent" && (
-                <p className="text-muted-foreground flex items-start gap-1.5 text-xs"><Info className="mt-px size-3.5 shrink-0" aria-hidden />Accepting (by the client or here) moves the client to onboarding and opens a draft engagement. &ldquo;Back to assessment&rdquo; withdraws the proposal from their portal.</p>
+                <p className="text-muted-foreground flex items-start gap-1.5 text-xs"><Info className="mt-px size-3.5 shrink-0" aria-hidden />Accepting (by the client or here) moves the client to onboarding and opens the engagement as accepted. &ldquo;Back to assessment&rdquo; withdraws the proposal from their portal.</p>
               )}
               {row.stage === "assessment" && (
                 <p className="text-muted-foreground flex items-start gap-1.5 text-xs"><Info className="mt-px size-3.5 shrink-0" aria-hidden />Sending emails the owner and shows the package, fee and your message in their portal, where they can accept it.</p>
