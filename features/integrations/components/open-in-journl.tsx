@@ -25,13 +25,15 @@ export function OpenInJournl({ link, size = "sm", className }: { link: JournlLin
             <ExternalLink className="size-4" aria-hidden /> Open in JournL
           </a>
         </Button>
-        <p className="text-muted-foreground mt-1.5 text-xs">Opens in a new tab. JournL asks you to sign in with your own JournL account.</p>
+        <p className="text-muted-foreground mt-1.5 text-xs">
+          Opens JournL in a new tab. Sign in with your JournL login for this client: JournL opens the company that login belongs to.
+        </p>
       </div>
     );
   }
   const message =
     link.state === "not_configured"
-      ? "The JournL link isn't set up yet. An admin needs to add JournL's company link format (JOURNL_APP_URL_TEMPLATE)."
+      ? "The JournL link isn't set up yet. An admin needs to add JournL's web address (JOURNL_APP_URL_TEMPLATE)."
       : link.status
         ? (UNAVAILABLE[link.status] ?? `JournL status: ${humanize(link.status)}.`)
         : "The client hasn't connected JournL yet. They do it from their portal (Accounting Software).";

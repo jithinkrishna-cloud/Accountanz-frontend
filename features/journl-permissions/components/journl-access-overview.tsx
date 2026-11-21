@@ -138,8 +138,8 @@ export function JournlAccessOverviewView({ children }: { children?: React.ReactN
       actions={<Button asChild variant="outline"><Link href="/admin/integrations"><PlugZap className="size-4" aria-hidden /> Integrations</Link></Button>}
     />
   );
-  if (error) return <>{header}<ErrorState error={error} onRetry={() => void refetch()} /></>;
-  if (isLoading || !data) return <>{header}<div className="grid gap-4"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div></>;
+  if (error) return <>{header}{children}<ErrorState error={error} onRetry={() => void refetch()} /></>;
+  if (isLoading || !data) return <>{header}{children}<div className="grid gap-4"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div></>;
 
   const clients = data.clients.filter(
     (c) => (!q || c.client_name.toLowerCase().includes(q.toLowerCase())) && (!onlyConnected || c.connection?.status === "connected"),

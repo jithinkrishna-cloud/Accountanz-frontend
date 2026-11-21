@@ -108,7 +108,7 @@ function CloseDialog({ task, mode, onClose }: { task: AccessTask | null; mode: "
             maxLength={2000}
             value={notes}
             aria-invalid={!!error}
-            placeholder={done ? "e.g. Added under JournL → Settings → Users, invite accepted" : "e.g. Duplicate of another to-do"}
+            placeholder={done ? "e.g. Added in JournL → Company Settings → Users with role Accountant; login checked" : "e.g. Duplicate of another to-do"}
             onChange={(e) => setNotes(e.target.value)}
           />
           {error && <p role="alert" className="text-destructive text-xs">{error}</p>}
