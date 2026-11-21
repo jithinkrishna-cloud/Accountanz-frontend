@@ -16,7 +16,7 @@ import { ModulePermissionsDialog } from "@/features/journl-permissions/component
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { useAssignmentOptions, useAssignments, useEndAssignment } from "../hooks/use-assignments";
-import { PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment, type AssignmentStatus, type TeamRole } from "../types/assignment.types";
+import { JOURNL_ACCESS_LABELS, PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment, type AssignmentStatus, type TeamRole } from "../types/assignment.types";
 import { AssignmentEditDialog } from "./assignment-edit-dialog";
 import { AssignmentFormDialog } from "./assignment-form-dialog";
 import { AssignGroupDialog } from "@/features/staff-groups/components/assign-group-dialog";
@@ -100,7 +100,17 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
         </div>
       ),
     },
-    { key: "journl", header: "JournL", hideOnMobile: true, cell: (a) => (a.journl_access ? "Yes" : <span className="text-muted-foreground">No</span>) },
+    {
+      key: "journl",
+      header: "JournL",
+      hideOnMobile: true,
+      // Access counts only once a to-do confirms it was given in JournL.
+      cell: (a) => (
+        <span className={a.journl_access_state === "granted" ? "" : a.journl_access_state === "none" ? "text-muted-foreground" : "text-warning text-xs font-medium"} title={a.journl_access_state === "unconfirmed" ? "Turned on before access to-dos existed; nobody has confirmed it in JournL" : undefined}>
+          {JOURNL_ACCESS_LABELS[a.journl_access_state]}
+        </span>
+      ),
+    },
     {
       key: "actions",
       header: "",

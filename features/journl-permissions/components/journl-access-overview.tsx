@@ -125,7 +125,7 @@ function ClientCard({ c, modules, onEdit }: { c: Client; modules: JournlAccessOv
 }
 
 /** Admin → JournL Access: who can read what in each client's JournL today, and whether the client's session is live. */
-export function JournlAccessOverviewView() {
+export function JournlAccessOverviewView({ children }: { children?: React.ReactNode }) {
   const { data, isLoading, error, refetch } = useJournlAccessOverview();
   const [q, setQ] = useState("");
   const [onlyConnected, setOnlyConnected] = useState(false);
@@ -150,6 +150,7 @@ export function JournlAccessOverviewView() {
   return (
     <>
       {header}
+      {children}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput value={q} onChange={setQ} placeholder="Search clients" />
         <label className="flex items-center gap-2 text-sm">

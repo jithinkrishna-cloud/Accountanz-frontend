@@ -1,3 +1,4 @@
+import type { JournlLinkState } from "@/features/integrations/components/open-in-journl";
 export const CLIENT_STATUSES = ["lead", "onboarding", "active", "paused", "exited"] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 export const ACCOUNTING_SOFTWARE = ["journl", "none"] as const;
@@ -97,4 +98,6 @@ export interface ClientDetail extends Client {
   tax_details?: CompanyTaxDetails | null;
   stakeholders?: CompanyStakeholder[];
   financial_profile?: CompanyFinancialProfile | null;
+  /** JournL connection and the "Open in JournL" link (navigation only; no token). */
+  journl: { status: string | null; org_id: string | null; org_name: string | null; session_until: string | null; link: JournlLinkState };
 }

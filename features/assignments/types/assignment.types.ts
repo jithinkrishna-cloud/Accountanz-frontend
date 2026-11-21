@@ -33,6 +33,8 @@ export interface Assignment {
   status: AssignmentStatus;
   phase: AssignmentPhase;
   journl_access: boolean;
+  /** What Accountanz knows about the JournL login, from confirmed to-dos. */
+  journl_access_state: JournlAccessState;
   replaced_by_assignment_id: number | null;
   replaced_by_name: string | null;
   /** The staff group this assignment was created from, if any (null once the group is deleted). */
@@ -45,3 +47,14 @@ export interface AssignmentOptions {
   staff: { user_id: number; full_name: string; email: string; portal_role: string; verification_status: string; expertise: string[]; active_clients: number }[];
   clients: { id: number; name: string; status: string }[];
 }
+
+/** Mirrors backend JournlAccessState: access counts as granted only once a to-do confirms it. */
+export type JournlAccessState = "granted" | "pending_grant" | "pending_removal" | "unconfirmed" | "none";
+
+export const JOURNL_ACCESS_LABELS: Record<JournlAccessState, string> = {
+  granted: "Granted",
+  pending_grant: "Being added",
+  pending_removal: "Being removed",
+  unconfirmed: "Not confirmed",
+  none: "No",
+};

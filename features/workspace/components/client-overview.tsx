@@ -1,5 +1,6 @@
 "use client";
 
+import { OpenInJournl } from "@/features/integrations/components/open-in-journl";
 import { ArrowLeft, BookOpen, CalendarPlus, CircleCheck, FilePlus2, FileText, MessageSquarePlus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -155,6 +156,7 @@ export function ClientOverviewView({ id }: { id: number }) {
                 ) : (
                   <p className="text-muted-foreground mt-2 text-sm">The JournL session has expired. Ask the client owner to refresh it from their portal (Accounting Software).</p>
                 )}
+                {(journlOn || journl.length === 0) && <OpenInJournl link={jc.link} className="mt-3 border-t pt-3" />}
               </>
             )}
           </Card>
