@@ -68,16 +68,18 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
-      // A client's lifecycle: prospect → client → signed engagement; the catalogue they buy from comes after.
+      // One business record moving through the pipeline: Prospects (lead → proposal) → Engagements
+      // (contract → activate) → Clients (served). Then the catalogue (services → packages).
       label: "Clients",
       items: [
-        { label: "Onboarding", href: "/admin/onboarding", icon: UserPlus },
-        { label: "Clients", href: "/admin/clients", icon: Building2 },
+        // Named "Prospects" (not "Onboarding") so it isn't confused with the client status "onboarding".
+        { label: "Prospects", href: "/admin/onboarding", icon: UserPlus },
         { label: "Engagements", href: "/admin/engagements", icon: Handshake },
+        { label: "Clients", href: "/admin/clients", icon: Building2 },
         // Clients asking for a specific accountant from Explore in their portal.
         { label: "Accountant Requests", href: "/admin/accountant-requests", icon: UserSearch },
-        { label: "Packages", href: "/admin/packages", icon: Package },
         { label: "Services", href: "/admin/services", icon: Briefcase },
+        { label: "Packages", href: "/admin/packages", icon: Package },
       ],
     },
     {

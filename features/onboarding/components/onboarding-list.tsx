@@ -65,7 +65,7 @@ export function OnboardingList() {
   return (
     <>
       <PageHeader
-        title="Onboarding"
+        title="Prospects"
         description="Every prospective client, from registration to a signed proposal."
         actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New prospect</Button>}
       />

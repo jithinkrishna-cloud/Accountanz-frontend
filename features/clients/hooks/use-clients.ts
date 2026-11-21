@@ -36,6 +36,8 @@ export function useSaveClient(id?: number) {
       qc.setQueryData([...KEY, "detail", client.id], client);
       void qc.invalidateQueries({ queryKey: [...KEY, "list"] });
       void qc.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+      // A new lead also opens a prospect case, so Prospects needs a refresh.
+      if (!id && client.status === "lead") void qc.invalidateQueries({ queryKey: ["admin", "onboarding"] });
     },
   });
 }
