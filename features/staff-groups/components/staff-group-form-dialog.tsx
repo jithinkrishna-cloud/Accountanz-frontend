@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
-import { useEffect } from "react";
+import { ChevronsUpDown, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StaffPicker } from "@/features/assignments/components/staff-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignmentOptions } from "@/features/assignments/hooks/use-assignments";
 import { TEAM_ROLE_LABELS, TEAM_ROLES, type TeamRole } from "@/features/assignments/types/assignment.types";
@@ -55,9 +56,14 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
     defaultValues: toValues(group),
   });
   const members = useFieldArray({ control, name: "members" });
+  // Row whose person picker is open (one at a time keeps the dialog short).
+  const [picking, setPicking] = useState<number | null>(null);
 
   useEffect(() => {
-    if (open) reset(toValues(group));
+    if (open) {
+      reset(toValues(group));
+      setPicking(group ? null : 0);
+    }
   }, [open, group, reset]);
 
   const staff = options.data?.staff ?? [];
@@ -104,31 +110,43 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
               return (
                 <div key={f.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_11rem_auto_auto] sm:items-start">
                   <div className="grid gap-1">
-                    <Controller control={control} name={`members.${i}.user_id`} render={({ field }) => (
-                      <Select
-                        value={field.value || undefined}
-                        onValueChange={(v) => {
-                          field.onChange(v);
-                          // Start the role at the person's own role; still changeable.
-                          const p = staff.find((s) => String(s.user_id) === v);
-                          if (p && !getValues(`members.${i}.team_role`) && (TEAM_ROLES as readonly string[]).includes(p.portal_role)) {
-                            setValue(`members.${i}.team_role`, p.portal_role as TeamRole);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full" aria-label={`Member ${i + 1}`} aria-invalid={!!rowErr?.user_id}>
-                          <SelectValue placeholder={options.isLoading ? "Loading…" : "Choose a person"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {staff.map((s) => (
-                            <SelectItem key={s.user_id} value={String(s.user_id)}>
-                              {s.full_name}
-                              {s.verification_status !== "verified" && " (not verified)"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )} />
+                    <Controller control={control} name={`members.${i}.user_id`} render={({ field }) => {
+                      const chosen = staff.find((s) => String(s.user_id) === field.value);
+                      const open = picking === i;
+                      return open && !options.isLoading ? (
+                        // Same searchable picker as New assignment: name, role, skills and current client load.
+                        <StaffPicker
+                          id={`member-${i}`}
+                          staff={staff}
+                          value={field.value}
+                          invalid={!!rowErr?.user_id}
+                          onChange={(v) => {
+                            field.onChange(v);
+                            setPicking(null);
+                            // Start the role at the person's own role; still changeable.
+                            const p = staff.find((s) => String(s.user_id) === v);
+                            if (p && !getValues(`members.${i}.team_role`) && (TEAM_ROLES as readonly string[]).includes(p.portal_role)) {
+                              setValue(`members.${i}.team_role`, p.portal_role as TeamRole);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-between font-normal"
+                          aria-label={chosen ? `Member ${i + 1}: ${chosen.full_name}. Change` : `Member ${i + 1}: choose a person`}
+                          aria-invalid={!!rowErr?.user_id}
+                          onClick={() => setPicking(i)}
+                          disabled={options.isLoading}
+                        >
+                          <span className={chosen ? "truncate" : "text-muted-foreground"}>
+                            {options.isLoading ? "Loading…" : chosen?.full_name ?? "Choose a person"}
+                          </span>
+                          <ChevronsUpDown className="size-4 opacity-50" aria-hidden />
+                        </Button>
+                      );
+                    }} />
                     {rowErr?.user_id && <p className="text-destructive text-xs">{rowErr.user_id.message}</p>}
                   </div>
                   <div className="grid gap-1">
@@ -148,14 +166,14 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
                       <Label htmlFor={`member-journl-${i}`} className="font-normal">JournL</Label>
                     </div>
                   )} />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => members.remove(i)} disabled={members.fields.length === 1} aria-label={`Remove member ${i + 1}`}>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => { members.remove(i); setPicking(null); }} disabled={members.fields.length === 1} aria-label={`Remove member ${i + 1}`}>
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
               );
             })}
             {membersError && <p role="alert" className="text-destructive text-xs">{membersError}</p>}
-            <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => members.append({ ...blank })}>
+            <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => { members.append({ ...blank }); setPicking(members.fields.length); }}>
               <Plus className="size-4" /> Add member
             </Button>
           </fieldset>
