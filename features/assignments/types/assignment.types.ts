@@ -35,6 +35,9 @@ export interface Assignment {
   journl_access: boolean;
   replaced_by_assignment_id: number | null;
   replaced_by_name: string | null;
+  /** The staff group this assignment was created from, if any (null once the group is deleted). */
+  source_group_id: number | null;
+  source_group_name: string | null;
   created_at: string;
 }
 

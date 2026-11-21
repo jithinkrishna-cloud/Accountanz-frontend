@@ -9,6 +9,8 @@ export interface TeamMember {
   team_role: TeamRole;
   journl_access: boolean;
   valid_to: string | null;
+  /** Staff group the assignment came from, if any. */
+  source_group_name: string | null;
 }
 
 export interface Team {

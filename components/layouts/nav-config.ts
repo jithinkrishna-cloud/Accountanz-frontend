@@ -14,6 +14,7 @@ import {
   ListChecks,
   FileText,
   FolderOpen,
+  Group,
   Handshake,
   Kanban,
   KeyRound,
@@ -123,6 +124,7 @@ export const NAV: Record<Portal, NavGroup[]> = {
       items: [
         { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
         { label: "Teams", href: "/admin/teams", icon: UsersRound },
+        { label: "Groups", href: "/admin/groups", icon: Group },
         { label: "Accountants", href: "/admin/accountants", icon: UserCog },
         { label: "Employees", href: "/admin/employees", icon: Users },
       ],

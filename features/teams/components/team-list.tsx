@@ -63,6 +63,7 @@ function TeamCard({ team, onRename }: { team: Team; onRename: () => void }) {
                     {TEAM_ROLE_LABELS[m.team_role]}
                     {m.journl_access && " · JournL"}
                     {m.valid_to && ` · until ${formatDate(m.valid_to)}`}
+                    {m.source_group_name && ` · via ${m.source_group_name}`}
                   </p>
                 </div>
               </li>

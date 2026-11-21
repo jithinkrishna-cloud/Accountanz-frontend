@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeft, KeyRound, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
+import { ArrowRightLeft, Group, KeyRound, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { useAssignmentOptions, useAssignments, useEndAssignment } from "../hooks
 import { PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment, type AssignmentStatus, type TeamRole } from "../types/assignment.types";
 import { AssignmentEditDialog } from "./assignment-edit-dialog";
 import { AssignmentFormDialog } from "./assignment-form-dialog";
+import { AssignGroupDialog } from "@/features/staff-groups/components/assign-group-dialog";
 
 const ALL = "all";
 
@@ -29,6 +30,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
   const [role, setRole] = useState<TeamRole | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [assigningGroup, setAssigningGroup] = useState(false);
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [replacing, setReplacing] = useState<Assignment | undefined>();
   const [ending, setEnding] = useState<Assignment | null>(null);
@@ -68,7 +70,16 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
       ),
     },
     ...(clientId ? [] : [{ key: "client", header: "Client", cell: (a: Assignment) => <span className="truncate">{a.client_name}</span> }]),
-    { key: "role", header: "Team role", cell: (a) => TEAM_ROLE_LABELS[a.team_role] },
+    {
+      key: "role",
+      header: "Team role",
+      cell: (a) => (
+        <div className="min-w-0">
+          <p>{TEAM_ROLE_LABELS[a.team_role]}</p>
+          {a.source_group_name && <p className="text-muted-foreground truncate text-xs">via {a.source_group_name}</p>}
+        </div>
+      ),
+    },
     {
       key: "dates",
       header: "Dates",
@@ -121,7 +132,12 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
       <PageHeader
         title="Assignments"
         description="Who can work on which client, in what role, and for how long."
-        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New assignment</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setAssigningGroup(true)}><Group className="size-4" /> Assign group</Button>
+            <Button onClick={() => setCreating(true)}><Plus className="size-4" /> New assignment</Button>
+          </div>
+        }
       />
       <div className="bg-card rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center">
@@ -166,6 +182,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
       </div>
 
       <AssignmentFormDialog open={creating} onOpenChange={setCreating} clientId={clientId} />
+      <AssignGroupDialog open={assigningGroup} onOpenChange={setAssigningGroup} clientId={clientId} />
       <AssignmentFormDialog open={!!replacing} onOpenChange={(open) => !open && setReplacing(undefined)} replacing={replacing} />
       <AssignmentEditDialog assignment={editing} onOpenChange={(open) => !open && setEditing(null)} />
       <ModulePermissionsDialog assignment={modules} onClose={() => setModules(null)} />
