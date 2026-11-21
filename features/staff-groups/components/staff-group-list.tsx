@@ -34,6 +34,7 @@ function GroupCard({ group, onEdit, onAssign, onDelete }: { group: StaffGroup; o
       </header>
 
       <div className="flex-1 space-y-4 px-5 py-4">
+        {group.members.length === 0 && <p className="text-muted-foreground text-sm">No members. Edit the group to add people.</p>}
         <ul className="space-y-3">
           {group.members.map((m) => (
             <li key={`${m.user_id}-${m.team_role}`} className="flex items-center gap-3">
@@ -72,7 +73,7 @@ function GroupCard({ group, onEdit, onAssign, onDelete }: { group: StaffGroup; o
       </div>
 
       <footer className="border-t px-5 py-3">
-        <Button variant="link" className="h-auto p-0" onClick={onAssign}>
+        <Button variant="link" className="h-auto p-0" onClick={onAssign} disabled={group.members.length === 0}>
           <UserPlus className="size-4" aria-hidden /> Assign to a client
         </Button>
       </footer>

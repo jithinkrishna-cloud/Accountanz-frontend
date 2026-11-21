@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FormField } from "@/components/shared/form-field";
@@ -56,15 +56,18 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
     defaultValues: toValues(group),
   });
   const members = useFieldArray({ control, name: "members" });
+  const memberValues = useWatch({ control, name: "members" });
   // Row whose person picker is open (one at a time keeps the dialog short).
   const [picking, setPicking] = useState<number | null>(null);
 
   useEffect(() => {
-    if (open) {
-      reset(toValues(group));
-      setPicking(group ? null : 0);
-    }
+    if (open) reset(toValues(group));
   }, [open, group, reset]);
+
+  const close = (next: boolean) => {
+    if (!next) setPicking(null);
+    onOpenChange(next);
+  };
 
   const staff = options.data?.staff ?? [];
 
@@ -76,7 +79,7 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
         members: v.members.map((m) => ({ user_id: Number(m.user_id), team_role: m.team_role as TeamRole, journl_access: m.journl_access })),
       });
       toast.success(group ? `${saved.name} saved` : `${saved.name} created`);
-      onOpenChange(false);
+      close(false);
     } catch (err) {
       applyApiError(err, setError, ["name", "description", "members"]);
     }
@@ -85,7 +88,7 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
   const membersError = errors.members?.message ?? errors.members?.root?.message;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{group ? "Edit group" : "New group"}</DialogTitle>
@@ -107,13 +110,14 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
             <legend className="mb-2 text-sm font-medium">Members</legend>
             {members.fields.map((f, i) => {
               const rowErr = errors.members?.[i];
+              // A blank row shows its picker straight away; a filled one opens it on "Change". An open picker takes the full row.
+              const pickerOpen = !options.isLoading && (picking === i || (picking === null && !memberValues?.[i]?.user_id));
               return (
-                <div key={f.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_11rem_auto_auto] sm:items-start">
-                  <div className="grid gap-1">
+                <div key={f.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto_auto] sm:items-start">
+                  <div className={pickerOpen ? "grid min-w-0 gap-1 sm:col-span-full" : "grid min-w-0 gap-1"}>
                     <Controller control={control} name={`members.${i}.user_id`} render={({ field }) => {
                       const chosen = staff.find((s) => String(s.user_id) === field.value);
-                      const open = picking === i;
-                      return open && !options.isLoading ? (
+                      return pickerOpen ? (
                         // Same searchable picker as New assignment: name, role, skills and current client load.
                         <StaffPicker
                           id={`member-${i}`}
@@ -173,13 +177,13 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
               );
             })}
             {membersError && <p role="alert" className="text-destructive text-xs">{membersError}</p>}
-            <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => { members.append({ ...blank }); setPicking(members.fields.length); }}>
+            <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => { members.append({ ...blank }); setPicking(null); }}>
               <Plus className="size-4" /> Add member
             </Button>
           </fieldset>
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => close(false)}>Cancel</Button>
           <SubmitButton form="staff-group-form" pending={save.isPending}>{group ? "Save group" : "Create group"}</SubmitButton>
         </DialogFooter>
       </DialogContent>
