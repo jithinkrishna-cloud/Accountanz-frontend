@@ -52,7 +52,7 @@ export function PaymentFormDialog({ open, onOpenChange }: { open: boolean; onOpe
           <FormField id="invoice_id" label="Invoice" error={errors.invoice_id?.message} className="sm:col-span-2">
             <Controller control={control} name="invoice_id" render={({ field }) => (
               <Select
-                value={field.value || undefined}
+                value={field.value || ""}
                 onValueChange={(v) => {
                   field.onChange(v);
                   const inv = invoices.data?.find((i) => String(i.id) === v);

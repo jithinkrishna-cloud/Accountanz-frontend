@@ -81,7 +81,7 @@ export function AssignGroupDialog({ open, onOpenChange, groupId, clientId }: Pro
           {!groupId && (
             <FormField id="group_id" label="Group" error={errors.group_id?.message} className="sm:col-span-2">
               <Controller control={control} name="group_id" render={({ field }) => (
-                <Select value={field.value || undefined} onValueChange={field.onChange}>
+                <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger id="group_id" className="w-full" aria-invalid={!!errors.group_id}>
                     <SelectValue placeholder={groups.isLoading ? "Loading…" : groups.data?.length === 0 ? "No groups yet. Create one in People → Groups." : "Select a group"} />
                   </SelectTrigger>
@@ -103,7 +103,7 @@ export function AssignGroupDialog({ open, onOpenChange, groupId, clientId }: Pro
           )}
           <FormField id="group-client" label="Client" error={errors.client_id?.message} className="sm:col-span-2">
             <Controller control={control} name="client_id" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange}>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger id="group-client" className="w-full" aria-invalid={!!errors.client_id}>
                   <SelectValue placeholder={options.isLoading ? "Loading…" : "Select a client"} />
                 </SelectTrigger>

@@ -107,7 +107,7 @@ function StakeholderForm({ clientId, stakeholder, allocatedElsewhere, isFirst, o
       <form id="stakeholder-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
         <FormField id="sh-type" label="Type" error={errors.stakeholder_type?.message}>
           <Controller control={control} name="stakeholder_type" render={({ field }) => (
-            <Select value={field.value || undefined} onValueChange={field.onChange}>
+            <Select value={field.value || ""} onValueChange={field.onChange}>
               <SelectTrigger id="sh-type" className="w-full" aria-invalid={!!errors.stakeholder_type}><SelectValue placeholder="Select type" /></SelectTrigger>
               <SelectContent>{STAKEHOLDER_TYPES.map((t) => <SelectItem key={t} value={t}>{humanize(t)}</SelectItem>)}</SelectContent>
             </Select>

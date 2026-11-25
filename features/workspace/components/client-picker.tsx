@@ -8,7 +8,7 @@ import { useStaffClientOptions } from "../hooks/use-workspace";
 export function ClientPicker({ portal, id, value, onChange, invalid }: { portal: StaffPortal; id: string; value: string; onChange: (v: string) => void; invalid?: boolean }) {
   const options = useStaffClientOptions(portal);
   return (
-    <Select value={value || undefined} onValueChange={onChange}>
+    <Select value={value || ""} onValueChange={onChange}>
       <SelectTrigger id={id} className="w-full" aria-invalid={invalid}>
         <SelectValue placeholder={options.isLoading ? "Loading clients…" : "Choose a client"} />
       </SelectTrigger>

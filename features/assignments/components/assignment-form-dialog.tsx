@@ -87,7 +87,7 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
                 control={control}
                 name="client_id"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
                     <SelectTrigger id="client_id" className="w-full" aria-invalid={!!errors.client_id}>
                       <SelectValue placeholder={options.isLoading ? "Loading…" : "Select a client"} />
                     </SelectTrigger>
@@ -129,7 +129,7 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
                 control={control}
                 name="team_role"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
                     <SelectTrigger id="team_role" className="w-full" aria-invalid={!!errors.team_role}><SelectValue placeholder="Select a role" /></SelectTrigger>
                     <SelectContent>
                       {TEAM_ROLES.map((r) => <SelectItem key={r} value={r}>{TEAM_ROLE_LABELS[r]}</SelectItem>)}

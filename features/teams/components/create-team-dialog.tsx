@@ -56,7 +56,7 @@ export function CreateTeamDialog({ open, onOpenChange }: { open: boolean; onOpen
         <form id="create-team-form" onSubmit={onSubmit} className="grid gap-4" noValidate>
           <FormField id="client_id" label="Client" error={errors.client_id?.message}>
             <Controller control={control} name="client_id" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange} disabled={!count}>
+              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!count}>
                 <SelectTrigger id="client_id" className="w-full" aria-invalid={!!errors.client_id}>
                   <SelectValue placeholder={count === 0 ? "Every client already has a team" : "Select a client"} />
                 </SelectTrigger>

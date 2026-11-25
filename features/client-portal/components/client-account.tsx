@@ -182,7 +182,7 @@ function BusinessDetailsCard({ business, isOwner, onSave }: { business: PortalBu
           </FormField>
           <FormField id="state" label="State" error={errors.state?.message}>
             <Controller control={control} name="state" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange} disabled={!editing}>
+              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!editing}>
                 <SelectTrigger id="state" className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>

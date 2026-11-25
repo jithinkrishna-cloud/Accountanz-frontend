@@ -149,7 +149,7 @@ export function ChangePackageDialog({ row, open, onOpenChange }: { row: Engageme
         </DialogHeader>
         <div className="grid gap-4">
           <FormField id="change-package" label="New package">
-            <Select value={packageId || undefined} onValueChange={setPackageId}>
+            <Select value={packageId || ""} onValueChange={setPackageId}>
               <SelectTrigger id="change-package" className="w-full"><SelectValue placeholder={packages.isLoading ? "Loading packages…" : "Select a package"} /></SelectTrigger>
               <SelectContent>
                 {options.map((p) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Stamp } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Plus, Stamp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks } from "../hooks/use-client-portal";
 import type { PortalRequest, PortalTask } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
+import { NewTaskDialog } from "./new-task-dialog";
 
 /**
  * Client view of the month's work, in plain language. Clients don't need the review workflow: four stages
@@ -443,10 +444,11 @@ const VIEWS = [
   { key: "list", label: "List", icon: List },
 ] as const;
 
-function ProgressBody() {
+function ProgressBody({ isOwner }: { isOwner: boolean }) {
   const [period, setPeriod] = useState<string>();
   const [view, setView] = useState<"board" | "list">("board");
   const [openId, setOpenId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
   const { data, isLoading, error, refetch } = usePortalTasks(period);
   const tasks = [...(data?.tasks ?? [])].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status] || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
   const open = tasks.find((t) => t.id === openId) ?? null;
@@ -457,14 +459,18 @@ function ProgressBody() {
         title="Tasks & Progress"
         description="What your accounting team is doing on your books, and how far along it is."
         actions={
-          data && (
-            <Select value={data.period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-40" aria-label="Month"><SelectValue /></SelectTrigger>
-              <SelectContent>{data.periods.map((p) => <SelectItem key={p} value={p}>{formatPeriod(p)}</SelectItem>)}</SelectContent>
-            </Select>
-          )
+          <>
+            {data && (
+              <Select value={data.period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-40" aria-label="Month"><SelectValue /></SelectTrigger>
+                <SelectContent>{data.periods.map((p) => <SelectItem key={p} value={p}>{formatPeriod(p)}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
+            {isOwner && <Button onClick={() => setCreating(true)}><Plus className="size-4" /> New task</Button>}
+          </>
         }
       />
+      {isOwner && <NewTaskDialog open={creating} onOpenChange={setCreating} onCreated={setPeriod} />}
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : isLoading || !data ? (
@@ -511,5 +517,5 @@ function ProgressBody() {
 }
 
 export function ClientProgress() {
-  return <CompanyGate>{() => <ProgressBody />}</CompanyGate>;
+  return <CompanyGate>{(company) => <ProgressBody isOwner={company.role === "owner"} />}</CompanyGate>;
 }

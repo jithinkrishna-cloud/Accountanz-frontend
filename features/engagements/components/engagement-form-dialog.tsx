@@ -80,7 +80,7 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }
                 control={control}
                 name="client_id"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
                     <SelectTrigger id="client_id" className="w-full" aria-invalid={!!errors.client_id}>
                       <SelectValue placeholder={clients.isLoading ? "Loading clients…" : "Select a client"} />
                     </SelectTrigger>
@@ -105,7 +105,7 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }
               control={control}
               name="package_id"
               render={({ field }) => (
-                <Select value={field.value || undefined} onValueChange={field.onChange} disabled={packageLocked}>
+                <Select value={field.value || ""} onValueChange={field.onChange} disabled={packageLocked}>
                   <SelectTrigger id="package_id" className="w-full" aria-invalid={!!errors.package_id}>
                     <SelectValue placeholder={packages.isLoading ? "Loading packages…" : "Select a package"} />
                   </SelectTrigger>

@@ -83,7 +83,7 @@ export function ProspectFormDialog({ open, onOpenChange, onCreated }: Props) {
           </FormField>
           <FormField id="business_type" label="Business type" error={errors.business_type?.message}>
             <Controller control={control} name="business_type" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange}>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger id="business_type" className="w-full"><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>{BUSINESS_TYPES.map((t) => <SelectItem key={t} value={t}>{humanize(t)}</SelectItem>)}</SelectContent>
               </Select>
@@ -94,7 +94,7 @@ export function ProspectFormDialog({ open, onOpenChange, onCreated }: Props) {
           </FormField>
           <FormField id="state" label="State" error={errors.state?.message}>
             <Controller control={control} name="state" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange}>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger id="state" className="w-full"><SelectValue placeholder="Select a state" /></SelectTrigger>
                 <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>

@@ -174,7 +174,7 @@ function ReviewBody({ r, onClose }: { r: AccountantRequest; onClose: () => void 
               {assign && (
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <FormField id="assign-role" label="Team role" error={errors.team_role}>
-                    <Select value={role || undefined} onValueChange={(v) => setRole(v as TeamRole)}>
+                    <Select value={role || ""} onValueChange={(v) => setRole(v as TeamRole)}>
                       <SelectTrigger id="assign-role" className="w-full" aria-invalid={!!errors.team_role}><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>{TEAM_ROLES.map((t) => <SelectItem key={t} value={t}>{TEAM_ROLE_LABELS[t]}</SelectItem>)}</SelectContent>
                     </Select>

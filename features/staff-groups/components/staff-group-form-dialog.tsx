@@ -156,7 +156,7 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
                   </div>
                   <div className="grid gap-1">
                     <Controller control={control} name={`members.${i}.team_role`} render={({ field }) => (
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
                         <SelectTrigger className="w-full" aria-label={`Role for member ${i + 1}`} aria-invalid={!!rowErr?.team_role}>
                           <SelectValue placeholder="Role" />
                         </SelectTrigger>

@@ -20,6 +20,18 @@ export const usePortalThread = (id: number | null) => useQuery({ queryKey: K("me
 export const usePortalMeetings = () => useQuery({ queryKey: K("meetings"), queryFn: s.meetings });
 export const usePortalMeetingRequests = () => useQuery({ queryKey: K("meeting-requests"), queryFn: s.meetingRequests });
 
+/** Company owner creates a task; refreshes the task board and dashboard. */
+export function useCreatePortalTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: s.createTask,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: K("tasks") });
+      void qc.invalidateQueries({ queryKey: K("dashboard") });
+    },
+  });
+}
+
 export function useRequestMeeting() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.requestMeeting, onSuccess: () => void qc.invalidateQueries({ queryKey: K("meeting-requests") }) });

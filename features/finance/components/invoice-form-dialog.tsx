@@ -55,7 +55,7 @@ export function InvoiceFormDialog({ open, onOpenChange }: { open: boolean; onOpe
         <form id="invoice-form" onSubmit={onSubmit} className="grid gap-4" noValidate>
           <FormField id="engagement_id" label="Engagement" error={errors.engagement_id?.message}>
             <Controller control={control} name="engagement_id" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange} disabled={engagements.isLoading}>
+              <Select value={field.value || ""} onValueChange={field.onChange} disabled={engagements.isLoading}>
                 <SelectTrigger id="engagement_id" className="w-full" aria-invalid={!!errors.engagement_id}>
                   <SelectValue placeholder={engagements.isLoading ? "Loading…" : "Select an engagement"} />
                 </SelectTrigger>

@@ -136,7 +136,7 @@ function RequestForm({ a, onDone, onBack }: { a: ExploreAccountant; onDone: () =
         </fieldset>
         {replacing && (
           <FormField id="req-replaces" label="Who should they replace?" error={replacesError ?? undefined}>
-            <Select value={replaces || undefined} onValueChange={(v) => { setReplaces(v); setReplacesError(null); }}>
+            <Select value={replaces || ""} onValueChange={(v) => { setReplaces(v); setReplacesError(null); }}>
               <SelectTrigger id="req-replaces" className="w-full" aria-invalid={!!replacesError}><SelectValue placeholder="Choose a team member" /></SelectTrigger>
               <SelectContent>
                 {replaceable.map((m) => (

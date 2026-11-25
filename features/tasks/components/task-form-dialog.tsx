@@ -105,7 +105,7 @@ export function TaskFormDialog({ portal, open, onOpenChange, task, onSaved }: Pr
   const select = (name: "client_id" | "engagement_id" | "assignee_id" | "reviewer_id", items: { value: string; label: string }[], placeholder: string, disabled = false) => (
     <Controller control={control} name={name} render={({ field }) => (
       <Select
-        value={field.value || undefined}
+        value={field.value || ""}
         onValueChange={(v) => {
           field.onChange(v);
           if (name === "client_id") {

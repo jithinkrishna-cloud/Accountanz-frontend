@@ -52,7 +52,7 @@ export function TemplateFormDialog({ open, onOpenChange, onCreated }: { open: bo
           </FormField>
           <FormField id="service_id" label="Service" error={errors.service_id?.message} className="sm:col-span-2">
             <Controller control={control} name="service_id" render={({ field }) => (
-              <Select value={field.value || undefined} onValueChange={field.onChange} disabled={services.isLoading}>
+              <Select value={field.value || ""} onValueChange={field.onChange} disabled={services.isLoading}>
                 <SelectTrigger id="service_id" className="w-full" aria-invalid={!!errors.service_id}><SelectValue placeholder="Select a service" /></SelectTrigger>
                 <SelectContent>{services.data?.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
               </Select>

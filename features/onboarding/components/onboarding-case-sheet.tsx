@@ -302,7 +302,7 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   control={control}
                   name="complexity"
                   render={({ field }) => (
-                    <Select value={field.value || undefined} onValueChange={field.onChange} disabled={locked}>
+                    <Select value={field.value || ""} onValueChange={field.onChange} disabled={locked}>
                       <SelectTrigger id="complexity" className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {COMPLEXITIES.map((c) => <SelectItem key={c} value={c}>{humanize(c)}</SelectItem>)}
@@ -317,7 +317,7 @@ function CaseBody({ row: listRow, onChanged }: { row: OnboardingCase; onChanged:
                   name="suggested_package_id"
                   render={({ field }) => (
                     <Select
-                      value={field.value || undefined}
+                      value={field.value || ""}
                       disabled={locked}
                       onValueChange={(v) => {
                         // The fee follows the package's list price: when it's empty or still the previous package's

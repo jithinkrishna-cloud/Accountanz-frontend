@@ -84,7 +84,7 @@ function FinancialForm({ client, onDone }: { client: ClientDetail; onDone: () =>
       <form id="financial-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
         <FormField id="fp-fy" label="Financial year starts in" hint="Usually April in India." error={errors.financial_year_start_month?.message}>
           <Controller control={control} name="financial_year_start_month" render={({ field }) => (
-            <Select value={field.value || undefined} onValueChange={field.onChange}>
+            <Select value={field.value || ""} onValueChange={field.onChange}>
               <SelectTrigger id="fp-fy" className="w-full"><SelectValue placeholder="Select month" /></SelectTrigger>
               <SelectContent>{MONTHS.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
             </Select>

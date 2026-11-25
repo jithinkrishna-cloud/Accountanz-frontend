@@ -113,7 +113,7 @@ export function TaskList({ portal = "admin" }: { portal?: TaskPortal }) {
       <PageHeader
         title="My Tasks"
         description={scope === "mine" ? "Every task assigned to you. Open one to work through its checklist, log time and submit." : "Every task on the clients you're assigned to."}
-        actions={isManager && <Button onClick={() => setCreating(true)}><Plus className="size-4" /> New task</Button>}
+        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New task</Button>}
       />
     );
 
