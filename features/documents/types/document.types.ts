@@ -27,6 +27,8 @@ export interface ClientDocument {
   uploaded_by_email: string | null;
   uploaded_by_name: string | null;
   from_client: 0 | 1;
+  /** Where the client filed it in their Document Centre ("Bank / 2026"); null = top level. */
+  folder_path?: string | null;
   created_at: string;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus2, FileText, Upload, X } from "lucide-react";
+import { FilePlus2, FileText, Folder, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -82,10 +82,17 @@ const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
     key: "document",
     header: "Document",
     cell: (d) => (
-      <a href={documentFileUrl(portal, d.id)} target="_blank" rel="noopener" className="text-primary inline-flex max-w-64 items-center gap-1.5 font-medium hover:underline">
-        <FileText className="size-4 shrink-0" aria-hidden />
-        <span className="truncate">{d.file_name}</span>
-      </a>
+      <div className="max-w-64">
+        <a href={documentFileUrl(portal, d.id)} target="_blank" rel="noopener" className="text-primary inline-flex max-w-full items-center gap-1.5 font-medium hover:underline">
+          <FileText className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">{d.file_name}</span>
+        </a>
+        {d.folder_path && (
+          <p className="text-muted-foreground flex items-center gap-1 truncate pl-5.5 text-xs" title={d.folder_path}>
+            <Folder className="size-3 shrink-0" aria-hidden /> <span className="truncate">{d.folder_path}</span>
+          </p>
+        )}
+      </div>
     ),
   },
   { key: "client", header: "Client", cell: (d) => d.client_name },

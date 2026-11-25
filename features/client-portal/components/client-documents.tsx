@@ -1,55 +1,21 @@
 "use client";
 
-import { FileText, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, type DocumentCategory } from "@/features/documents/types/document.types";
-import { formatDate, formatPeriod } from "@/lib/format";
-import { usePortalDocuments, usePortalRequests } from "../hooks/use-client-portal";
-import { portalFileUrl } from "../services/client-portal-service";
+import { formatDate } from "@/lib/format";
+import { usePortalRequests } from "../hooks/use-client-portal";
 import type { PortalRequest } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
+import { DocumentExplorer } from "./document-explorer";
 import { Card, ListBody } from "./portal-ui";
 import { UploadDialog } from "./upload-dialog";
 
-const DOC_STATUS_LABEL = { new: "Received", reviewed: "Reviewed", rejected: "Rejected" } as const;
-
-function DocumentsBody() {
-  const q = usePortalDocuments();
-  const [uploading, setUploading] = useState(false);
-  return (
-    <>
-      <PageHeader title="Document Centre" description="Everything you've shared with your accounting team." actions={<Button onClick={() => setUploading(true)}><Upload className="size-4" /> Upload</Button>} />
-      <Card title="Your documents" subtitle="Stored privately: only you and your accounting team can open them.">
-        <ListBody query={q} empty={{ title: "No documents yet", description: "Upload bank statements, bills and invoices here, or answer a document request." }}>
-          {(rows) => (
-            <ul className="divide-y">
-              {rows.map((d) => (
-                <li key={d.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                  <FileText className="text-primary size-5 shrink-0" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <a href={portalFileUrl.document(d.id)} target="_blank" rel="noopener" className="block truncate text-sm font-medium hover:underline">{d.file_name}</a>
-                    <p className="text-muted-foreground text-xs">
-                      {CATEGORY_LABELS[d.category as DocumentCategory] ?? d.category}{d.period ? ` · ${formatPeriod(d.period)}` : ""} · {formatDate(d.created_at)}{d.uploaded_by ? ` · ${d.uploaded_by}` : ""}
-                    </p>
-                    {d.status === "rejected" && d.review_note && <p className="text-destructive mt-1 text-xs">Rejected: {d.review_note}</p>}
-                  </div>
-                  <StatusBadge status={d.status === "new" ? "submitted" : d.status} label={DOC_STATUS_LABEL[d.status]} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </ListBody>
-      </Card>
-      <UploadDialog open={uploading} onOpenChange={setUploading} />
-    </>
-  );
-}
-
+/** Document Centre: the client's folders (any depth) and files. */
 export function ClientDocuments() {
-  return <CompanyGate>{() => <DocumentsBody />}</CompanyGate>;
+  return <CompanyGate>{() => <DocumentExplorer />}</CompanyGate>;
 }
 
 function RequestsBody() {

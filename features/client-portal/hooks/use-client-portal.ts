@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { clientPortalService as s } from "../services/client-portal-service";
+import { clientPortalService as s, type UploadMeta } from "../services/client-portal-service";
 
 const K = (...parts: (string | number | undefined)[]) => ["app", ...parts] as const;
 
@@ -59,7 +59,24 @@ function useInvalidate(...keys: string[]) {
 
 export function useUpload() {
   const onSuccess = useInvalidate("documents", "requests");
-  return useMutation({ mutationFn: ({ file, meta }: { file: File; meta: { category: string; period?: string; request_id?: number } }) => s.upload(file, meta), onSuccess });
+  return useMutation({ mutationFn: ({ file, meta }: { file: File; meta: UploadMeta }) => s.upload(file, meta), onSuccess });
+}
+
+export const usePortalFolders = () => useQuery({ queryKey: K("folders"), queryFn: s.folders });
+
+/** Create / rename / delete folders and move files; every change refreshes folders and files. */
+export function useFolderActions() {
+  const qc = useQueryClient();
+  const onSuccess = () => {
+    void qc.invalidateQueries({ queryKey: K("folders") });
+    void qc.invalidateQueries({ queryKey: K("documents") });
+  };
+  return {
+    create: useMutation({ mutationFn: s.createFolder, onSuccess }),
+    rename: useMutation({ mutationFn: ({ id, name }: { id: number; name: string }) => s.renameFolder(id, name), onSuccess }),
+    remove: useMutation({ mutationFn: s.deleteFolder, onSuccess }),
+    move: useMutation({ mutationFn: ({ id, folderId }: { id: number; folderId: number | null }) => s.moveDocument(id, folderId), onSuccess }),
+  };
 }
 
 export function useDecideApproval() {

@@ -8,6 +8,7 @@ import type {
   PortalCompany,
   PortalDashboard,
   PortalDocument,
+  PortalFolder,
   PortalMeeting,
   PortalMeetingRequest,
   PortalMemberOverview,
@@ -22,6 +23,13 @@ import type {
   PortalThread,
   PortalThreadDetail,
 } from "../types/client-portal.types";
+
+export interface UploadMeta {
+  category: string;
+  period?: string;
+  request_id?: number;
+  folder_id?: number | null;
+}
 
 const items = <T,>(path: string) => api<{ items: T[] }>(path).then((r) => r.items);
 
@@ -42,12 +50,18 @@ export const clientPortalService = {
   requestPackageChange: (body: { package_id: number; message: string | null }) => api<unknown>("/app/package-changes", { method: "POST", body }),
   withdrawPackageChange: (id: number) => api<unknown>(`/app/package-changes/${id}/withdraw`, { method: "POST" }),
   documents: () => items<PortalDocument>("/app/documents"),
-  upload: (file: File, meta: { category: string; period?: string; request_id?: number }) => {
+  folders: () => items<PortalFolder>("/app/folders"),
+  createFolder: (body: { name: string; parent_id: number | null }) => api<PortalFolder>("/app/folders", { method: "POST", body }),
+  renameFolder: (id: number, name: string) => api<PortalFolder>(`/app/folders/${id}`, { method: "PATCH", body: { name } }),
+  deleteFolder: (id: number) => api<void>(`/app/folders/${id}`, { method: "DELETE" }),
+  moveDocument: (id: number, folderId: number | null) => api<void>(`/app/documents/${id}`, { method: "PATCH", body: { folder_id: folderId } }),
+  upload: (file: File, meta: UploadMeta) => {
     const body = new FormData();
     body.append("file", file);
     body.append("category", meta.category);
     if (meta.period) body.append("period", meta.period);
     if (meta.request_id) body.append("request_id", String(meta.request_id));
+    if (meta.folder_id) body.append("folder_id", String(meta.folder_id));
     return api<{ id: number; fulfilled_request: number | null }>("/app/documents", { method: "POST", body });
   },
   requests: () => items<PortalRequest>("/app/requests"),

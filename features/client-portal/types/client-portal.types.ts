@@ -56,6 +56,17 @@ export interface PortalDocument {
   created_at: string;
   uploaded_by: string | null;
   request_id: number | null;
+  /** Document Centre folder; null = top level. */
+  folder_id: number | null;
+  size_bytes: number | null;
+}
+
+/** A Document Centre folder. Any depth: parent_id is another folder (null = top level). */
+export interface PortalFolder {
+  id: number;
+  parent_id: number | null;
+  name: string;
+  created_at: string;
 }
 
 export interface PortalRequest {
