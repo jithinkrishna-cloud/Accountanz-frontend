@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Mail, MessageSquare } from "lucide-react";
+import { Check, ChevronRight, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -8,16 +8,16 @@ import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { RegistrationStatus } from "@/features/clients/types/client.types";
 import { ACCOUNTING_SOFTWARE_LABELS, MONTHS } from "@/lib/constants";
-import { formatDate, formatINR, formatPeriod, humanize, initials, splitList } from "@/lib/format";
+import { formatDate, formatINR, humanize, initials, splitList } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-client-portal";
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
-import { STAGE_OF, StagePill, isLate, shortDate } from "./client-progress";
+import { STAGE_OF } from "./client-progress";
+import { AccountantOverview } from "./accountant-overview";
 import { CompanyGate } from "./company-gate";
 import { BizpoleConnection } from "./bizpole-connection";
 import { Card, ListBody } from "./portal-ui";
@@ -185,12 +185,6 @@ const ROLE: Record<PortalTeamMember["team_role"], { label: string; does: string;
 };
 
 type Tone = "working" | "done" | "waiting" | "scheduled";
-const TONE: Record<Tone, string> = {
-  working: "bg-amber-50 text-amber-800 ring-amber-200",
-  done: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  waiting: "bg-muted text-muted-foreground ring-border",
-  scheduled: "bg-sky-50 text-sky-800 ring-sky-200",
-};
 
 /**
  * Where this person's area of work stands this month, in plain words. Deliberately not a score: clients see
@@ -219,125 +213,64 @@ function areaStatus(m: PortalTeamMember, tasks: PortalTask[]): { label: string; 
   return { label: "After the monthly review", detail: `${first} reviews your finances once the month's accounts are checked.`, tone: "waiting" };
 }
 
-function StatusChip({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  return <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset", TONE[tone])}>{children}</span>;
-}
-
 /** The month's jobs this person is responsible for: the ones they do, or the ones they check. The CFO oversees all. */
 function jobsFor(m: PortalTeamMember, tasks: PortalTask[]) {
   if (m.team_role === "cfo") return tasks;
   return tasks.filter((t) => (m.team_role === "bookkeeper" ? t.assignee_id === m.user_id : t.reviewer_id === m.user_id));
 }
 
-function MemberAvatar({ name, large }: { name: string; large?: boolean }) {
-  return (
-    <Avatar className={large ? "size-14" : "size-10"}>
-      <AvatarFallback className={cn("bg-primary/15 text-primary ring-primary/25 font-semibold ring-1 ring-inset", large ? "text-base" : "text-xs")}>{initials(name)}</AvatarFallback>
-    </Avatar>
-  );
-}
 
-function MemberDialog({ member, tasks, period, onClose }: { member: PortalTeamMember | null; tasks: PortalTask[]; period: string | undefined; onClose: () => void }) {
-  const jobs = member ? jobsFor(member, tasks) : [];
-  const role = member ? ROLE[member.team_role] : null;
-  const status = member ? areaStatus(member, tasks) : null;
-  return (
-    <Dialog open={!!member} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-md">
-        {member && role && (
-          <>
-            <DialogHeader className="items-center border-b px-6 pt-8 pb-6 text-center sm:text-center">
-              <MemberAvatar name={member.full_name} large />
-              <DialogTitle className="mt-2 text-lg">{member.full_name}</DialogTitle>
-              <span className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-medium">{role.label}</span>
-              <DialogDescription className="mt-1">{role.does}</DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-5 px-6 py-5">
-              <section aria-labelledby="member-area" className="rounded-xl border p-4">
-                <p className="text-muted-foreground text-xs tracking-wide uppercase">{period ? formatPeriod(period) : "This month"}</p>
-                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                  <h3 id="member-area" className="font-medium">{role.area}</h3>
-                  {status && <StatusChip tone={status.tone}>{status.label}</StatusChip>}
-                </div>
-                {status && <p className="text-muted-foreground mt-1 text-sm">{status.detail}</p>}
-              </section>
-
-              {jobs.length > 0 && (
-                <section aria-labelledby="member-jobs">
-                  <h3 id="member-jobs" className="font-medium">{member.team_role === "bookkeeper" ? "What they're responsible for" : member.team_role === "cfo" ? "This month's jobs" : "What they review"}</h3>
-                  <ul className="mt-3 grid gap-2">
-                    {[...jobs].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status]).map((t) => {
-                      const stage = STAGE_OF[t.status];
-                      return (
-                        <li key={t.id} className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{t.title}</p>
-                            {t.due_date && (
-                              <p className={cn("text-xs", isLate(t) ? "text-amber-700" : "text-muted-foreground")}>
-                                {stage === 3 ? "Finished" : isLate(t) ? `Planned for ${shortDate(t.due_date)}, taking a little longer` : `Due ${shortDate(t.due_date)}`}
-                              </p>
-                            )}
-                          </div>
-                          <StagePill stage={stage} />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <Link href="/app/progress" className="text-primary mt-3 inline-block text-sm hover:underline">See all of this month&apos;s progress</Link>
-                </section>
-              )}
-            </div>
-
-            <div className="grid gap-3 border-t px-6 py-4">
-              <a href={`mailto:${member.email}`} className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs hover:underline">
-                <Mail className="size-3.5 shrink-0" aria-hidden />
-                <span className="truncate">{member.email}</span>
-              </a>
-              <DialogFooter className="gap-2">
-                <Button asChild size="sm"><Link href={`/app/messages?to=${member.user_id}`}><MessageSquare className="size-4" /> Message {member.full_name.split(" ")[0]}</Link></Button>
-              </DialogFooter>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
+/** One row per person; someone with two roles on the account (e.g. finance manager and reviewer) appears once. */
+function people(rows: PortalTeamMember[]) {
+  const byUser = new Map<number, { member: PortalTeamMember; roles: PortalTeamMember["team_role"][] }>();
+  for (const m of rows) {
+    const entry = byUser.get(m.user_id);
+    if (entry) entry.roles.push(m.team_role);
+    else byUser.set(m.user_id, { member: m, roles: [m.team_role] });
+  }
+  return [...byUser.values()];
 }
 
 function TeamBody() {
   const q = usePortalTeam();
   const tasks = usePortalTasks();
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const keyOf = (m: PortalTeamMember) => `${m.user_id}-${m.team_role}`;
-  const open = q.data?.find((m) => keyOf(m) === openKey) ?? null;
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const monthTasks = tasks.data?.tasks ?? [];
+  const list = people(q.data ?? []);
+  const selected = selectedId ?? list[0]?.member.user_id ?? null;
+
   return (
-    <>
-      <Card title="Your accounting team" subtitle="Who looks after each part of your accounts, and where it stands this month. Click someone for details.">
+    <div className="grid items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Card title="Your accounting team" subtitle="Pick someone to see everything they do for you.">
         <ListBody query={q} empty={{ title: "No team assigned yet", description: "Your team appears here once Accountanz assigns accountants to your company." }}>
-          {(rows) => (
-            <ul className="divide-y">
-              {rows.map((m) => {
-                const role = ROLE[m.team_role];
+          {() => (
+            <ul className="space-y-1 p-2" role="listbox" aria-label="Accountants">
+              {list.map(({ member: m, roles }) => {
+                const active = m.user_id === selected;
                 const status = areaStatus(m, monthTasks);
                 return (
-                  <li key={keyOf(m)}>
-                    <button type="button" onClick={() => setOpenKey(keyOf(m))} className="hover:bg-muted/40 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-4 text-left sm:grid-cols-[auto_minmax(0,1fr)_200px_auto]">
-                      <MemberAvatar name={m.full_name} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{m.full_name} <span className="text-muted-foreground font-normal">· {role.label}</span></p>
-                        <p className="text-muted-foreground truncate text-xs">{role.does}</p>
+                  <li key={m.user_id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      onClick={() => setSelectedId(m.user_id)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
+                        active ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted",
+                      )}
+                    >
+                      <Avatar className="size-9">
+                        <AvatarFallback className={cn("text-xs font-semibold", active ? "bg-primary-foreground text-primary" : "bg-secondary")}>{initials(m.full_name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{m.full_name}</p>
+                        <p className={cn("truncate text-xs", active ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                          {roles.map((r) => ROLE[r].label).join(" · ")}
+                          {tasks.data && ` · ${status.label}`}
+                        </p>
                       </div>
-                      <div className="col-span-3 col-start-2 sm:col-span-1 sm:col-start-auto">
-                        {tasks.data && (
-                          <>
-                            <p className="text-muted-foreground text-[11px] tracking-wide uppercase">{role.area}</p>
-                            <StatusChip tone={status.tone}>{status.label}</StatusChip>
-                          </>
-                        )}
-                      </div>
-                      <ChevronRight className="text-muted-foreground row-start-1 size-4 sm:row-start-auto" aria-hidden />
+                      <ChevronRight className={cn("size-4 shrink-0", active ? "opacity-100" : "opacity-40")} aria-hidden />
                     </button>
                   </li>
                 );
@@ -346,8 +279,8 @@ function TeamBody() {
           )}
         </ListBody>
       </Card>
-      <MemberDialog member={open} tasks={monthTasks} period={tasks.data?.period} onClose={() => setOpenKey(null)} />
-    </>
+      {selected !== null && <AccountantOverview key={selected} userId={selected} />}
+    </div>
   );
 }
 
@@ -356,7 +289,7 @@ export function ClientTeam() {
     <CompanyGate>
       {() => (
         <>
-          <PageHeader title="My Accounting Team" description="Who looks after your accounts at Accountanz." />
+          <PageHeader title="My Accounting Team" description="Who looks after your accounts. Pick an accountant to track their details, tasks, progress, document requests and messages." />
           <TeamBody />
         </>
       )}

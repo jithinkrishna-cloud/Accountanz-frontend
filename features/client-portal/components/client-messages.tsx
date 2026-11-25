@@ -132,7 +132,9 @@ function MessagesBody() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [typedDraft, setTypedDraft] = useState<Draft | null>(null);
   const [linkDraftClosed, setLinkDraftClosed] = useState(false);
-  const selected = openId ?? threads.data?.[0]?.id ?? null;
+  // ?thread= (e.g. from an accountant's overview) opens that conversation; otherwise the latest one.
+  const linkedThread = Number(params.get("thread")) || null;
+  const selected = openId ?? (linkedThread && threads.data?.some((t) => t.id === linkedThread) ? linkedThread : null) ?? threads.data?.[0]?.id ?? null;
 
   // "Message Arun" from a job or the team page (?to=&subject=): a new message already addressed to that person.
   const to = params.get("to");

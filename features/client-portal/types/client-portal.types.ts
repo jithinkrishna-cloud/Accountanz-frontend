@@ -239,3 +239,21 @@ export interface PortalPackageChange {
   decided_at: string | null;
   created_at: string;
 }
+
+/** One accountant's full picture for this company (Client Portal → My Accounting Team). */
+export interface PortalMemberOverview {
+  member: {
+    user_id: number;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    team_roles: PortalTeamMember["team_role"][];
+    /** First day of their earliest active assignment to this company (YYYY-MM-DD). */
+    since: string;
+  };
+  tasks: (PortalTask & { period: string })[];
+  requests: { id: number; description: string; due_date: string | null; period: string | null; status: string; files: number }[];
+  approvals: { id: number; subject: string; status: "pending" | "approved" | "rejected"; created_at: string; decided_at: string | null }[];
+  threads: { id: number; subject: string | null; messages: number; last_at: string | null; last_body: string | null; last_author: string | null }[];
+  meetings: { id: number; title: string; starts_at: string; ends_at: string; meeting_link: string | null }[];
+}
