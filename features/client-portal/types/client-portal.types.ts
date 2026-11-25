@@ -83,6 +83,10 @@ export interface PortalRequest {
   status: "open" | "fulfilled";
   requested_by: string | null;
   files: number;
+  /** The job this request belongs to, when the client can see it on Tasks & Progress. */
+  task: { id: number; title: string; status: PortalTask["status"]; period: string } | null;
+  /** Files sent for this request. */
+  documents: { id: number; file_name: string; created_at: string }[];
 }
 
 /** The proposal Accountanz sent (while open), or the accepted one while the company is onboarding. */

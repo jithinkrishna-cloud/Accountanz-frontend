@@ -34,7 +34,9 @@ export interface UploadMeta {
 const items = <T,>(path: string) => api<{ items: T[] }>(path).then((r) => r.items);
 
 /** Same-origin download URLs (the auth cookie goes with them; the API checks the company). */
-export const portalFileUrl = { document: (id: number) => `/api/app/documents/${id}/file`, report: (id: number) => `/api/app/reports/${id}/file` };
+export const portalFileUrl = { document: (id: number) => `/api/app/documents/${id}/file`,
+  /** Opens PDFs and images in the browser tab; other files download. */
+  view: (id: number) => `/api/app/documents/${id}/file?view=1`, report: (id: number) => `/api/app/reports/${id}/file` };
 
 export const clientPortalService = {
   context: () => api<{ company: PortalCompany | null }>("/app/context").then((r) => r.company),
