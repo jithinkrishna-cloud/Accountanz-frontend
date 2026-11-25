@@ -17,9 +17,9 @@ const isActive = (pathname: string, href: string) => pathname === href || pathna
 function SidebarNav({ portal, collapsed = false, onNavigate }: { portal: Portal; collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
+    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full flex-col border-r">
       <div className={cn("px-5 py-5", collapsed && "px-3 py-3")}>
-        <Logo inverted collapsed={collapsed} />
+        <Logo collapsed={collapsed} />
       </div>
       <nav className="no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 pb-4" aria-label="Main">
         {NAV[portal].map((group) => (
@@ -36,10 +36,12 @@ function SidebarNav({ portal, collapsed = false, onNavigate }: { portal: Portal;
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                        active ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/60 hover:text-white",
+                        active
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
+                          : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )}
                     >
-                      <item.icon className={cn("size-4 shrink-0", active && "text-sidebar-primary")} aria-hidden />
+                      <item.icon className="size-4 shrink-0" aria-hidden />
                       <span className={cn("truncate", collapsed && "hidden")}>{item.label}</span>
                     </Link>
                   </li>

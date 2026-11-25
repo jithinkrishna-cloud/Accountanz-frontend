@@ -35,13 +35,13 @@ export function ProfileMenu({ portal, user }: { portal: Portal; user: SessionUse
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-[3px]" aria-label="Open your profile">
         <Avatar className="size-8">
-          <AvatarFallback className="bg-sidebar text-xs text-white">{initials(user.fullName)}</AvatarFallback>
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials(user.fullName)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={10} className="grid w-80 gap-4 p-5">
         <div className="flex flex-col items-center gap-2 text-center">
           <Avatar className="size-14">
-            <AvatarFallback className="bg-sidebar text-base text-white">{initials(user.fullName)}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-base">{initials(user.fullName)}</AvatarFallback>
           </Avatar>
           <p className="font-semibold">{user.fullName}</p>
         </div>

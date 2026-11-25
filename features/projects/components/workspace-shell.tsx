@@ -19,12 +19,12 @@ function SpaceNav({ user, collapsed = false, onNavigate }: { user: SessionUser; 
   const pathname = usePathname();
   const { data: spaces } = useSpaces({});
   const link = (href: string, active: boolean) =>
-    cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors", active ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/60 hover:text-white");
+    cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors", active ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground");
 
   return (
-    <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
+    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full flex-col border-r">
       <div className={cn("px-5 py-5", collapsed && "px-3 py-3")}>
-        <Logo inverted collapsed={collapsed} />
+        <Logo collapsed={collapsed} />
         <p className={cn("text-sidebar-muted mt-2 text-[11px] font-semibold tracking-[0.14em] uppercase", collapsed && "hidden")}>Workspace</p>
       </div>
       <nav className="no-scrollbar flex-1 space-y-6 overflow-y-auto px-3 pb-4" aria-label="Workspace">
@@ -45,7 +45,7 @@ function SpaceNav({ user, collapsed = false, onNavigate }: { user: SessionUser; 
         <div>
           <div className="flex items-center justify-between px-3 pb-2">
             <p className={cn("text-sidebar-muted text-[11px] font-semibold tracking-[0.14em] uppercase", collapsed && "hidden")}>Spaces</p>
-            <Link href="/projects/new" onClick={onNavigate} className="text-sidebar-muted hover:text-white" aria-label="Create space" title="Create space">
+            <Link href="/projects/new" onClick={onNavigate} className="text-sidebar-muted hover:text-sidebar-foreground" aria-label="Create space" title="Create space">
               <Plus className="size-4" />
             </Link>
           </div>
@@ -56,7 +56,7 @@ function SpaceNav({ user, collapsed = false, onNavigate }: { user: SessionUser; 
               return (
                 <li key={s.id}>
                   <Link href={`${href}/board`} onClick={onNavigate} aria-current={active ? "page" : undefined} className={link(href, active)}>
-                    <span className="bg-sidebar-primary/20 text-sidebar-primary flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-bold">{s.space_key.slice(0, 2)}</span>
+                    <span className="bg-sidebar-accent text-sidebar-accent-foreground flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-bold">{s.space_key.slice(0, 2)}</span>
                     <span className={cn("truncate", collapsed && "hidden")}>{s.name}</span>
                   </Link>
                 </li>
