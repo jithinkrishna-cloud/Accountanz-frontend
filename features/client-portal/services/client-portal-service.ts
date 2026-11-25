@@ -73,6 +73,9 @@ export const clientPortalService = {
   tasks: (period?: string) => api<{ period: string; periods: string[]; tasks: PortalTask[] }>("/app/tasks", { query: { period } }),
   createTask: (body: { title: string; description: string | null; due_date: string; checklist: string[] }) =>
     api<{ id: number; title: string; period: string; due_date: string }>("/app/tasks", { method: "POST", body }),
+  updateTask: (id: number, body: { title: string; description: string | null; due_date: string; checklist: string[] }) =>
+    api<{ id: number }>(`/app/tasks/${id}`, { method: "PATCH", body }),
+  deleteTask: (id: number) => api<void>(`/app/tasks/${id}`, { method: "DELETE" }),
   reports: () => items<PortalReport>("/app/reports"),
   approvals: () => items<PortalApproval>("/app/approvals"),
   decide: (id: number, decision: "approved" | "rejected", comment: string) =>

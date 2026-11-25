@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Plus, Stamp } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Pencil, Plus, Stamp, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -13,7 +13,9 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPeriod, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks } from "../hooks/use-client-portal";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api-client";
+import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks, useOwnTaskActions } from "../hooks/use-client-portal";
 import type { PortalRequest, PortalTask } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { NewTaskDialog } from "./new-task-dialog";
@@ -250,7 +252,10 @@ function JobCard({ task, onOpen }: { task: PortalTask; onOpen: () => void }) {
       onClick={onOpen}
       className="bg-card hover:border-primary/40 focus-visible:ring-ring w-full rounded-xl border p-4 text-left shadow-xs transition hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
     >
-      <p className="font-medium">{task.title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-medium">{task.title}</p>
+        {!!task.created_by_client && <span className="bg-secondary text-muted-foreground shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium">Added by you</span>}
+      </div>
       {meaning && <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{meaning}</p>}
       <div className="mt-3"><Person name={task.handled_by} /></div>
       {isLate(task) && (
@@ -330,8 +335,21 @@ function JobList({ tasks, onOpen }: { tasks: PortalTask[]; onOpen: (t: PortalTas
 
 // ───────────── Job details panel ─────────────
 
-function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: string; onClose: () => void }) {
+function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: PortalTask | null; period: string; onClose: () => void; isOwner: boolean; onEdit: (t: PortalTask) => void }) {
   const requests = usePortalRequests();
+  const { remove } = useOwnTaskActions();
+  const addedByClient = !!task?.created_by_client;
+  const canChange = isOwner && addedByClient && task?.status === "todo";
+  const deleteTask = async () => {
+    if (!task || !window.confirm(`Delete the task "${task.title}"? Your team will no longer see it.`)) return;
+    try {
+      await remove.mutateAsync(task.id);
+      toast.success("Task deleted");
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't delete the task");
+    }
+  };
   const stage = task ? STAGE_OF[task.status] : 0;
   const blockers = task && stage < 2 ? blockingRequests(requests.data, period) : [];
   const done = task?.checklist.filter((c) => c.done).length ?? 0;
@@ -347,6 +365,23 @@ function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: 
             </SheetHeader>
 
             <div className="grid gap-8 px-6 py-7 sm:px-8">
+              {addedByClient && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">Added by you</p>
+                    <p className="text-muted-foreground text-xs">
+                      {canChange ? "You can change or delete it until your team starts working on it." : isOwner ? "Your team has started it, so it can't be changed now. Message them if something needs to change." : "Only the company owner can change it."}
+                    </p>
+                  </div>
+                  {canChange && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => onEdit(task)}><Pencil className="size-4" /> Edit</Button>
+                      <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={remove.isPending} onClick={() => void deleteTask()}><Trash2 className="size-4" /> Delete</Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <dl className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-x-6 gap-y-5 text-sm">
                 <dt className="text-muted-foreground">Due</dt>
                 <dd>{task.due_date ? longDate(task.due_date) : "No date set"}</dd>
@@ -457,6 +492,7 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
     if (params.get("task")) router.replace("/app/progress", { scroll: false });
   };
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<PortalTask | null>(null);
   const { data, isLoading, error, refetch } = usePortalTasks(period);
   const tasks = [...(data?.tasks ?? [])].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status] || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
   const open = tasks.find((t) => t.id === openId) ?? null;
@@ -479,6 +515,7 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
         }
       />
       {isOwner && <NewTaskDialog open={creating} onOpenChange={setCreating} onCreated={setPeriod} />}
+      {isOwner && <NewTaskDialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} onCreated={setPeriod} task={editing} />}
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : isLoading || !data ? (
@@ -517,7 +554,7 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
             )}
           </div>
           <HowItWorks />
-          <JobSheet task={open} period={data.period} onClose={closeJob} />
+          <JobSheet task={open} period={data.period} onClose={closeJob} isOwner={isOwner} onEdit={(t) => setEditing(t)} />
         </div>
       )}
     </>

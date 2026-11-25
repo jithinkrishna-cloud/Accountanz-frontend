@@ -33,6 +33,19 @@ export function useCreatePortalTask() {
   });
 }
 
+/** Owner edits or deletes a task the company added (only while it's not started). */
+export function useOwnTaskActions() {
+  const qc = useQueryClient();
+  const onSuccess = () => {
+    void qc.invalidateQueries({ queryKey: K("tasks") });
+    void qc.invalidateQueries({ queryKey: K("dashboard") });
+  };
+  return {
+    update: useMutation({ mutationFn: ({ id, body }: { id: number; body: Parameters<typeof s.updateTask>[1] }) => s.updateTask(id, body), onSuccess }),
+    remove: useMutation({ mutationFn: s.deleteTask, onSuccess }),
+  };
+}
+
 export function useRequestMeeting() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: s.requestMeeting, onSuccess: () => void qc.invalidateQueries({ queryKey: K("meeting-requests") }) });

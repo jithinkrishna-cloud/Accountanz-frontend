@@ -133,6 +133,8 @@ export interface PortalTask {
   status: "todo" | "in_progress" | "submitted" | "returned" | "approved";
   due_date: string | null;
   checklist: { text: string; done: boolean }[];
+  /** 1 = someone at the company added it (the owner can edit or delete it while it's not started). */
+  created_by_client?: 0 | 1;
 }
 
 export interface PortalReport {
