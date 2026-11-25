@@ -152,10 +152,17 @@ export interface PortalApproval {
   description: string | null;
   status: "pending" | "approved" | "rejected";
   requested_by: string | null;
+  /** Their role on the company's team (bookkeeper, finance_manager, ...) or at Accountanz (super_admin, ops_admin). */
+  requested_by_role: string | null;
   decided_by: string | null;
   decided_at: string | null;
   comment: string | null;
   created_at: string;
+  /** The job this approval is about, when the client can see it on Tasks & Progress. */
+  task_id: number | null;
+  task_title: string | null;
+  task_period: string | null;
+  task_status: PortalTask["status"] | null;
 }
 
 export interface PortalThread {

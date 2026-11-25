@@ -24,7 +24,7 @@ export function ClientDocuments() {
 }
 
 /** The requester's role on the company's team (or at Accountanz), in plain words. */
-const REQUESTER_ROLE: Record<string, string> = {
+export const REQUESTER_ROLE: Record<string, string> = {
   bookkeeper: "Bookkeeper",
   finance_manager: "Finance manager",
   reviewer: "Reviewer",
