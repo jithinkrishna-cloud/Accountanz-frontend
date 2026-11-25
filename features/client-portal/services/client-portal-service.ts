@@ -55,6 +55,9 @@ export const clientPortalService = {
   renameFolder: (id: number, name: string) => api<PortalFolder>(`/app/folders/${id}`, { method: "PATCH", body: { name } }),
   deleteFolder: (id: number) => api<void>(`/app/folders/${id}`, { method: "DELETE" }),
   moveDocument: (id: number, folderId: number | null) => api<void>(`/app/documents/${id}`, { method: "PATCH", body: { folder_id: folderId } }),
+  shareFolder: (id: number, userIds: number[]) => api<PortalFolder>(`/app/folders/${id}/share`, { method: "PUT", body: { user_ids: userIds } }),
+  shareDocument: (id: number, userIds: number[]) => api<{ id: number }>(`/app/documents/${id}/share`, { method: "PUT", body: { user_ids: userIds } }),
+  attachToRequest: (requestId: number, documentId: number) => api<{ id: number; fulfilled_request: number }>(`/app/requests/${requestId}/attach`, { method: "POST", body: { document_id: documentId } }),
   upload: (file: File, meta: UploadMeta) => {
     const body = new FormData();
     body.append("file", file);

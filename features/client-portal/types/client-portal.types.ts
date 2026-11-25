@@ -59,6 +59,10 @@ export interface PortalDocument {
   /** Document Centre folder; null = top level. */
   folder_id: number | null;
   size_bytes: number | null;
+  /** 1 = uploaded by someone at the company, 0 = by the accounting team. */
+  from_client: 0 | 1;
+  /** Accountants this file is shared with directly. */
+  shared_with: { user_id: number; full_name: string }[];
 }
 
 /** A Document Centre folder. Any depth: parent_id is another folder (null = top level). */
@@ -67,6 +71,8 @@ export interface PortalFolder {
   parent_id: number | null;
   name: string;
   created_at: string;
+  /** Accountants it is shared with directly (subfolders inherit). Empty = private to the company. */
+  shared_with: { user_id: number; full_name: string }[];
 }
 
 export interface PortalRequest {

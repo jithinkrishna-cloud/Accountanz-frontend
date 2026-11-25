@@ -76,7 +76,15 @@ export function useFolderActions() {
     rename: useMutation({ mutationFn: ({ id, name }: { id: number; name: string }) => s.renameFolder(id, name), onSuccess }),
     remove: useMutation({ mutationFn: s.deleteFolder, onSuccess }),
     move: useMutation({ mutationFn: ({ id, folderId }: { id: number; folderId: number | null }) => s.moveDocument(id, folderId), onSuccess }),
+    share: useMutation({ mutationFn: ({ id, userIds }: { id: number; userIds: number[] }) => s.shareFolder(id, userIds), onSuccess }),
+    shareFile: useMutation({ mutationFn: ({ id, userIds }: { id: number; userIds: number[] }) => s.shareDocument(id, userIds), onSuccess }),
   };
+}
+
+/** Answer a document request with a file already in the Document Centre. */
+export function useAttachToRequest() {
+  const onSuccess = useInvalidate("documents", "requests");
+  return useMutation({ mutationFn: ({ requestId, documentId }: { requestId: number; documentId: number }) => s.attachToRequest(requestId, documentId), onSuccess });
 }
 
 export function useDecideApproval() {
