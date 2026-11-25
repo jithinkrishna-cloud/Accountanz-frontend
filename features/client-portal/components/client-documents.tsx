@@ -8,11 +8,11 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatPeriod } from "@/lib/format";
 import { usePortalRequests } from "../hooks/use-client-portal";
-import { portalFileUrl } from "../services/client-portal-service";
 import type { PortalRequest } from "../types/client-portal.types";
 import { STAGE_OF, StagePill } from "./client-progress";
 import { CompanyGate } from "./company-gate";
 import { DocumentExplorer } from "./document-explorer";
+import { DocumentViewer } from "./document-viewer";
 import { Card, ListBody } from "./portal-ui";
 import { UploadDialog } from "./upload-dialog";
 
@@ -24,6 +24,7 @@ export function ClientDocuments() {
 function RequestsBody() {
   const q = usePortalRequests();
   const [answering, setAnswering] = useState<PortalRequest | null>(null);
+  const [viewing, setViewing] = useState<{ id: number; file_name: string } | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
@@ -65,9 +66,7 @@ function RequestsBody() {
                               <span className="block truncate text-sm">{d.file_name}</span>
                               <span className="text-muted-foreground block text-xs">Sent {formatDate(d.created_at)}</span>
                             </span>
-                            <Button asChild size="sm" variant="outline">
-                              <a href={portalFileUrl.view(d.id)} target="_blank" rel="noopener" aria-label={`View ${d.file_name}`}><Eye className="size-4" /> View</a>
-                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setViewing(d)} aria-label={`View ${d.file_name}`}><Eye className="size-4" /> View</Button>
                           </li>
                         ))}
                       </ul>
@@ -79,6 +78,7 @@ function RequestsBody() {
           )}
         </ListBody>
       </Card>
+      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
       <UploadDialog open={answering !== null} onOpenChange={(o) => !o && setAnswering(null)} request={answering} />
     </>
   );

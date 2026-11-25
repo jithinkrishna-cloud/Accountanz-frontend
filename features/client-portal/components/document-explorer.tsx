@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Download, FileText, Folder, FolderInput, FolderPlus, Home, Lock, MoreHorizontal, Pencil, Search, Share2, Trash2, Upload, Users } from "lucide-react";
+import { ChevronRight, Download, Eye, FileText, Folder, FolderInput, FolderPlus, Home, Lock, MoreHorizontal, Pencil, Search, Share2, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
@@ -22,6 +22,7 @@ import { useFolderActions, usePortalDocuments, usePortalFolders, usePortalTeam }
 import { portalFileUrl } from "../services/client-portal-service";
 import type { PortalDocument, PortalFolder } from "../types/client-portal.types";
 import { ROLE_LABEL } from "./accountant-overview";
+import { DocumentViewer } from "./document-viewer";
 import { UploadDialog } from "./upload-dialog";
 
 const DOC_STATUS_LABEL = { new: "Received", reviewed: "Reviewed", rejected: "Rejected" } as const;
@@ -283,13 +284,13 @@ function FileAccess({ doc, tree }: { doc: PortalDocument; tree: ReturnType<typeo
   return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> Shared with {firstNames(people)}</span>;
 }
 
-function FileRow({ doc, path, tree, onMove, onShare }: { doc: PortalDocument; path?: string; tree: ReturnType<typeof buildTree>; onMove: () => void; onShare: () => void }) {
+function FileRow({ doc, path, tree, onView, onMove, onShare }: { doc: PortalDocument; path?: string; tree: ReturnType<typeof buildTree>; onView: () => void; onMove: () => void; onShare: () => void }) {
   const size = formatSize(doc.size_bytes);
   return (
     <li className="flex items-center gap-3 px-5 py-2.5">
       <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1">
-        <a href={portalFileUrl.document(doc.id)} target="_blank" rel="noopener" className="block truncate text-sm font-medium hover:underline">{doc.file_name}</a>
+        <button type="button" onClick={onView} className="block max-w-full truncate text-left text-sm font-medium hover:underline">{doc.file_name}</button>
         <p className="text-muted-foreground truncate text-xs">
           {path !== undefined && <>{path ? `Documents / ${path}` : "Documents"} · </>}
           {CATEGORY_LABELS[doc.category as DocumentCategory] ?? doc.category}
@@ -306,7 +307,8 @@ function FileRow({ doc, path, tree, onMove, onShare }: { doc: PortalDocument; pa
           <Button variant="ghost" size="icon" className="size-8" aria-label={`Actions for ${doc.file_name}`}><MoreHorizontal className="size-4" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild><a href={portalFileUrl.document(doc.id)} target="_blank" rel="noopener"><Download className="size-4" /> Open / download</a></DropdownMenuItem>
+          <DropdownMenuItem onSelect={onView}><Eye className="size-4" /> View</DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={portalFileUrl.document(doc.id)} download={doc.file_name}><Download className="size-4" /> Download</a></DropdownMenuItem>
           <DropdownMenuItem onSelect={onMove}><FolderInput className="size-4" /> Move to…</DropdownMenuItem>
           {doc.from_client && doc.request_id === null && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
         </DropdownMenuContent>
@@ -327,6 +329,7 @@ export function DocumentExplorer() {
   const [naming, setNaming] = useState<{ mode: "create" | "rename"; folder?: PortalFolder } | null>(null);
   const [moving, setMoving] = useState<PortalDocument | null>(null);
   const [sharing, setSharing] = useState<ShareTarget | null>(null);
+  const [viewing, setViewing] = useState<PortalDocument | null>(null);
 
   const tree = buildTree(folders.data ?? []);
   // A folder deleted elsewhere: fall back to the top level.
@@ -420,7 +423,7 @@ export function DocumentExplorer() {
               {foundFolders.map((f) => (
                 <FolderRow key={`f${f.id}`} folder={{ ...f, name: tree.path(f.id) }} count={countIn(f.id)} access={tree.access(f.id)} onOpen={() => open(f.id)} onShare={() => setSharing({ kind: "folder", folder: f })} onRename={() => setNaming({ mode: "rename", folder: f })} onDelete={() => void deleteFolder(f)} />
               ))}
-              {found.map((d) => <FileRow key={d.id} doc={d} path={tree.path(d.folder_id)} tree={tree} onMove={() => setMoving(d)} onShare={() => setSharing({ kind: "file", doc: d })} />)}
+              {found.map((d) => <FileRow key={d.id} doc={d} path={tree.path(d.folder_id)} tree={tree} onView={() => setViewing(d)} onMove={() => setMoving(d)} onShare={() => setSharing({ kind: "file", doc: d })} />)}
             </ul>
           )
         ) : subfolders.length + files.length === 0 ? (
@@ -433,7 +436,7 @@ export function DocumentExplorer() {
             {subfolders.map((f) => (
               <FolderRow key={`f${f.id}`} folder={f} count={countIn(f.id)} access={tree.access(f.id)} onOpen={() => open(f.id)} onShare={() => setSharing({ kind: "folder", folder: f })} onRename={() => setNaming({ mode: "rename", folder: f })} onDelete={() => void deleteFolder(f)} />
             ))}
-            {files.map((d) => <FileRow key={d.id} doc={d} tree={tree} onMove={() => setMoving(d)} onShare={() => setSharing({ kind: "file", doc: d })} />)}
+            {files.map((d) => <FileRow key={d.id} doc={d} tree={tree} onView={() => setViewing(d)} onMove={() => setMoving(d)} onShare={() => setSharing({ kind: "file", doc: d })} />)}
           </ul>
         )}
         <p className="text-muted-foreground border-t px-5 py-2.5 text-xs">Your files and folders are <span className="text-foreground font-medium">private until you share them</span> with someone on your accounting team. Files you send for a request are visible to your team.</p>
@@ -441,6 +444,7 @@ export function DocumentExplorer() {
 
       <UploadDialog open={uploading} onOpenChange={setUploading} folder={here === null ? null : { id: here, path: herePath }} />
       {naming && <FolderNameDialog mode={naming.mode} folder={naming.folder} parent={{ id: here, path: herePath }} onClose={() => setNaming(null)} />}
+      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
       {sharing && <ShareDialog target={sharing} tree={tree} onClose={() => setSharing(null)} />}
       {moving && <MoveDialog doc={moving} tree={tree} onClose={() => setMoving(null)} />}
     </>
