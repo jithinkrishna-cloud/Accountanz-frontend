@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FormField } from "@/components/shared/form-field";
@@ -13,7 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ClientPicker } from "@/features/workspace/components/client-picker";
+import { useTasks } from "@/features/tasks/hooks/use-tasks";
 import { applyApiError } from "@/lib/form-errors";
+import { formatPeriod } from "@/lib/format";
 import type { StaffPortal } from "@/types/auth";
 import { useCreateRequest, useUploadDocument } from "../hooks/use-documents";
 import { CATEGORY_LABELS, DOCUMENT_CATEGORIES, type DocumentCategory } from "../types/document.types";
@@ -25,22 +27,41 @@ const requestSchema = z.object({
   description: z.string().trim().min(3, "Describe what you need").max(500),
   period: z.string(),
   due_date: z.string(),
+  task_id: z.string(),
 });
 type RequestValues = z.infer<typeof requestSchema>;
 
+const NO_TASK = "none";
+
+/** The chosen client's tasks (open ones first), for linking a request to the job it's for. */
+function TaskPicker({ portal, clientId, value, onChange }: { portal: StaffPortal; clientId: number | null; value: string; onChange: (v: string) => void }) {
+  const tasks = useTasks({ client_id: clientId ?? undefined, pageSize: 100, scope: portal === "team" ? "clients" : undefined }, portal);
+  const items = clientId ? [...(tasks.data?.items ?? [])].sort((a, b) => Number(a.status === "approved") - Number(b.status === "approved") || b.period.localeCompare(a.period)) : [];
+  return (
+    <Select value={value || NO_TASK} onValueChange={(v) => onChange(v === NO_TASK ? "" : v)} disabled={!clientId}>
+      <SelectTrigger id="req-task" className="w-full"><SelectValue placeholder={clientId ? "No task" : "Pick a client first"} /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_TASK}>No task</SelectItem>
+        {items.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.title} · {formatPeriod(t.period)}{t.status === "approved" ? " (done)" : ""}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; clientId?: number; onDone: () => void }) {
   const create = useCreateRequest(portal);
-  const { register, control, handleSubmit, setError, formState: { errors } } = useForm<RequestValues>({
+  const { register, control, handleSubmit, setError, setValue, formState: { errors } } = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
-    defaultValues: { client_id: clientId ? String(clientId) : "", description: "", period: thisMonth(), due_date: "" },
+    defaultValues: { client_id: clientId ? String(clientId) : "", description: "", period: thisMonth(), due_date: "", task_id: "" },
   });
+  const chosenClient = Number(useWatch({ control, name: "client_id" })) || null;
   const onSubmit = handleSubmit(async (v) => {
     try {
-      await create.mutateAsync({ client_id: Number(v.client_id), description: v.description, period: v.period || null, due_date: v.due_date || null });
+      await create.mutateAsync({ client_id: Number(v.client_id), description: v.description, period: v.period || null, due_date: v.due_date || null, task_id: v.task_id ? Number(v.task_id) : null });
       toast.success("Request sent. The client has been emailed.");
       onDone();
     } catch (err) {
-      applyApiError(err, setError, ["client_id", "description", "period", "due_date"]);
+      applyApiError(err, setError, ["client_id", "description", "period", "due_date", "task_id"]);
     }
   });
   return (
@@ -52,9 +73,18 @@ function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; client
       <form id="request-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
         {!clientId && (
           <FormField id="req-client" label="Client" error={errors.client_id?.message} className="sm:col-span-2">
-            <Controller control={control} name="client_id" render={({ field }) => <ClientPicker portal={portal} id="req-client" value={field.value} onChange={field.onChange} invalid={!!errors.client_id} />} />
+            <Controller
+              control={control}
+              name="client_id"
+              render={({ field }) => (
+                <ClientPicker portal={portal} id="req-client" value={field.value} onChange={(v) => { field.onChange(v); setValue("task_id", ""); }} invalid={!!errors.client_id} />
+              )}
+            />
           </FormField>
         )}
+        <FormField id="req-task" label="For task" hint="Optional. The client sees which job this is for." error={errors.task_id?.message} className="sm:col-span-2">
+          <Controller control={control} name="task_id" render={({ field }) => <TaskPicker portal={portal} clientId={chosenClient} value={field.value} onChange={field.onChange} />} />
+        </FormField>
         <FormField id="req-description" label="What do you need?" error={errors.description?.message} className="sm:col-span-2">
           <Textarea id="req-description" rows={3} placeholder="Bank statements for all current accounts" aria-invalid={!!errors.description} {...register("description")} />
         </FormField>

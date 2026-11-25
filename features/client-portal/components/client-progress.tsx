@@ -2,6 +2,7 @@
 
 import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Plus, Stamp } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState, ErrorState } from "@/components/shared/states";
@@ -336,17 +337,17 @@ function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: 
   const done = task?.checklist.filter((c) => c.done).length ?? 0;
   return (
     <Sheet open={!!task} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
+      <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
         {task && (
           <>
-            <SheetHeader className="border-b px-6 py-5">
+            <SheetHeader className="gap-1.5 border-b px-6 py-6 sm:px-8">
               <p className="text-muted-foreground text-xs">{formatPeriod(period)} / Tasks &amp; Progress</p>
-              <SheetTitle className="text-xl">{task.title}</SheetTitle>
-              <SheetDescription className="text-sm">{explain(task) ?? "Part of your monthly bookkeeping."}</SheetDescription>
+              <SheetTitle className="pr-8 text-2xl">{task.title}</SheetTitle>
+              <SheetDescription className="text-sm leading-relaxed">{explain(task) ?? "Part of your monthly bookkeeping."}</SheetDescription>
             </SheetHeader>
 
-            <div className="grid gap-6 px-6 py-5">
-              <dl className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-4 gap-y-4 text-sm">
+            <div className="grid gap-8 px-6 py-7 sm:px-8">
+              <dl className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-x-6 gap-y-5 text-sm">
                 <dt className="text-muted-foreground">Due</dt>
                 <dd>{task.due_date ? longDate(task.due_date) : "No date set"}</dd>
                 <dt className="text-muted-foreground">Handled by</dt>
@@ -360,18 +361,18 @@ function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: 
                 </dd>
               </dl>
 
-              <div className="bg-muted/40 rounded-xl border p-4">
+              <div className="bg-muted/40 rounded-xl border p-5">
                 <StageTracker stage={stage} />
-                <p className="text-muted-foreground mt-2 text-xs">{STAGES[stage]!.help}</p>
+                <p className="text-muted-foreground mt-3 text-sm">{STAGES[stage]!.help}</p>
               </div>
 
               {blockers.length > 0 && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
                   <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="size-4" aria-hidden /> Waiting on you</p>
-                  <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
+                  <ul className="mt-2.5 list-disc space-y-1.5 pl-5">
                     {blockers.map((r) => <li key={r.id}>{r.description}{r.due_date ? ` (by ${shortDate(r.due_date)})` : ""}</li>)}
                   </ul>
-                  <Button asChild size="sm" variant="outline" className="mt-3 border-red-200 bg-white text-red-800 hover:text-red-900"><Link href="/app/requests"><FileUp className="size-4" /> Upload documents</Link></Button>
+                  <Button asChild size="sm" variant="outline" className="mt-4 border-red-200 bg-white text-red-800 hover:text-red-900"><Link href="/app/requests"><FileUp className="size-4" /> Upload documents</Link></Button>
                 </div>
               )}
 
@@ -381,9 +382,9 @@ function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: 
                     <h3 id="steps-heading" className="font-medium">Steps your team follows</h3>
                     <span className="text-muted-foreground text-sm tabular-nums">{done} of {task.checklist.length}</span>
                   </div>
-                  <ul className="mt-3 grid gap-2">
+                  <ul className="mt-4 grid gap-2.5">
                     {task.checklist.map((c, i) => (
-                      <li key={i} className={cn("flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm", c.done && "bg-muted/40")}>
+                      <li key={i} className={cn("flex items-start gap-3 rounded-lg border px-4 py-3.5 text-sm", c.done && "bg-muted/40")}>
                         <span className={cn("mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border", c.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/40")} aria-hidden>
                           {c.done && <Check className="size-3" />}
                         </span>
@@ -396,7 +397,7 @@ function JobSheet({ task, period, onClose }: { task: PortalTask | null; period: 
               )}
             </div>
 
-            <SheetFooter className="mt-auto flex-row items-center justify-between border-t px-6 py-4">
+            <SheetFooter className="mt-auto flex-row items-center justify-between gap-4 border-t px-6 py-5 sm:px-8">
               <p className="text-muted-foreground text-xs">Questions about this job?</p>
               <Button asChild size="sm">
                 <Link href={`/app/messages?${new URLSearchParams({ ...(task.assignee_id ? { to: String(task.assignee_id) } : {}), subject: `About: ${task.title}` })}`}>
@@ -445,9 +446,16 @@ const VIEWS = [
 ] as const;
 
 function ProgressBody({ isOwner }: { isOwner: boolean }) {
-  const [period, setPeriod] = useState<string>();
+  // ?task=&period= (e.g. from a document request) opens that job straight away, in its month.
+  const params = useSearchParams();
+  const router = useRouter();
+  const [period, setPeriod] = useState<string | undefined>(() => params.get("period") ?? undefined);
   const [view, setView] = useState<"board" | "list">("board");
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<number | null>(() => Number(params.get("task")) || null);
+  const closeJob = () => {
+    setOpenId(null);
+    if (params.get("task")) router.replace("/app/progress", { scroll: false });
+  };
   const [creating, setCreating] = useState(false);
   const { data, isLoading, error, refetch } = usePortalTasks(period);
   const tasks = [...(data?.tasks ?? [])].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status] || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
@@ -509,7 +517,7 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
             )}
           </div>
           <HowItWorks />
-          <JobSheet task={open} period={data.period} onClose={() => setOpenId(null)} />
+          <JobSheet task={open} period={data.period} onClose={closeJob} />
         </div>
       )}
     </>

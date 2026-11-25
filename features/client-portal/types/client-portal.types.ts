@@ -82,6 +82,8 @@ export interface PortalRequest {
   period: string | null;
   status: "open" | "fulfilled";
   requested_by: string | null;
+  /** Their role on the company's team (bookkeeper, finance_manager, ...) or at Accountanz (super_admin, ops_admin). */
+  requested_by_role: string | null;
   files: number;
   /** The job this request belongs to, when the client can see it on Tasks & Progress. */
   task: { id: number; title: string; status: PortalTask["status"]; period: string } | null;

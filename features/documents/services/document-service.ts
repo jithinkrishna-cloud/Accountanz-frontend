@@ -22,6 +22,8 @@ export interface NewRequest {
   description: string;
   period: string | null;
   due_date: string | null;
+  /** The task this request is for (optional); the client sees it on the request. */
+  task_id?: number | null;
 }
 
 /** Same-origin URL; the browser sends the auth cookie, the API checks access and streams the private file. */
