@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { applyApiError } from "@/lib/form-errors";
-import { useClientOptions, useCreateStatus, useDeleteSpace, useDeleteStatus, useReorderStatuses, useUpdateSpace, useUpdateStatus } from "../hooks/use-projects";
+import { useArchiveSpace, useCreateStatus, useDeleteSpace, useDeleteStatus, useReorderStatuses, useUnarchiveSpace, useUpdateSpace, useUpdateStatus } from "../hooks/use-projects";
 import { CATEGORY_LABELS, type Status, type StatusCategory } from "../types/project.types";
 import { useSpaceCtx } from "./space-layout";
 
@@ -21,10 +21,8 @@ const CATEGORIES: StatusCategory[] = ["todo", "in_progress", "done"];
 
 function Details() {
   const { space } = useSpaceCtx();
-  const clients = useClientOptions();
   const update = useUpdateSpace(space.space_key);
   const [name, setName] = useState(space.name);
-  const [clientId, setClientId] = useState(space.client_id ? String(space.client_id) : "none");
   const [description, setDescription] = useState(space.description ?? "");
   return (
     <section className="bg-card grid gap-4 rounded-xl border p-5 shadow-xs">
@@ -35,14 +33,8 @@ function Details() {
       <FormField id="space-key" label="Key" hint="The key is fixed after creation.">
         <Input id="space-key" value={space.space_key} disabled className="max-w-40 font-mono" />
       </FormField>
-      <FormField id="space-client" label="Client" hint="New work items take this client by default.">
-        <Select value={clientId} onValueChange={setClientId}>
-          <SelectTrigger id="space-client" className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No client</SelectItem>
-            {clients.data?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <FormField id="space-client" label="Client" hint="The client is fixed after creation.">
+        <Input id="space-client" value={space.client_name ?? "No client"} disabled />
       </FormField>
       <FormField id="space-description" label="Description">
         <Textarea id="space-description" rows={3} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -227,9 +219,45 @@ function DeleteSpace() {
   );
 }
 
+const PRIMARY_ARCHIVE_COPY = "The primary client space is archived and restored automatically with the client's engagement";
+
+/** Archive or unarchive. The primary client space follows the engagement, so it only shows the explanation. */
+function Archive() {
+  const { space } = useSpaceCtx();
+  const archive = useArchiveSpace(space.space_key);
+  const unarchive = useUnarchiveSpace(space.space_key);
+  const archived = !!space.archived_at;
+  const m = archived ? unarchive : archive;
+  return (
+    <section className="bg-card grid gap-3 rounded-xl border p-5 shadow-xs">
+      <div>
+        <h2 className="font-semibold">{archived ? "Unarchive space" : "Archive space"}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {space.kind === "client_primary"
+            ? PRIMARY_ARCHIVE_COPY
+            : archived
+              ? "This space is read-only. Unarchive it to make changes again."
+              : "Archiving makes the space read-only. Nothing is deleted and you can unarchive it any time."}
+        </p>
+      </div>
+      {space.kind !== "client_primary" && (
+        <div>
+          <SubmitButton
+            variant="outline"
+            pending={m.isPending}
+            onClick={() => void m.mutateAsync().then(() => toast.success(archived ? "Space unarchived" : "Space archived")).catch((e) => applyApiError(e))}
+          >
+            {archived ? "Unarchive space" : "Archive space"}
+          </SubmitButton>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Space settings for Administrators: details, statuses and deleting the space. */
 export function SpaceSettings() {
-  const { isAdmin } = useSpaceCtx();
+  const { isAdmin, space } = useSpaceCtx();
   if (!isAdmin) return <p className="text-muted-foreground text-sm">Only space Administrators can change settings.</p>;
   return (
     <>
@@ -237,7 +265,8 @@ export function SpaceSettings() {
       <div className="grid max-w-3xl gap-5">
         <Details />
         <Statuses />
-        <DeleteSpace />
+        <Archive />
+        {space.kind !== "client_primary" && <DeleteSpace />}
       </div>
     </>
   );

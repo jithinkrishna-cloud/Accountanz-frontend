@@ -75,10 +75,34 @@ export function useDeleteSpace(key: string) {
   });
 }
 
-export const useArchiveSpace = (key: string) => useSpaceMutation(key, () => s.archive(key));
-export const useUnarchiveSpace = (key: string) => useSpaceMutation(key, () => s.unarchive(key));
-export const useGrantOverride = (key: string) => useSpaceMutation(key, (b: NewOverride) => s.grantOverride(key, b));
-export const useRevokeOverride = (key: string) => useSpaceMutation(key, (id: number) => s.revokeOverride(key, id));
+/** Archiving changes the spaces list and the client-space overview as well as the space itself. */
+function useArchiveMutation(key: string, fn: () => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: PK.space(key) });
+      void qc.invalidateQueries({ queryKey: ["projects", "list"] });
+      void qc.invalidateQueries({ queryKey: ["projects", "client-space"] });
+    },
+  });
+}
+export const useArchiveSpace = (key: string) => useArchiveMutation(key, () => s.archive(key));
+export const useUnarchiveSpace = (key: string) => useArchiveMutation(key, () => s.unarchive(key));
+
+/** Overrides change what the client-space overview shows (limits), so it refreshes too. */
+function useOverrideMutation<V>(key: string, fn: (v: V) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: PK.space(key) });
+      void qc.invalidateQueries({ queryKey: ["projects", "client-space"] });
+    },
+  });
+}
+export const useGrantOverride = (key: string) => useOverrideMutation(key, (b: NewOverride) => s.grantOverride(key, b));
+export const useRevokeOverride = (key: string) => useOverrideMutation(key, (id: number) => s.revokeOverride(key, id));
 export const useSyncNow = (key: string) => useSpaceMutation(key, () => s.syncNow(key));
 
 export const useCreateStatus = (key: string) => useSpaceMutation(key, (b: { name: string; category: StatusCategory }) => s.createStatus(key, b));

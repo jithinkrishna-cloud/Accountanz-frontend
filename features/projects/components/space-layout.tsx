@@ -1,14 +1,17 @@
 "use client";
 
-import { Settings, Users } from "lucide-react";
+import { Archive, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { createContext, Suspense, useCallback, useContext } from "react";
 import { ErrorState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ApiError } from "@/lib/api-client";
+import { applyApiError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
-import { useMembers, useSpace } from "../hooks/use-projects";
+import { useMembers, useSpace, useSpaceLookup, useUnarchiveSpace } from "../hooks/use-projects";
 import type { Member, SpaceDetail } from "../types/project.types";
 import { ItemSheet } from "./item-sheet";
 
@@ -57,6 +60,48 @@ function Tabs({ space, isAdmin }: { space: SpaceDetail; isAdmin: boolean }) {
   );
 }
 
+const NO_ACCESS_COPY = "You don't have access to this client workspace. Contact an Ops Admin to request access.";
+
+/** Shown when the space fails to load. A 404 may mean it exists but the viewer isn't in it: then show the name only. */
+function SpaceError({ spaceKey, error, onRetry }: { spaceKey: string; error: unknown; onRetry: () => void }) {
+  const notFound = error instanceof ApiError && error.status === 404;
+  const lookup = useSpaceLookup(spaceKey, notFound);
+  if (notFound && lookup.data && !lookup.data.accessible) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <h1 className="text-xl font-semibold">{lookup.data.name}</h1>
+        <p className="text-muted-foreground mt-2 text-sm">{NO_ACCESS_COPY}</p>
+        <Button variant="outline" size="sm" className="mt-4" asChild>
+          <Link href="/projects">Back to spaces</Link>
+        </Button>
+      </div>
+    );
+  }
+  if (notFound && lookup.isLoading) return <Skeleton className="h-40 w-full" />;
+  return <ErrorState error={error} onRetry={onRetry} />;
+}
+
+function ArchivedBanner({ spaceKey, canUnarchive }: { spaceKey: string; canUnarchive: boolean }) {
+  const unarchive = useUnarchiveSpace(spaceKey);
+  return (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+      <Archive className="size-4 shrink-0" aria-hidden />
+      <span>This space is archived. Unarchive it to make changes.</span>
+      {canUnarchive && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto"
+          disabled={unarchive.isPending}
+          onClick={() => void unarchive.mutateAsync().then(() => toast.success("Space unarchived")).catch((e) => applyApiError(e))}
+        >
+          Unarchive
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function Inner({ spaceKey, children }: { spaceKey: string; children: React.ReactNode }) {
   const space = useSpace(spaceKey);
   const members = useMembers(spaceKey);
@@ -77,7 +122,7 @@ function Inner({ spaceKey, children }: { spaceKey: string; children: React.React
     [params, pathname, router, spaceKey],
   );
 
-  if (space.error) return <ErrorState error={space.error} onRetry={() => void space.refetch()} />;
+  if (space.error) return <SpaceError spaceKey={spaceKey} error={space.error} onRetry={() => void space.refetch()} />;
   if (!space.data) return <Skeleton className="h-40 w-full" />;
 
   const s = space.data;
@@ -103,6 +148,7 @@ function Inner({ spaceKey, children }: { spaceKey: string; children: React.React
           <Tabs space={s} isAdmin={value.isAdmin} />
         </div>
       </div>
+      {s.archived_at && <ArchivedBanner spaceKey={s.space_key} canUnarchive={value.isAdmin && s.kind !== "client_primary"} />}
       {children}
       <ItemSheet number={itemNumber} onClose={() => setItem(null)} />
     </Ctx.Provider>

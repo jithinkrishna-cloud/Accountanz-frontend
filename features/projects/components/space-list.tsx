@@ -8,9 +8,13 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useClientOptions, useSpaces } from "../hooks/use-projects";
-import { SPACE_ROLE_LABELS, type Space } from "../types/project.types";
+import { SPACE_ROLE_LABELS, type Space, type SpaceKind } from "../types/project.types";
+
+const KIND_LABELS: Record<SpaceKind, string> = { client_primary: "Client", client_project: "Client project", internal: "Internal" };
 
 const columns: Column<Space>[] = [
   {
@@ -20,12 +24,16 @@ const columns: Column<Space>[] = [
       <div className="flex items-center gap-3">
         <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-bold">{s.space_key.slice(0, 2)}</span>
         <div className="min-w-0">
-          <p className="truncate font-medium">{s.name}</p>
+          <p className="flex items-center gap-2 truncate font-medium">
+            {s.name}
+            {s.archived_at && <Badge variant="outline">Archived</Badge>}
+          </p>
           <p className="text-muted-foreground font-mono text-xs">{s.space_key}</p>
         </div>
       </div>
     ),
   },
+  { key: "kind", header: "Kind", hideOnMobile: true, cell: (s) => <Badge variant="secondary">{KIND_LABELS[s.kind]}</Badge> },
   { key: "template", header: "Type", hideOnMobile: true, cell: (s) => (s.template === "scrum" ? "Scrum" : "Kanban") },
   { key: "client", header: "Client", hideOnMobile: true, cell: (s) => s.client_name ?? <span className="text-muted-foreground">—</span> },
   { key: "admins", header: "Administrators", hideOnMobile: true, cell: (s) => <span className="text-sm">{s.admins ?? "—"}</span> },
@@ -37,7 +45,8 @@ export function SpaceList() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [clientId, setClientId] = useState<string>();
-  const query = useSpaces({ q: q || undefined, client_id: clientId ? Number(clientId) : undefined });
+  const [archived, setArchived] = useState(false);
+  const query = useSpaces({ q: q || undefined, client_id: clientId ? Number(clientId) : undefined, archived: archived || undefined });
   const clients = useClientOptions();
 
   return (
@@ -55,6 +64,9 @@ export function SpaceList() {
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={setQ} placeholder="Search spaces" />
           <FilterSelect allLabel="All clients" value={clientId} onChange={setClientId} options={(clients.data ?? []).map((c) => ({ value: String(c.id), label: c.name }))} />
+          <label className="flex shrink-0 items-center gap-2 text-sm">
+            <Switch checked={archived} onCheckedChange={setArchived} aria-label="Show archived spaces" /> Archived
+          </label>
         </div>
         <DataTable
           columns={columns}
@@ -65,9 +77,9 @@ export function SpaceList() {
           onRetry={() => void query.refetch()}
           onRowClick={(s) => router.push(`/projects/${s.space_key}/board`)}
           empty={{
-            title: q || clientId ? "No spaces match" : "No spaces yet",
-            description: q || clientId ? undefined : "Create a space to start planning work with your team.",
-            action: q || clientId ? undefined : (
+            title: q || clientId || archived ? "No spaces match" : "No spaces yet",
+            description: q || clientId || archived ? undefined : "Create a space to start planning work with your team.",
+            action: q || clientId || archived ? undefined : (
               <Button asChild size="sm">
                 <Link href="/projects/new">Create space</Link>
               </Button>
