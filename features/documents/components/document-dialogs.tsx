@@ -27,37 +27,37 @@ const requestSchema = z.object({
   description: z.string().trim().min(3, "Describe what you need").max(500),
   period: z.string(),
   due_date: z.string(),
-  task_id: z.string(),
+  task_id: z.string().min(1, "Pick the task this is for"),
 });
 type RequestValues = z.infer<typeof requestSchema>;
 
-const NO_TASK = "none";
-
 /** The chosen client's tasks (open ones first), for linking a request to the job it's for. */
-function TaskPicker({ portal, clientId, value, onChange }: { portal: StaffPortal; clientId: number | null; value: string; onChange: (v: string) => void }) {
+function TaskPicker({ portal, clientId, value, onChange }: { portal: StaffPortal; clientId: number | null; value: string; onChange: (v: string, period?: string) => void }) {
   const tasks = useTasks({ client_id: clientId ?? undefined, pageSize: 100, scope: portal === "team" ? "clients" : undefined }, portal);
   const items = clientId ? [...(tasks.data?.items ?? [])].sort((a, b) => Number(a.status === "approved") - Number(b.status === "approved") || b.period.localeCompare(a.period)) : [];
   return (
-    <Select value={value || NO_TASK} onValueChange={(v) => onChange(v === NO_TASK ? "" : v)} disabled={!clientId}>
-      <SelectTrigger id="req-task" className="w-full"><SelectValue placeholder={clientId ? "No task" : "Pick a client first"} /></SelectTrigger>
+    <Select value={value} onValueChange={(v) => { const t = items.find((x) => String(x.id) === v); onChange(v, t?.period); }} disabled={!clientId}>
+      <SelectTrigger id="req-task" className="w-full"><SelectValue placeholder={clientId ? (items.length ? "Pick a task" : "This client has no tasks yet") : "Pick a client first"} /></SelectTrigger>
       <SelectContent>
-        <SelectItem value={NO_TASK}>No task</SelectItem>
         {items.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.title} · {formatPeriod(t.period)}{t.status === "approved" ? " (done)" : ""}</SelectItem>)}
       </SelectContent>
     </Select>
   );
 }
 
-function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; clientId?: number; onDone: () => void }) {
+/** A request made from inside a task: client, task and period are fixed. */
+export interface RequestForTask { id: number; clientId: number; title: string; period: string }
+
+function RequestForm({ portal, clientId, task, onDone }: { portal: StaffPortal; clientId?: number; task?: RequestForTask; onDone: () => void }) {
   const create = useCreateRequest(portal);
   const { register, control, handleSubmit, setError, setValue, formState: { errors } } = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
-    defaultValues: { client_id: clientId ? String(clientId) : "", description: "", period: thisMonth(), due_date: "", task_id: "" },
+    defaultValues: { client_id: task ? String(task.clientId) : clientId ? String(clientId) : "", description: "", period: task?.period ?? thisMonth(), due_date: "", task_id: task ? String(task.id) : "" },
   });
   const chosenClient = Number(useWatch({ control, name: "client_id" })) || null;
   const onSubmit = handleSubmit(async (v) => {
     try {
-      await create.mutateAsync({ client_id: Number(v.client_id), description: v.description, period: v.period || null, due_date: v.due_date || null, task_id: v.task_id ? Number(v.task_id) : null });
+      await create.mutateAsync({ client_id: Number(v.client_id), description: v.description, period: v.period || null, due_date: v.due_date || null, task_id: Number(v.task_id) });
       toast.success("Request sent. The client has been emailed.");
       onDone();
     } catch (err) {
@@ -68,10 +68,10 @@ function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; client
     <>
       <DialogHeader>
         <DialogTitle>Request documents</DialogTitle>
-        <DialogDescription>The client sees this under Document Requests and is emailed. Uploading against it marks it done.</DialogDescription>
+        <DialogDescription>{task ? `For the task "${task.title}". ` : ""}The client sees this under Document Requests and is emailed. Files they upload go into the task&apos;s folder.</DialogDescription>
       </DialogHeader>
       <form id="request-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
-        {!clientId && (
+        {!clientId && !task && (
           <FormField id="req-client" label="Client" error={errors.client_id?.message} className="sm:col-span-2">
             <Controller
               control={control}
@@ -82,9 +82,17 @@ function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; client
             />
           </FormField>
         )}
-        <FormField id="req-task" label="For task" hint="Optional. The client sees which job this is for." error={errors.task_id?.message} className="sm:col-span-2">
-          <Controller control={control} name="task_id" render={({ field }) => <TaskPicker portal={portal} clientId={chosenClient} value={field.value} onChange={field.onChange} />} />
-        </FormField>
+        {!task && (
+          <FormField id="req-task" label="For task" hint="The client sees which job this is for; files go into that task's folder." error={errors.task_id?.message} className="sm:col-span-2">
+            <Controller
+              control={control}
+              name="task_id"
+              render={({ field }) => (
+                <TaskPicker portal={portal} clientId={chosenClient} value={field.value} onChange={(v, period) => { field.onChange(v); if (period) setValue("period", period); }} />
+              )}
+            />
+          </FormField>
+        )}
         <FormField id="req-description" label="What do you need?" error={errors.description?.message} className="sm:col-span-2">
           <Textarea id="req-description" rows={3} placeholder="Bank statements for all current accounts" aria-invalid={!!errors.description} {...register("description")} />
         </FormField>
@@ -103,10 +111,10 @@ function RequestForm({ portal, clientId, onDone }: { portal: StaffPortal; client
   );
 }
 
-export function RequestDocumentsDialog({ portal, clientId, open, onOpenChange }: { portal: StaffPortal; clientId?: number; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function RequestDocumentsDialog({ portal, clientId, task, open, onOpenChange }: { portal: StaffPortal; clientId?: number; task?: RequestForTask; open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">{open && <RequestForm portal={portal} clientId={clientId} onDone={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="sm:max-w-lg">{open && <RequestForm portal={portal} clientId={clientId} task={task} onDone={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   );
 }

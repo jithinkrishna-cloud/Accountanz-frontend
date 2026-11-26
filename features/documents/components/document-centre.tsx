@@ -96,6 +96,7 @@ const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
 
 const requestColumns = (portal: StaffPortal, openFolder?: (id: number) => void): Column<DocumentRequest>[] => [
   { key: "request", header: "Request", cell: (r) => <span className="font-medium">{r.description}</span> },
+  { key: "task", header: "Task", hideOnMobile: true, cell: (r) => <span className="text-muted-foreground">{r.task_title ?? "—"}</span> },
   { key: "client", header: "Client", cell: (r) => r.client_name },
   { key: "period", header: "Period", hideOnMobile: true, cell: (r) => (r.period ? formatPeriod(r.period) : "—") },
   { key: "asked", header: "Asked by", hideOnMobile: true, cell: (r) => <span className="text-muted-foreground">{r.requested_by_email ?? "—"}</span> },

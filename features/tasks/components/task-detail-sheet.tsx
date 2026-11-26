@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Pencil, Send, Undo2 } from "lucide-react";
+import { CheckCircle2, FilePlus2, Pencil, Send, Undo2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RequestDocumentsDialog } from "@/features/documents/components/document-dialogs";
 import { ReviewDialog } from "@/features/reviews/components/review-dialog";
 import type { ReviewQueueItem } from "@/features/reviews/types/review.types";
 import { applyApiError } from "@/lib/form-errors";
@@ -102,6 +103,7 @@ export function TaskDetailSheet({ portal, taskId, onClose }: { portal: TaskPorta
   const submit = useSubmitTask(taskId ?? 0);
   const [editing, setEditing] = useState(false);
   const [reviewing, setReviewing] = useState<ReviewQueueItem | null>(null);
+  const [requesting, setRequesting] = useState(false);
 
   const doSubmit = async () => {
     try {
@@ -164,7 +166,16 @@ export function TaskDetailSheet({ portal, taskId, onClose }: { portal: TaskPorta
                 {task.permissions.can_edit && (
                   <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit</Button>
                 )}
+                {task.status !== "approved" && (
+                  <Button size="sm" variant="outline" onClick={() => setRequesting(true)}><FilePlus2 className="size-4" /> Request documents</Button>
+                )}
               </div>
+              <RequestDocumentsDialog
+                portal={portal}
+                task={{ id: task.id, clientId: task.client_id, title: task.title, period: task.period }}
+                open={requesting}
+                onOpenChange={setRequesting}
+              />
 
               <dl className="grid grid-cols-2 gap-3 border-t px-5 py-4 text-sm">
                 <div><dt className="text-muted-foreground text-xs">Assignee</dt><dd>{task.assignee_name ?? "Unassigned"}</dd></div>

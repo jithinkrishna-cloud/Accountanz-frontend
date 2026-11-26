@@ -57,7 +57,9 @@ export interface DocumentRequest {
   due_date: string | null;
   period: string | null;
   status: RequestStatus;
-  /** The folder files sent for this request land in ("Nov 2026 / Bank statements"). */
+  task_id: number | null;
+  task_title: string | null;
+  /** The folder files sent for this request land in ("Nov 2026 / Bank reconciliation / Bank statements"). */
   folder_id: number | null;
   created_at: string;
 }
