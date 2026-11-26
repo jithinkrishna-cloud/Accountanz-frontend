@@ -15,6 +15,7 @@ import { useTaskClients, useTasks } from "../hooks/use-tasks";
 import type { TaskPortal, TaskView, TaskViewCounts } from "../services/task-service";
 import { TASK_SOURCES, TASK_STATUSES, type TaskListItem, type TaskSource, type TaskStatus } from "../types/task.types";
 import { GenerateTasksDialog } from "./generate-tasks-dialog";
+import { GroupedTaskTable } from "./grouped-task-table";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { TaskFormDialog } from "./task-form-dialog";
 
@@ -60,6 +61,8 @@ function ViewTiles({ value, counts, onChange }: { value: TaskView | "all"; count
     </div>
   );
 }
+
+const isLate = (t: TaskListItem) => !!t.due_date && (t.status === "todo" || t.status === "in_progress" || t.status === "returned") && t.due_date < today();
 
 /** "3 days late", "Due today", "Due in 2 days", or the date. */
 function dueText(due: string | null, done: boolean) {
@@ -140,12 +143,14 @@ export function TaskList({ portal = "admin" }: { portal?: TaskPortal }) {
   const [scope, setScope] = useState<"mine" | "clients">("mine");
   // Open work first; "Everything" shows all tasks.
   const [view, setView] = useState<TaskView | "all">("open");
+  // Admin list is grouped by client by default; a toggle shows the flat list.
+  const [grouped, setGrouped] = useState(portal === "admin");
   const [clientId, setClientId] = useState<number>();
   const [page, setPage] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
-  const query = useTasks({ q, status, source, page, view: view === "all" ? undefined : view, scope: portal === "team" ? scope : undefined, client_id: portal === "team" ? clientId : undefined }, portal);
+  const query = useTasks({ q, status, source, page, view: view === "all" ? undefined : view, ...(grouped ? { group: "client" as const, pageSize: 100 } : {}), scope: portal === "team" ? scope : undefined, client_id: portal === "team" ? clientId : undefined }, portal);
   const filtered = !!(q || status || source || view !== "all");
 
   const header =
@@ -193,25 +198,50 @@ export function TaskList({ portal = "admin" }: { portal?: TaskPortal }) {
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search tasks" />
           <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as TaskStatus | undefined); setPage(1); }} options={TASK_STATUSES.map((s) => ({ value: s, label: humanize(s) }))} />
+          {portal === "admin" && (
+            <Button variant={grouped ? "secondary" : "outline"} className="shrink-0" aria-pressed={grouped} onClick={() => { setGrouped((g) => !g); setPage(1); }}>
+              {grouped ? "Grouped by client" : "Group by client"}
+            </Button>
+          )}
           <FilterSelect allLabel="All sources" value={source} onChange={(v) => { setSource(v as TaskSource | undefined); setPage(1); }} options={TASK_SOURCES.map((s) => ({ value: s, label: SOURCE_LABEL[s] }))} />
         </div>
-        <DataTable
-          columns={columns(portal, !clientId)}
-          rows={query.data?.items}
-          rowKey={(t) => t.id}
-          isLoading={query.isLoading}
-          error={query.error}
-          onRetry={() => void query.refetch()}
-          onRowClick={(t) => setOpenTaskId(t.id)}
-          empty={
+        {grouped ? (
+          <GroupedTaskTable
+            columns={columns(portal, false)}
+            rows={query.data?.items}
+            isLoading={query.isLoading}
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            onRowClick={(t) => setOpenTaskId(t.id)}
+            isLate={isLate}
+            empty={
             filtered
               ? { title: view === "overdue" ? "Nothing overdue" : view === "review" ? "Nothing waiting for review" : "No tasks match", description: view !== "all" ? "Pick another tile above, or Everything to see all tasks." : "Try a different search or filter." }
               : portal === "admin"
                 ? { title: "No tasks yet", description: "Generate a period's tasks from your templates.", action: <Button size="sm" onClick={() => setGenerating(true)}>Generate tasks</Button> }
                 : { title: "Nothing assigned to you", description: "Tasks assigned to you appear here as soon as they're created." }
-          }
-          pagination={query.data && { ...query.data, onPageChange: setPage }}
-        />
+            }
+            pagination={query.data && { ...query.data, onPageChange: setPage }}
+          />
+        ) : (
+          <DataTable
+            columns={columns(portal, !clientId)}
+            rows={query.data?.items}
+            rowKey={(t) => t.id}
+            isLoading={query.isLoading}
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            onRowClick={(t) => setOpenTaskId(t.id)}
+            empty={
+              filtered
+                ? { title: view === "overdue" ? "Nothing overdue" : view === "review" ? "Nothing waiting for review" : "No tasks match", description: view !== "all" ? "Pick another tile above, or Everything to see all tasks." : "Try a different search or filter." }
+                : portal === "admin"
+                  ? { title: "No tasks yet", description: "Generate a period's tasks from your templates.", action: <Button size="sm" onClick={() => setGenerating(true)}>Generate tasks</Button> }
+                  : { title: "Nothing assigned to you", description: "Tasks assigned to you appear here as soon as they're created." }
+            }
+            pagination={query.data && { ...query.data, onPageChange: setPage }}
+          />
+          )}
       </div>
       </div>
       {portal === "admin" && <GenerateTasksDialog open={generating} onOpenChange={setGenerating} />}

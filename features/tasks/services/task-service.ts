@@ -13,6 +13,7 @@ export interface TaskListParams {
   scope?: "mine" | "clients";
   client_id?: number;
   view?: TaskView;
+  group?: "client";
   pageSize?: number;
   page?: number;
 }
