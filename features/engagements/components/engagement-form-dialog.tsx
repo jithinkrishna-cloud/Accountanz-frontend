@@ -55,8 +55,8 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const row = await save.mutateAsync(values);
-      toast.success(editing ? "Engagement updated" : "Draft engagement created");
+      const row = await save.mutateAsync(forClient ? { ...values, activate_now: true } : values);
+      toast.success(editing ? "Engagement updated" : forClient ? "Package active" : "Draft engagement created");
       onOpenChange(false);
       onSaved?.(row);
     } catch (err) {
@@ -72,7 +72,7 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
         <DialogHeader>
           <DialogTitle>{editing ? "Edit engagement" : forClient ? "Attach a package" : "New engagement"}</DialogTitle>
           <DialogDescription>
-            {editing ? engagement.client_name : forClient ? `Pick the package and services for ${forClient.name}. It starts as a draft engagement.` : "Starts as a draft. Send it, record acceptance, then activate it with the signed agreement."}
+            {editing ? engagement.client_name : forClient ? `Pick the package and services for ${forClient.name}. It becomes active straight away; you can upload the signed agreement later.` : "Starts as a draft. Send it, record acceptance, then activate it with the signed agreement."}
           </DialogDescription>
         </DialogHeader>
         <form id="engagement-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
@@ -128,8 +128,8 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
           </FormField>
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <SubmitButton form="engagement-form" pending={save.isPending}>{editing ? "Save changes" : "Create draft"}</SubmitButton>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{forClient ? "Skip for now" : "Cancel"}</Button>
+          <SubmitButton form="engagement-form" pending={save.isPending}>{editing ? "Save changes" : forClient ? "Activate package" : "Create draft"}</SubmitButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -28,7 +28,7 @@ function afterChange(qc: QueryClient, row: Engagement) {
 export function useSaveEngagement(id?: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (values: EngagementFormOutput) => {
+    mutationFn: (values: EngagementFormOutput & { activate_now?: boolean }) => {
       if (!id) return engagementService.create(values);
       return engagementService.update(id, { package_id: values.package_id, start_date: values.start_date, renewal_date: values.renewal_date });
     },
