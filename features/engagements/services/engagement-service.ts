@@ -7,6 +7,7 @@ export interface EngagementListParams {
   q?: string;
   status?: EngagementStatus;
   page?: number;
+  clientId?: number;
 }
 
 export const agreementUrl = (id: number) => `/api/admin/engagements/${id}/agreement`;

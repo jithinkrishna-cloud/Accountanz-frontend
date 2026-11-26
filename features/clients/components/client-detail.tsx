@@ -4,6 +4,7 @@ import { OpenInJournl } from "@/features/integrations/components/open-in-journl"
 import { ArrowLeft, Pencil, Plus, Trash2, TriangleAlert, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { ClientOnboardingCard } from "@/features/onboarding/components/client-onboarding-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -99,6 +100,9 @@ export function ClientDetailView({ id }: { id: number }) {
           </>
         }
       />
+      {(client.status === "lead" || client.status === "onboarding") && (
+        <ClientOnboardingCard client={{ id: client.id, name: client.trade_name ?? client.legal_name }} onActivated={() => void refetch()} />
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Section title="Business details">

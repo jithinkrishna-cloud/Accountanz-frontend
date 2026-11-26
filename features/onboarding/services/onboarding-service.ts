@@ -6,6 +6,7 @@ export interface OnboardingListParams {
   q?: string;
   stage?: OnboardingStage;
   page?: number;
+  client_id?: number;
 }
 
 export interface ServiceRequirementsInput {
