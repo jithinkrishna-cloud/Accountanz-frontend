@@ -27,9 +27,37 @@ const toValues = (p?: ServicePackage): PackageFormValues => ({
   description: p?.description ?? "",
   scope_notes: p?.scope_notes ?? "",
   team_roles: p?.team_roles ?? ["bookkeeper", "finance_manager"],
+  workspace_limit: p ? p.workspace_limit : 1,
+  staff_per_workspace: p ? p.staff_per_workspace : null,
   is_active: p?.is_active ?? true,
   service_ids: p?.services.map((s) => s.id) ?? [],
 });
+
+function LimitInput({ id, label, value, error, onChange }: { id: string; label: string; value: number | null; error?: string; onChange: (v: number | null) => void }) {
+  return (
+    <div className="grid content-start gap-2">
+      <FormField id={id} label={label} error={error}>
+        <Input
+          id={id}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={999}
+          step={1}
+          disabled={value === null}
+          placeholder={value === null ? "Unlimited" : undefined}
+          aria-invalid={!!error}
+          value={value === null || Number.isNaN(value) ? "" : value}
+          onChange={(e) => onChange(e.target.value === "" ? Number.NaN : Number(e.target.value))}
+        />
+      </FormField>
+      <Label className="flex items-center gap-2 font-normal">
+        <Checkbox checked={value === null} onCheckedChange={(c) => onChange(c === true ? null : 1)} />
+        Unlimited
+      </Label>
+    </div>
+  );
+}
 
 export function PackageFormDialog({ open, onOpenChange, pkg }: { open: boolean; onOpenChange: (o: boolean) => void; pkg?: ServicePackage }) {
   const services = useServices();
@@ -119,6 +147,12 @@ export function PackageFormDialog({ open, onOpenChange, pkg }: { open: boolean; 
             )} />
             {errors.team_roles && <p role="alert" className="text-destructive text-xs">{errors.team_roles.message}</p>}
           </fieldset>
+          <Controller control={control} name="workspace_limit" render={({ field }) => (
+            <LimitInput id="workspace_limit" label="Workspace limit" value={field.value} error={errors.workspace_limit?.message} onChange={field.onChange} />
+          )} />
+          <Controller control={control} name="staff_per_workspace" render={({ field }) => (
+            <LimitInput id="staff_per_workspace" label="Staff per workspace" value={field.value} error={errors.staff_per_workspace?.message} onChange={field.onChange} />
+          )} />
           <FormField id="scope_notes" label="Scope notes" error={errors.scope_notes?.message} className="sm:col-span-2">
             <Textarea id="scope_notes" rows={2} placeholder="Transaction limits, bank accounts, review calls…" {...register("scope_notes")} />
           </FormField>

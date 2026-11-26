@@ -12,6 +12,14 @@ export const serviceFormSchema = z.object({
   description: z.string().trim().max(500),
 });
 
+// null = Unlimited. Mirrors backend 0-999 integer limits.
+const limitSchema = z
+  .number({ message: "Enter a number from 0 to 999" })
+  .int("Enter a whole number")
+  .min(0, "Enter a number from 0 to 999")
+  .max(999, "Enter a number from 0 to 999")
+  .nullable();
+
 export const packageFormSchema = z.object({
   name: z.string().trim().min(2, "Enter a package name").max(150),
   monthly_fee: z.coerce.number<string | number>({ message: "Enter the monthly fee" }).positive("Enter the monthly fee").max(9_999_999_999),
@@ -19,6 +27,8 @@ export const packageFormSchema = z.object({
   description: z.string().trim().max(500),
   scope_notes: z.string().trim().max(1000),
   team_roles: z.array(z.enum(PACKAGE_ROLES)).min(1, "Include at least one role"),
+  workspace_limit: limitSchema,
+  staff_per_workspace: limitSchema,
   is_active: z.boolean(),
   service_ids: z.array(z.number()).min(1, "Pick at least one service"),
 });

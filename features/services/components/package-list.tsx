@@ -13,6 +13,13 @@ import type { ServicePackage } from "../types/service.types";
 import { PackageFormDialog } from "./package-form-dialog";
 import { PACKAGE_ROLE_INFO } from "../types/service.types";
 
+function limitsLabel(p: ServicePackage) {
+  if (p.workspace_limit === null && p.staff_per_workspace === null) return "Unlimited";
+  const ws = p.workspace_limit === null ? "Unlimited workspaces" : `${p.workspace_limit} workspace${p.workspace_limit === 1 ? "" : "s"}`;
+  const staff = p.staff_per_workspace === null ? "Unlimited staff" : `${p.staff_per_workspace} staff`;
+  return `${ws} · ${staff}`;
+}
+
 export function PackageList() {
   const { data, isLoading, error, refetch } = usePackages();
   const [editing, setEditing] = useState<ServicePackage | null | undefined>(undefined);
@@ -46,6 +53,7 @@ export function PackageList() {
               </p>
               {p.scope_notes && <p className="text-muted-foreground mt-2 text-sm">{p.scope_notes}</p>}
               <p className="text-muted-foreground mt-2 text-xs">Team: {p.team_roles.map((r) => PACKAGE_ROLE_INFO[r].label).join(" · ")}</p>
+              <p className="text-muted-foreground mt-1 text-xs">Limits: {limitsLabel(p)}</p>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {p.services.map((s) => <span key={s.id} className="bg-accent text-accent-foreground rounded-md px-2 py-0.5 text-xs font-medium">{s.name}</span>)}
               </div>
