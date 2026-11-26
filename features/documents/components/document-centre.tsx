@@ -2,6 +2,7 @@
 
 import { FilePlus2, FileText, Folder, FolderOpen, Upload, X } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterSelect } from "@/components/shared/filter-select";
@@ -118,6 +119,32 @@ const requestColumns = (portal: StaffPortal, openFolder?: (folderId: number, cli
   },
 ];
 
+/** Left-hand client list: All clients, then each client. */
+function ClientList({ clients, value, onChange }: { clients: { value: string; label: string }[]; value?: string; onChange: (v?: string) => void }) {
+  const item = (key: string, label: string, selected: boolean, onClick: () => void, icon: React.ReactNode) => (
+    <li key={key} className="shrink-0">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={selected ? "true" : undefined}
+        className={cn("flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors", selected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-foreground")}
+      >
+        {icon}
+        <span className="truncate">{label}</span>
+      </button>
+    </li>
+  );
+  return (
+    <nav aria-label="Clients" className="bg-card rounded-xl border p-2 shadow-xs lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto">
+      <p className="text-muted-foreground hidden px-3 pt-1 pb-2 text-xs font-medium tracking-wide uppercase lg:block">Clients</p>
+      <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+        {item("all", "All clients", value === undefined, () => onChange(undefined), <FileText className="text-muted-foreground size-4 shrink-0" aria-hidden />)}
+        {clients.map((c) => item(c.value, c.label, value === c.value, () => onChange(c.value), <Folder className="size-4 shrink-0 text-amber-500" aria-hidden />))}
+      </ul>
+    </nav>
+  );
+}
+
 export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
   const clients = useStaffClientOptions(portal);
   const [docQ, setDocQ] = useState("");
@@ -154,10 +181,9 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
           </>
         }
       />
-      <div className="mb-4">
-        <FilterSelect allLabel="All clients" value={clientId} onChange={(v) => { setClientId(v); setFolder(null); setDocPage(1); setReqPage(1); }} options={clients.data ?? []} className="sm:w-64" />
-      </div>
-      <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <ClientList clients={clients.data ?? []} value={clientId} onChange={(v) => { setClientId(v); setFolder(null); setDocPage(1); setReqPage(1); }} />
+      <div className="min-w-0 space-y-6">
         <Section title="Document requests" subtitle="What the team has asked clients for. Uploading against a request marks it fulfilled.">
           <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
             <SearchInput value={reqQ} onChange={(v) => { setReqQ(v); setReqPage(1); }} placeholder="Search requests" />
@@ -184,22 +210,6 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
           <StaffFolderExplorer key={clientId} portal={portal} clientId={Number(clientId)} current={folder} onOpen={setFolder} />
         ) : (
         <>
-        <Section title="Client folders" subtitle="Each client's documents, in folders. Open one to browse, create folders or upload.">
-          <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {(clients.data ?? []).map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => { setClientId(c.value); setFolder(null); setDocPage(1); setReqPage(1); }}
-                className="hover:bg-muted/60 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors"
-              >
-                <Folder className="size-4 shrink-0 text-amber-500" aria-hidden />
-                <span className="truncate font-medium">{c.label}</span>
-              </button>
-            ))}
-            {clients.data?.length === 0 && <p className="text-muted-foreground col-span-full text-sm">No clients yet.</p>}
-          </div>
-        </Section>
         <Section title="Documents" subtitle="Stored privately. Only people with access to the client can open them.">
           <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
             <SearchInput value={docQ} onChange={(v) => { setDocQ(v); setDocPage(1); }} placeholder="Search documents" />
@@ -229,6 +239,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
         </Section>
         </>
         )}
+      </div>
       </div>
       <RequestDocumentsDialog portal={portal} open={requesting} onOpenChange={setRequesting} />
       <UploadDocumentDialog portal={portal} open={uploading} onOpenChange={setUploading} />
