@@ -1,13 +1,15 @@
 "use client";
 
-import { ChevronRight, LogOut, Mail, Settings, ShieldCheck } from "lucide-react";
+import { ChevronRight, LogOut, Mail, Monitor, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useTheme } from "next-themes";
+import { useState, useSyncExternalStore } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLogout } from "@/features/auth/hooks/use-session";
 import { ROLE_LABELS } from "@/lib/constants";
 import { initials } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Portal, SessionUser } from "@/types/auth";
 
 /** Where each portal keeps its settings; the accountant workspace has none. */
@@ -25,11 +27,23 @@ function Row({ icon: Icon, label, value }: { icon: typeof Mail; label: string; v
   );
 }
 
+const THEME_OPTIONS = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+] as const;
+
 /** Top-bar avatar: opens the profile card under it (email, role, settings, sign out). */
 export function ProfileMenu({ portal, user }: { portal: Portal; user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const logout = useLogout();
   const settingsHref = SETTINGS_HREF[portal];
+  const { theme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -49,6 +63,30 @@ export function ProfileMenu({ portal, user }: { portal: Portal; user: SessionUse
         <div className="divide-y rounded-lg border px-4">
           <Row icon={Mail} label="Email" value={user.email} />
           <Row icon={ShieldCheck} label="Role" value={ROLE_LABELS[user.role]} />
+        </div>
+
+        <div className="grid gap-2">
+          <p className="text-muted-foreground text-xs font-medium">Theme</p>
+          <div className="grid grid-cols-3 gap-1 rounded-lg border p-1">
+            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+              const active = mounted && theme === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTheme(value)}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                    active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                  )}
+                  aria-pressed={active}
+                >
+                  <Icon className="size-3.5" aria-hidden />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="-mx-2 grid gap-0.5 border-t pt-2">
