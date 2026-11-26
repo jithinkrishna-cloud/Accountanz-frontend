@@ -38,7 +38,7 @@ const columns: Column<Space>[] = [
   { key: "client", header: "Client", hideOnMobile: true, cell: (s) => s.client_name ?? <span className="text-muted-foreground">—</span> },
   { key: "admins", header: "Administrators", hideOnMobile: true, cell: (s) => <span className="text-sm">{s.admins ?? "—"}</span> },
   { key: "items", header: "Work items", className: "text-right", cell: (s) => s.item_count },
-  { key: "role", header: "My role", hideOnMobile: true, cell: (s) => (s.my_role ? SPACE_ROLE_LABELS[s.my_role] : <span className="text-muted-foreground text-xs">Super admin</span>) },
+  { key: "role", header: "My role", hideOnMobile: true, cell: (s) => (s.my_role ? SPACE_ROLE_LABELS[s.my_role] : <span className="text-muted-foreground text-xs">Admin access</span>) },
 ];
 
 export function SpaceList() {
