@@ -92,6 +92,8 @@ export const clientPortalService = {
     api<PortalMeetingRequest>("/app/meeting-requests", { method: "POST", body }),
   withdrawMeetingRequest: (id: number) => api<void>(`/app/meeting-requests/${id}/withdraw`, { method: "POST" }),
   billing: () => api<PortalBilling>("/app/billing"),
+  /** Starts an online payment of the invoice's remaining balance; returns the Easebuzz checkout URL. */
+  payInvoice: (id: number) => api<{ url: string }>(`/app/invoices/${id}/pay`, { method: "POST" }),
   settings: () => api<PortalSettings>("/app/settings"),
   updateSettings: (body: { full_name?: string; phone?: string | null; notification_prefs?: NotificationPrefs }) =>
     api<PortalSettings>("/app/settings", { method: "PATCH", body }),

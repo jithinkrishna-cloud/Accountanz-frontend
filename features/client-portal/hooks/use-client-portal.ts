@@ -57,6 +57,8 @@ export function useWithdrawMeetingRequest() {
 }
 export const usePortalBilling = () => useQuery({ queryKey: K("billing"), queryFn: s.billing });
 export const usePortalSettings = () => useQuery({ queryKey: K("settings"), queryFn: s.settings });
+/** Gets the checkout URL; the caller sends the browser there, so nothing is invalidated here. */
+export const usePayInvoice = () => useMutation({ mutationFn: s.payInvoice });
 
 export function useUpdateClient() {
   const qc = useQueryClient();

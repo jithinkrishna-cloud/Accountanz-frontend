@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CreditCard, MessageSquare } from "lucide-react";
+import { CircleAlert, CircleCheck, CreditCard, Loader2, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -14,8 +14,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { applyApiError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
 import { formatDate, formatINR, formatPeriod, humanize } from "@/lib/format";
-import { usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
+import { usePayInvoice, usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
 import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalCompany, PortalSettings } from "../types/client-portal.types";
 import { BizpoleConnection } from "./bizpole-connection";
 import { CompanyGate } from "./company-gate";
@@ -47,34 +47,74 @@ const paymentColumns: Column<Payment>[] = [
   { key: "no", header: "Invoice", cell: (p) => <span className="font-mono text-xs">{p.invoice_number}</span> },
   { key: "amount", header: "Amount", className: "text-right", cell: (p) => <span className="tabular-nums">{formatINR(p.amount, true)}</span> },
   { key: "date", header: "Paid on", cell: (p) => formatDate(p.paid_date) },
-  { key: "method", header: "Method", hideOnMobile: true, cell: (p) => humanize(p.method) },
+  { key: "method", header: "Method", hideOnMobile: true, cell: (p) => (p.method === "easebuzz" ? "Online" : humanize(p.method)) },
   { key: "ref", header: "Reference", hideOnMobile: true, cell: (p) => <span className="text-muted-foreground">{p.reference ?? "—"}</span> },
 ];
 
-/** No payment gateway is configured yet, so "Pay now" explains how to pay instead of taking card details. */
-function PayNowDialog({ amount, onClose }: { amount: number; onClose: () => void }) {
+const isOpen = (i: Invoice) => (i.status === "issued" || i.status === "overdue") && i.total - i.paid > 0.004;
+
+/** "Pay now" sends the browser to Easebuzz for the invoice's remaining balance. */
+function PayInvoiceButton({ invoice, size = "sm" }: { invoice: Invoice; size?: "sm" | "default" }) {
+  const pay = usePayInvoice();
+  const start = async () => {
+    try {
+      const { url } = await pay.mutateAsync(invoice.id);
+      window.location.assign(url);
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  // Stays busy after success too: the page is about to navigate away.
+  const busy = pay.isPending || pay.isSuccess;
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Pay {formatINR(amount, true)}</DialogTitle>
-          <DialogDescription>Online payment isn&apos;t available yet.</DialogDescription>
-        </DialogHeader>
-        <p className="text-sm">Please pay by bank transfer or UPI using the details on your invoice, and quote the invoice number as the reference. Your Accountanz team records the payment and the invoice is marked paid.</p>
-        <DialogFooter><Button onClick={onClose}>OK</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button size={size} variant="outline" disabled={busy} onClick={() => void start()}>
+      {busy ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />} Pay {formatINR(invoice.total - invoice.paid, true)}
+    </Button>
+  );
+}
+
+const PAYMENT_RESULT: Record<string, { title: string; text: string; bad?: boolean }> = {
+  success: { title: "Payment received", text: "Thank you. The payment has been recorded against your invoice." },
+  pending: { title: "Payment is being confirmed", text: "Your bank hasn't confirmed the payment yet. Check back here in a few minutes, and please don't pay again in the meantime." },
+  failed: { title: "Payment didn't go through", text: "No money was taken, or it will be refunded by your bank. You can try again.", bad: true },
+  invalid: { title: "We couldn't confirm that payment", text: "If money left your account, message your Accountanz team with the transaction reference and we'll sort it out.", bad: true },
+};
+
+/** Shown after Easebuzz sends the payer back (?payment=…); dismissing it clears the query string. */
+function PaymentResultBanner({ onShown }: { onShown: () => void }) {
+  const params = useSearchParams();
+  const router = useRouter();
+  const result = PAYMENT_RESULT[params.get("payment") ?? ""];
+  useEffect(() => {
+    if (result) onShown();
+  }, [result, onShown]);
+  if (!result) return null;
+  return (
+    <Alert variant={result.bad ? "destructive" : "default"} className="mb-6">
+      {result.bad ? <CircleAlert /> : <CircleCheck />}
+      <AlertTitle>{result.title}</AlertTitle>
+      <AlertDescription>{result.text}</AlertDescription>
+      <AlertAction>
+        <Button variant="ghost" size="sm" onClick={() => router.replace("/app/billing")}>Dismiss</Button>
+      </AlertAction>
+    </Alert>
   );
 }
 
 function BillingBody() {
   const { data, isLoading, error, refetch } = usePortalBilling();
-  const [paying, setPaying] = useState(false);
+  const refresh = useCallback(() => void refetch(), [refetch]);
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !data) return <Skeleton className="h-64 w-full rounded-xl" />;
+  const open = data.invoices.filter(isOpen);
+  const columns: Column<Invoice>[] = [
+    ...invoiceColumns,
+    { key: "pay", header: "", className: "text-right", cell: (i) => (isOpen(i) ? <PayInvoiceButton invoice={i} /> : null) },
+  ];
   return (
     <>
       <PageHeader title="Service & Billing" description="Your package, invoices and payments in one place." />
+      <PaymentResultBanner onShown={refresh} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Your package">
           {data.package ? (
@@ -93,18 +133,19 @@ function BillingBody() {
             <p className="text-muted-foreground p-5 text-sm">No active package yet. Your Accountanz team will set it up once your agreement is signed.</p>
           )}
         </Card>
-        <Card title="Outstanding" actions={data.outstanding > 0 && <Button size="sm" onClick={() => setPaying(true)}><CreditCard className="size-4" /> Pay now</Button>}>
+        <Card title="Outstanding" actions={open.length === 1 && <PayInvoiceButton invoice={open[0]} />}>
           <div className="p-5">
             <p className="text-2xl font-semibold tabular-nums">{formatINR(data.outstanding, true)}</p>
-            <p className="text-muted-foreground text-sm">{data.outstanding > 0 ? "Due on your open invoices." : "Nothing due right now — thank you."}</p>
+            <p className="text-muted-foreground text-sm">
+              {open.length === 0 ? "Nothing due right now — thank you." : open.length === 1 ? "Due on your open invoice. Pay online by card, UPI or net banking." : `Due on ${open.length} open invoices. Pay each one online from the list below.`}
+            </p>
           </div>
         </Card>
       </div>
       <div className="mt-6 space-y-6">
-        <Card title="Invoices"><DataTable columns={invoiceColumns} rows={data.invoices} rowKey={(i) => i.id} empty={{ title: "No invoices yet" }} /></Card>
+        <Card title="Invoices"><DataTable columns={columns} rows={data.invoices} rowKey={(i) => i.id} empty={{ title: "No invoices yet" }} /></Card>
         <Card title="Payment history"><DataTable columns={paymentColumns} rows={data.payments} rowKey={(p) => p.id} empty={{ title: "No payments recorded yet" }} /></Card>
       </div>
-      {paying && <PayNowDialog amount={data.outstanding} onClose={() => setPaying(false)} />}
     </>
   );
 }

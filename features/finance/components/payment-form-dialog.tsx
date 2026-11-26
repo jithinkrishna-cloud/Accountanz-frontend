@@ -14,7 +14,7 @@ import { applyApiError } from "@/lib/form-errors";
 import { formatINR } from "@/lib/format";
 import { useOpenInvoices, useRecordPayment } from "../hooks/use-finance";
 import { paymentFormSchema, type PaymentFormOutput, type PaymentFormValues } from "../schemas/finance.schema";
-import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "../types/finance.types";
+import { MANUAL_PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "../types/finance.types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -82,7 +82,7 @@ export function PaymentFormDialog({ open, onOpenChange }: { open: boolean; onOpe
             <Controller control={control} name="method" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="method" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>{PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>)}</SelectContent>
+                <SelectContent>{MANUAL_PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </FormField>

@@ -65,8 +65,6 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
       label: "Overview",
       items: [
         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-        { label: "Team Progress", href: "/admin/workspace", icon: Activity },
-        { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
       ],
     },
     {
@@ -100,6 +98,8 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
         { label: "Document Centre", href: "/admin/documents", icon: FolderOpen },
         { label: "Reviews & Approvals", href: "/admin/reviews", icon: CircleCheck },
         { label: "Month-End Closing", href: "/admin/closing", icon: CalendarCheck },
+        { label: "Team Progress", href: "/admin/workspace", icon: Activity },
+        { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
       ],
     },
     {

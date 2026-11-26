@@ -22,7 +22,10 @@ export interface InvoiceSummary {
   outstanding: number;
 }
 
-export const PAYMENT_METHODS = ["bank_transfer", "upi", "cheque", "cash", "other"] as const;
+/** Methods staff can record by hand. */
+export const MANUAL_PAYMENT_METHODS = ["bank_transfer", "upi", "cheque", "cash", "other"] as const;
+/** Every method a payment can have; "easebuzz" is only ever set by an online payment. */
+export const PAYMENT_METHODS = [...MANUAL_PAYMENT_METHODS, "easebuzz"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   bank_transfer: "Bank transfer",
@@ -30,6 +33,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cheque: "Cheque",
   cash: "Cash",
   other: "Other",
+  easebuzz: "Online (Easebuzz)",
 };
 
 export interface Payment {
