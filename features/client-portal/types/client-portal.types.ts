@@ -59,6 +59,7 @@ export interface PortalDocument {
   /** Document Centre folder; null = top level. */
   folder_id: number | null;
   size_bytes: number | null;
+  mime_type: string | null;
   /** 1 = uploaded by someone at the company, 0 = by the accounting team. */
   from_client: 0 | 1;
   /** Accountants this file is shared with directly. */

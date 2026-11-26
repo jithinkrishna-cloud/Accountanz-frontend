@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, FileText, Folder, FolderInput, FolderPlus, Home, Lock, MoreHorizontal, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronRight, Eye, FileText, Folder, FolderInput, FolderPlus, Home, Lock, MoreHorizontal, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { EmptyState, ErrorState } from "@/components/shared/states";
@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DocumentViewer } from "@/features/client-portal/components/document-viewer";
 import { ApiError } from "@/lib/api-client";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatPeriod, humanize } from "@/lib/format";
@@ -79,18 +80,18 @@ function FolderRow({ folder, tree, onOpen, onRename, onDelete }: { folder: Staff
   );
 }
 
-function FileRow({ portal, doc, showPath, onMove }: { portal: StaffPortal; doc: ClientDocument; showPath?: boolean; onMove: () => void }) {
+function FileRow({ portal, doc, showPath, onView, onMove }: { portal: StaffPortal; doc: ClientDocument; showPath?: boolean; onView: () => void; onMove: () => void }) {
   return (
     <li className="flex items-center gap-3 px-5 py-2.5">
       <FileText className="text-muted-foreground size-5 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1">
-        <a href={documentFileUrl(portal, doc.id)} target="_blank" rel="noopener" className="text-primary block max-w-full truncate text-sm font-medium hover:underline">{doc.file_name}</a>
+        <button type="button" onClick={onView} className="text-primary block max-w-full truncate text-left text-sm font-medium hover:underline">{doc.file_name}</button>
         <p className="text-muted-foreground truncate text-xs">
-          {showPath && <>{doc.folder_path ? `Documents / ${doc.folder_path}` : "Documents"} · </>}
+          {showPath && <>{doc.folder_path ? `Documents / ${doc.folder_path}` : "Documents"} • </>}
           {CATEGORY_LABELS[doc.category]}
-          {doc.period ? ` · ${formatPeriod(doc.period)}` : ""} · {formatDate(doc.created_at)}
-          {doc.uploaded_by_name ? ` · ${doc.uploaded_by_name} (${doc.from_client ? "client" : "team"})` : ""}
-          {doc.request_id !== null ? " · sent for a request" : ""}
+          {doc.period ? ` • ${formatPeriod(doc.period)}` : ""} • {formatDate(doc.created_at)}
+          {doc.uploaded_by_name ? ` • ${doc.uploaded_by_name} (${doc.from_client ? "client" : "team"})` : ""}
+          {doc.request_id !== null ? " • sent for a request" : ""}
         </p>
       </div>
       <div className="hidden sm:block"><DocumentStatusCell portal={portal} doc={doc} /></div>
@@ -99,7 +100,8 @@ function FileRow({ portal, doc, showPath, onMove }: { portal: StaffPortal; doc: 
           <Button variant="ghost" size="icon" className="size-8" aria-label={`Actions for ${doc.file_name}`}><MoreHorizontal className="size-4" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild><a href={documentFileUrl(portal, doc.id)} target="_blank" rel="noopener"><FileText className="size-4" /> Open</a></DropdownMenuItem>
+          <DropdownMenuItem onSelect={onView}><Eye className="size-4" /> View</DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={documentFileUrl.download(portal, doc.id)} download={doc.file_name}><FileText className="size-4" /> Download</a></DropdownMenuItem>
           <DropdownMenuItem onSelect={onMove}><FolderInput className="size-4" /> Move to…</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -120,6 +122,7 @@ export function StaffFolderExplorer({ portal, clientId, current, onOpen }: { por
   const [uploading, setUploading] = useState(false);
   const [naming, setNaming] = useState<{ mode: "create" | "rename"; folder?: StaffFolder } | null>(null);
   const [moving, setMoving] = useState<ClientDocument | null>(null);
+  const [viewing, setViewing] = useState<ClientDocument | null>(null);
 
   const tree = buildFolderTree(folders.data ?? []);
   // A folder deleted elsewhere (or not visible): fall back to the top level.
@@ -231,7 +234,7 @@ export function StaffFolderExplorer({ portal, clientId, current, onOpen }: { por
               {[...subfolders, ...foundFolders].map((f) => (
                 <FolderRow key={`f${f.id}`} folder={search ? { ...f, name: tree.path(f.id) } : f} tree={tree} onOpen={() => open(f.id)} onRename={() => setNaming({ mode: "rename", folder: f })} onDelete={() => void deleteFolder(f)} />
               ))}
-              {files.map((d) => <FileRow key={d.id} portal={portal} doc={d} showPath={!!search} onMove={() => setMoving(d)} />)}
+              {files.map((d) => <FileRow key={d.id} portal={portal} doc={d} showPath={!!search} onView={() => setViewing(d)} onMove={() => setMoving(d)} />)}
             </ul>
           )}
           {pages > 1 && (
@@ -256,6 +259,12 @@ export function StaffFolderExplorer({ portal, clientId, current, onOpen }: { por
         />
       )}
       {moving && <MoveFileDialog fileName={moving.file_name} currentFolderId={moving.folder_id} tree={tree} pending={move.isPending} onSubmit={submitMove} onClose={() => setMoving(null)} />}
+      <DocumentViewer
+        doc={viewing}
+        viewUrl={(id) => documentFileUrl.view(portal, id)}
+        downloadUrl={(id) => documentFileUrl.download(portal, id)}
+        onClose={() => setViewing(null)}
+      />
     </section>
   );
 }

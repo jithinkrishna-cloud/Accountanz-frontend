@@ -30,7 +30,10 @@ export interface NewRequest {
 }
 
 /** Same-origin URL; the browser sends the auth cookie, the API checks access and streams the private file. */
-export const documentFileUrl = (portal: StaffPortal, id: number) => `/api/${portal}/documents/${id}/file`;
+export const documentFileUrl = {
+  download: (portal: StaffPortal, id: number) => `/api/${portal}/documents/${id}/file`,
+  view: (portal: StaffPortal, id: number) => `/api/${portal}/documents/${id}/file?view=1`,
+};
 
 export const documentService = {
   list: (portal: StaffPortal, params: DocumentListParams) => api<Paged<ClientDocument>>(`/${portal}/documents`, { query: { ...params } }),

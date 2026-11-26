@@ -4,7 +4,6 @@ import { Download, FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { portalFileUrl } from "../services/client-portal-service";
 
 type Preview =
   | { kind: "loading" }
@@ -13,8 +12,17 @@ type Preview =
   | { kind: "text"; text: string; csv: boolean }
   | { kind: "none" };
 
+export type PreviewableDoc = { id: number; file_name: string; mime_type?: string | null };
+
 const ext = (name: string) => name.split(".").pop()?.toLowerCase() ?? "";
 const MAX_TEXT = 200_000;
+const PREVIEWABLE = new Set(["pdf", "png", "jpg", "jpeg", "gif", "webp", "csv", "txt", "json"]);
+
+export function canPreviewDoc(doc: { file_name: string; mime_type?: string | null }) {
+  const mime = (doc.mime_type ?? "").split(";")[0]!.trim().toLowerCase();
+  if (mime === "application/pdf" || /^image\/(png|jpe?g|gif|webp)$/.test(mime) || mime.startsWith("text/")) return true;
+  return PREVIEWABLE.has(ext(doc.file_name));
+}
 
 /** Splits one CSV line, respecting quoted fields. Good enough for previews. */
 function csvRow(line: string) {
@@ -66,25 +74,25 @@ function CsvTable({ text }: { text: string }) {
  * Loads the file into memory and shows it, so nothing is downloaded just to look at it. The viewer body is keyed by
  * document, so each file starts from "loading".
  */
-function usePreview({ id, file_name }: { id: number; file_name: string }) {
+function usePreview({ url, file_name }: { url: string; file_name: string }) {
   const [preview, setPreview] = useState<Preview>({ kind: "loading" });
   useEffect(() => {
-    let url: string | null = null;
+    let objectUrl: string | null = null;
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(portalFileUrl.view(id), { credentials: "same-origin" });
+        const res = await fetch(url, { credentials: "same-origin" });
         if (!res.ok) throw new Error(res.status === 404 ? "This file isn't available any more." : "Couldn't load this file.");
         const type = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
         const e = ext(file_name);
         const blob = await res.blob();
         if (cancelled) return;
         if (type === "application/pdf" || e === "pdf") {
-          url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
-          setPreview({ kind: "pdf", url });
+          objectUrl = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+          setPreview({ kind: "pdf", url: objectUrl });
         } else if (/^image\/(png|jpe?g|gif|webp)$/.test(type) || ["png", "jpg", "jpeg", "gif", "webp"].includes(e)) {
-          url = URL.createObjectURL(blob);
-          setPreview({ kind: "image", url });
+          objectUrl = URL.createObjectURL(blob);
+          setPreview({ kind: "image", url: objectUrl });
         } else if (type.startsWith("text/") || ["csv", "txt", "json"].includes(e)) {
           const text = (await blob.text()).slice(0, MAX_TEXT);
           if (!cancelled) setPreview({ kind: "text", text, csv: e === "csv" || type === "text/csv" });
@@ -97,14 +105,14 @@ function usePreview({ id, file_name }: { id: number; file_name: string }) {
     })();
     return () => {
       cancelled = true;
-      if (url) URL.revokeObjectURL(url);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [id, file_name]);
+  }, [url, file_name]);
   return preview;
 }
 
-function PreviewBody({ doc }: { doc: { id: number; file_name: string } }) {
-  const preview = usePreview(doc);
+function PreviewBody({ doc, viewUrl }: { doc: { file_name: string }; viewUrl: string }) {
+  const preview = usePreview({ url: viewUrl, file_name: doc.file_name });
   return (
         <div className="bg-muted/30 min-h-0 flex-1 overflow-hidden rounded-lg">
           {preview.kind === "loading" && (
@@ -132,7 +140,17 @@ function PreviewBody({ doc }: { doc: { id: number; file_name: string } }) {
 }
 
 /** View a document inside the app: PDFs, images, CSV and text files show here; other types offer a download. */
-export function DocumentViewer({ doc, onClose }: { doc: { id: number; file_name: string } | null; onClose: () => void }) {
+export function DocumentViewer({
+  doc,
+  viewUrl,
+  downloadUrl,
+  onClose,
+}: {
+  doc: PreviewableDoc | null;
+  viewUrl: (id: number) => string;
+  downloadUrl: (id: number) => string;
+  onClose: () => void;
+}) {
   return (
     <Dialog open={!!doc} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex h-[90vh] max-w-[calc(100%-2rem)] flex-col gap-3 sm:max-w-5xl">
@@ -143,11 +161,11 @@ export function DocumentViewer({ doc, onClose }: { doc: { id: number; file_name:
           </div>
           {doc && (
             <Button asChild size="sm" variant="outline">
-              <a href={portalFileUrl.document(doc.id)} download={doc.file_name}><Download className="size-4" /> Download</a>
+              <a href={downloadUrl(doc.id)} download={doc.file_name}><Download className="size-4" /> Download</a>
             </Button>
           )}
         </DialogHeader>
-        {doc && <PreviewBody key={doc.id} doc={doc} />}
+        {doc && <PreviewBody key={doc.id} doc={doc} viewUrl={viewUrl(doc.id)} />}
       </DialogContent>
     </Dialog>
   );

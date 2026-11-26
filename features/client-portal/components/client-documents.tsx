@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatPeriod, humanize, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePortalRequests } from "../hooks/use-client-portal";
+import { portalFileUrl } from "../services/client-portal-service";
 import type { PortalRequest } from "../types/client-portal.types";
 import { STAGE_OF, StagePill } from "./client-progress";
 import { CompanyGate } from "./company-gate";
@@ -129,7 +130,12 @@ function RequestsBody() {
           )}
         </ListBody>
       </Card>
-      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
+      <DocumentViewer
+        doc={viewing}
+        viewUrl={portalFileUrl.view}
+        downloadUrl={portalFileUrl.document}
+        onClose={() => setViewing(null)}
+      />
       <UploadDialog open={answering !== null} onOpenChange={(o) => !o && setAnswering(null)} request={answering} />
     </>
   );

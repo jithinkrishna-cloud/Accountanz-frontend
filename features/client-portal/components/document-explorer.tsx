@@ -363,7 +363,12 @@ export function DocumentExplorer() {
 
       <UploadDialog open={uploading} onOpenChange={setUploading} folder={here === null ? null : { id: here, path: herePath }} />
       {naming && <ClientFolderNameDialog mode={naming.mode} folder={naming.folder} parent={{ id: here, path: herePath }} onClose={() => setNaming(null)} />}
-      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
+      <DocumentViewer
+        doc={viewing}
+        viewUrl={portalFileUrl.view}
+        downloadUrl={portalFileUrl.document}
+        onClose={() => setViewing(null)}
+      />
       {sharing && <ShareDialog target={sharing} tree={tree} onClose={() => setSharing(null)} />}
       {moving && <MoveDialog doc={moving} tree={tree} onClose={() => setMoving(null)} />}
     </>

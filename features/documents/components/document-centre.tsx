@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
+import { DocumentViewer } from "@/features/client-portal/components/document-viewer";
 import { useStaffClientOptions } from "@/features/workspace/hooks/use-workspace";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatPeriod, humanize } from "@/lib/format";
@@ -60,16 +61,16 @@ function CancelRequestButton({ portal, request }: { portal: StaffPortal; request
   );
 }
 
-const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
+const docColumns = (portal: StaffPortal, onOpen: (doc: ClientDocument) => void): Column<ClientDocument>[] => [
   {
     key: "document",
     header: "Document",
     cell: (d) => (
       <div className="max-w-64">
-        <a href={documentFileUrl(portal, d.id)} target="_blank" rel="noopener" className="text-primary inline-flex max-w-full items-center gap-1.5 font-medium hover:underline">
+        <button type="button" onClick={() => onOpen(d)} className="text-primary inline-flex max-w-full items-center gap-1.5 font-medium hover:underline">
           <FileText className="size-4 shrink-0" aria-hidden />
           <span className="truncate">{d.file_name}</span>
-        </a>
+        </button>
         {d.folder_path && (
           <p className="text-muted-foreground flex items-center gap-1 truncate pl-5.5 text-xs" title={d.folder_path}>
             <Folder className="size-3 shrink-0" aria-hidden /> <span className="truncate">{d.folder_path}</span>
@@ -157,6 +158,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
   const [reqPage, setReqPage] = useState(1);
   const [requesting, setRequesting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [viewing, setViewing] = useState<ClientDocument | null>(null);
   // The folder open in the explorer (one client selected); null = the client's top level.
   const [folder, setFolder] = useState<number | null>(null);
   const docs = useDocuments(portal, { q: docQ, client_id: clientId, category, status, page: docPage });
@@ -227,7 +229,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
             />
           </div>
           <DataTable
-            columns={docColumns(portal)}
+            columns={docColumns(portal, setViewing)}
             rows={docs.data?.items}
             rowKey={(d) => d.id}
             isLoading={docs.isLoading}
@@ -243,6 +245,12 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
       </div>
       <RequestDocumentsDialog portal={portal} open={requesting} onOpenChange={setRequesting} />
       <UploadDocumentDialog portal={portal} open={uploading} onOpenChange={setUploading} />
+      <DocumentViewer
+        doc={viewing}
+        viewUrl={(id) => documentFileUrl.view(portal, id)}
+        downloadUrl={(id) => documentFileUrl.download(portal, id)}
+        onClose={() => setViewing(null)}
+      />
     </>
   );
 }
