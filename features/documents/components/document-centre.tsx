@@ -94,7 +94,7 @@ const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
   { key: "status", header: "Status", cell: (d) => <DocumentStatusCell portal={portal} doc={d} /> },
 ];
 
-const requestColumns = (portal: StaffPortal, openFolder?: (id: number) => void): Column<DocumentRequest>[] => [
+const requestColumns = (portal: StaffPortal, openFolder?: (folderId: number, clientId: number) => void): Column<DocumentRequest>[] => [
   { key: "request", header: "Request", cell: (r) => <span className="font-medium">{r.description}</span> },
   { key: "task", header: "Task", hideOnMobile: true, cell: (r) => <span className="text-muted-foreground">{r.task_title ?? "—"}</span> },
   { key: "client", header: "Client", cell: (r) => r.client_name },
@@ -108,7 +108,7 @@ const requestColumns = (portal: StaffPortal, openFolder?: (id: number) => void):
     cell: (r) => (
       <div className="flex justify-end gap-1">
         {openFolder && r.folder_id !== null && (
-          <Button variant="ghost" size="sm" onClick={() => openFolder(r.folder_id!)} aria-label={`Open the folder for: ${r.description}`}>
+          <Button variant="ghost" size="sm" onClick={() => openFolder(r.folder_id!, r.client_id)} aria-label={`Open the folder for: ${r.description}`}>
             <FolderOpen className="size-4" /> Folder
           </Button>
         )}
@@ -133,8 +133,10 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
   // The folder open in the explorer (one client selected); null = the client's top level.
   const [folder, setFolder] = useState<number | null>(null);
   const docs = useDocuments(portal, { q: docQ, client_id: clientId, category, status, page: docPage });
-  const openRequestFolder = (id: number) => {
-    setFolder(id);
+  // Opens a request's folder, switching to its client first when "All clients" is shown.
+  const openRequestFolder = (folderId: number, forClient: number) => {
+    if (clientId !== String(forClient)) { setClientId(String(forClient)); setDocPage(1); setReqPage(1); }
+    setFolder(folderId);
     document.getElementById("client-folders")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const requests = useDocumentRequests(portal, { q: reqQ, client_id: clientId, status: reqStatus, page: reqPage });
@@ -167,7 +169,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
             />
           </div>
           <DataTable
-            columns={requestColumns(portal, clientId ? openRequestFolder : undefined)}
+            columns={requestColumns(portal, openRequestFolder)}
             rows={requests.data?.items}
             rowKey={(r) => r.id}
             isLoading={requests.isLoading}
@@ -181,6 +183,23 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
         {clientId ? (
           <StaffFolderExplorer key={clientId} portal={portal} clientId={Number(clientId)} current={folder} onOpen={setFolder} />
         ) : (
+        <>
+        <Section title="Client folders" subtitle="Each client's documents, in folders. Open one to browse, create folders or upload.">
+          <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {(clients.data ?? []).map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => { setClientId(c.value); setFolder(null); setDocPage(1); setReqPage(1); }}
+                className="hover:bg-muted/60 flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors"
+              >
+                <Folder className="size-4 shrink-0 text-amber-500" aria-hidden />
+                <span className="truncate font-medium">{c.label}</span>
+              </button>
+            ))}
+            {clients.data?.length === 0 && <p className="text-muted-foreground col-span-full text-sm">No clients yet.</p>}
+          </div>
+        </Section>
         <Section title="Documents" subtitle="Stored privately. Only people with access to the client can open them.">
           <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
             <SearchInput value={docQ} onChange={(v) => { setDocQ(v); setDocPage(1); }} placeholder="Search documents" />
@@ -208,6 +227,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
             pagination={docs.data && { ...docs.data, onPageChange: setDocPage }}
           />
         </Section>
+        </>
         )}
       </div>
       <RequestDocumentsDialog portal={portal} open={requesting} onOpenChange={setRequesting} />
