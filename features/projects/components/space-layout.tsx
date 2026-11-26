@@ -81,12 +81,12 @@ function SpaceError({ spaceKey, error, onRetry }: { spaceKey: string; error: unk
   return <ErrorState error={error} onRetry={onRetry} />;
 }
 
-function ArchivedBanner({ spaceKey, canUnarchive }: { spaceKey: string; canUnarchive: boolean }) {
+function ArchivedBanner({ spaceKey, primary, canUnarchive }: { spaceKey: string; primary: boolean; canUnarchive: boolean }) {
   const unarchive = useUnarchiveSpace(spaceKey);
   return (
     <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
       <Archive className="size-4 shrink-0" aria-hidden />
-      <span>This space is archived. Unarchive it to make changes.</span>
+      <span>{primary ? "The primary client space is archived and restored automatically with the client's engagement" : "This space is archived. Unarchive it to make changes."}</span>
       {canUnarchive && (
         <Button
           size="sm"
@@ -148,7 +148,7 @@ function Inner({ spaceKey, children }: { spaceKey: string; children: React.React
           <Tabs space={s} isAdmin={value.isAdmin} />
         </div>
       </div>
-      {s.archived_at && <ArchivedBanner spaceKey={s.space_key} canUnarchive={value.isAdmin && s.kind !== "client_primary"} />}
+      {s.archived_at && <ArchivedBanner spaceKey={s.space_key} primary={s.kind === "client_primary"} canUnarchive={value.isAdmin && s.kind !== "client_primary"} />}
       {children}
       <ItemSheet number={itemNumber} onClose={() => setItem(null)} />
     </Ctx.Provider>

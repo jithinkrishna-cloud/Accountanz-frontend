@@ -36,6 +36,7 @@ export function SpaceLimitsPanel() {
   const [granting, setGranting] = useState(false);
   if (!limits) return null;
   const isSuper = me?.role === "super_admin";
+  const noPackage = !limits.base || !limits.effective;
 
   const revokeOverride = (o: EntitlementOverride) => {
     if (!window.confirm(`Revoke +${o.extra} ${LIMIT_LABELS[o.limit_type].toLowerCase()}? The limit drops back immediately.`)) return;
@@ -49,19 +50,23 @@ export function SpaceLimitsPanel() {
           <h2 className="text-sm font-semibold">Package limits</h2>
           <p className="text-muted-foreground text-xs">{limits.package_name ?? "No active package"}</p>
         </div>
-        {isSuper && <Button size="sm" variant="outline" onClick={() => setGranting(true)}><Plus className="size-4" /> Grant extra room</Button>}
+        {isSuper && !noPackage && <Button size="sm" variant="outline" onClick={() => setGranting(true)}><Plus className="size-4" /> Grant extra room</Button>}
       </div>
-      <dl className="grid gap-4 p-4 sm:grid-cols-2">
-        {([["Workspaces", "workspaces", "workspaces"], ["Staff", "staff", "staff"]] as const).map(([label, k, unit]) => (
-          <div key={k} className="rounded-lg border p-3">
-            <dt className="text-muted-foreground text-xs font-semibold">{label}</dt>
-            <dd className="mt-1 text-sm">
-              <span className="font-medium">{limits.usage[k]} of {value(limits.effective?.[k])} {unit}</span>
-              <span className="text-muted-foreground block text-xs">Package: {value(limits.base?.[k])}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {noPackage ? (
+        <p className="text-muted-foreground p-4 text-sm">This client has no active package</p>
+      ) : (
+        <dl className="grid gap-4 p-4 sm:grid-cols-2">
+          {([["Workspaces", "workspaces", "workspaces"], ["Staff", "staff", "staff"]] as const).map(([label, k, unit]) => (
+            <div key={k} className="rounded-lg border p-3">
+              <dt className="text-muted-foreground text-xs font-semibold">{label}</dt>
+              <dd className="mt-1 text-sm">
+                <span className="font-medium">{limits.usage[k]} of {value(limits.effective?.[k])} {unit}</span>
+                <span className="text-muted-foreground block text-xs">Package: {value(limits.base?.[k])}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {limits.overrides.length > 0 && (
         <ul className="divide-y border-t">
           {limits.overrides.map((o) => (
@@ -165,7 +170,7 @@ export function SyncIssuesPanel() {
           onClick={() =>
             void sync
               .mutateAsync()
-              .then((r) => toast.success(`Synced: ${r.added} added, ${r.removed} removed, ${r.issues} still blocked`))
+              .then((r) => toast.success(`Synced: ${r.added.length} added, ${r.removed.length} removed, ${r.issues.length} still blocked`))
               .catch((e) => applyApiError(e))
           }
         >
