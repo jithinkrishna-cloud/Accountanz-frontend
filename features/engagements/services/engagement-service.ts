@@ -17,6 +17,8 @@ export const engagementService = {
   get: (id: number) => api<Engagement>(`/admin/engagements/${id}`),
   create: (values: EngagementFormOutput & { activate_now?: boolean; service_ids?: number[] }) => api<Engagement>("/admin/engagements", { method: "POST", body: values }),
   update: (id: number, values: Omit<EngagementFormOutput, "client_id">) => api<Engagement>(`/admin/engagements/${id}`, { method: "PATCH", body: values }),
+  /** Draft, sent or accepted → active straight away (no agreement, no first invoice). */
+  activateNow: (id: number) => api<Engagement>(`/admin/engagements/${id}/activate-now`, { method: "POST" }),
   changeStatus: (id: number, to: EngagementStatus) =>
     api<{ engagement: Engagement; invoice: IssuedInvoice | null }>(`/admin/engagements/${id}/status`, { method: "POST", body: { to } }),
   /** Staff move the engagement to another package directly. */

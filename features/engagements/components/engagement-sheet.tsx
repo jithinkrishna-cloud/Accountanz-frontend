@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatINR, humanize } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useChangeEngagementStatus, useEngagement, useUploadAgreement } from "../hooks/use-engagements";
+import { useActivateNow, useChangeEngagementStatus, useEngagement, useUploadAgreement } from "../hooks/use-engagements";
 import { agreementUrl } from "../services/engagement-service";
 import { ENGAGEMENT_TRANSITIONS, type Engagement, type EngagementStatus } from "../types/engagement.types";
 import { EngagementFormDialog } from "./engagement-form-dialog";
@@ -78,6 +78,7 @@ function CheckItem({ done, children }: { done: boolean; children: React.ReactNod
 
 function Body({ row }: { row: Engagement }) {
   const status = useChangeEngagementStatus(row.id);
+  const activateNow = useActivateNow(row.id);
   const upload = useUploadAgreement(row.id);
   const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
@@ -250,6 +251,17 @@ function Body({ row }: { row: Engagement }) {
                         </Button>
                       ),
                     )}
+                  {row.status !== "active" && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={activateNow.isPending}
+                      title="Skip the remaining steps: active now, no signed agreement needed and no first invoice"
+                      onClick={() => void activateNow.mutateAsync().then(() => toast.success("Engagement active")).catch((e) => applyApiError(e))}
+                    >
+                      Activate now
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmEnd(true)}>
                     End
                   </Button>

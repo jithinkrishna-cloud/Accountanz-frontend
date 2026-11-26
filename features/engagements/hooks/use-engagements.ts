@@ -44,6 +44,14 @@ export function useChangeEngagementStatus(id: number) {
   });
 }
 
+export function useActivateNow(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => engagementService.activateNow(id),
+    onSuccess: (engagement) => afterChange(qc, engagement),
+  });
+}
+
 export function useChangePackage(id: number) {
   const qc = useQueryClient();
   return useMutation({
