@@ -154,14 +154,17 @@ export function SyncIssuesPanel() {
   const enabled = portalAdmin && space.kind === "client_primary";
   const { data: issues } = useSyncIssues(space.space_key, enabled);
   const sync = useSyncNow(space.space_key);
-  if (!enabled || !issues || issues.length === 0) return null;
+  if (!enabled) return null;
+  const list = issues ?? [];
 
   return (
     <section className="bg-card rounded-xl border shadow-xs">
       <div className="flex items-center justify-between gap-3 border-b p-4">
         <div>
-          <h2 className="text-sm font-semibold">Sync issues</h2>
-          <p className="text-muted-foreground text-xs">Assigned to this client but not added to the space.</p>
+          <h2 className="text-sm font-semibold">Client team sync</h2>
+          <p className="text-muted-foreground text-xs">
+            {list.length ? "Assigned to this client but not added to the space." : "Members follow the client's assigned team. No open issues."}
+          </p>
         </div>
         <SubmitButton
           size="sm"
@@ -178,7 +181,7 @@ export function SyncIssuesPanel() {
         </SubmitButton>
       </div>
       <ul className="divide-y">
-        {issues.map((i) => (
+        {list.map((i) => (
           <li key={i.user_id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
             <span>
               <span className="block font-medium">{i.full_name}</span>
