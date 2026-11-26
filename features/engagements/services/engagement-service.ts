@@ -15,7 +15,7 @@ export const agreementUrl = (id: number) => `/api/admin/engagements/${id}/agreem
 export const engagementService = {
   list: (params: EngagementListParams) => api<Paged<Engagement> & { counts: EngagementCounts }>("/admin/engagements", { query: { ...params } }),
   get: (id: number) => api<Engagement>(`/admin/engagements/${id}`),
-  create: (values: EngagementFormOutput & { activate_now?: boolean }) => api<Engagement>("/admin/engagements", { method: "POST", body: values }),
+  create: (values: EngagementFormOutput & { activate_now?: boolean; service_ids?: number[] }) => api<Engagement>("/admin/engagements", { method: "POST", body: values }),
   update: (id: number, values: Omit<EngagementFormOutput, "client_id">) => api<Engagement>(`/admin/engagements/${id}`, { method: "PATCH", body: values }),
   changeStatus: (id: number, to: EngagementStatus) =>
     api<{ engagement: Engagement; invoice: IssuedInvoice | null }>(`/admin/engagements/${id}/status`, { method: "POST", body: { to } }),

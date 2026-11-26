@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePackages } from "@/features/services/hooks/use-catalogue";
+import { Checkbox } from "@/components/ui/checkbox";
+import { usePackages, useServices } from "@/features/services/hooks/use-catalogue";
 import { applyApiError } from "@/lib/form-errors";
 import { formatINR } from "@/lib/format";
 import { useEngagementClientOptions, useSaveEngagement } from "../hooks/use-engagements";
@@ -39,6 +40,10 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
   const packages = usePackages();
   const clients = useEngagementClientOptions(open && !editing && !forClient);
   const packageLocked = editing && engagement.status !== "draft";
+  const services = useServices();
+  // Per-client services (create only): pre-ticked from the chosen package; edits are kept per package, so
+  // switching package starts again from that package's services.
+  const [picked, setPicked] = useState<{ pkg: string; ids: number[] } | null>(null);
 
   const {
     register,
@@ -53,11 +58,22 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
     if (open) reset(toValues(engagement, forClient?.id));
   }, [open, engagement, forClient?.id, reset]);
 
+  const packageId = useWatch({ control, name: "package_id" });
+  const packageServices = packages.data?.find((p) => String(p.id) === packageId)?.services.map((s) => s.id) ?? [];
+  const serviceIds = picked && picked.pkg === packageId ? picked.ids : packageServices;
+  const close = (o: boolean) => {
+    if (!o) setPicked(null);
+    onOpenChange(o);
+  };
+  const toggleService = (id: number, on: boolean) =>
+    setPicked({ pkg: packageId, ids: on ? [...serviceIds, id] : serviceIds.filter((x) => x !== id) });
+
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const row = await save.mutateAsync(forClient ? { ...values, activate_now: true } : values);
+      const extra = editing ? {} : { service_ids: serviceIds };
+      const row = await save.mutateAsync(forClient ? { ...values, ...extra, activate_now: true } : { ...values, ...extra });
       toast.success(editing ? "Engagement updated" : forClient ? "Package active" : "Draft engagement created");
-      onOpenChange(false);
+      close(false);
       onSaved?.(row);
     } catch (err) {
       applyApiError(err, setError, Object.keys(values));
@@ -67,7 +83,7 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
   const packageOptions = packages.data?.filter((p) => p.is_active || p.id === engagement?.package_id) ?? [];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit engagement" : forClient ? "Attach a package" : "New engagement"}</DialogTitle>
@@ -126,10 +142,25 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, 
           <FormField id="renewal_date" label="Renewal date" error={errors.renewal_date?.message}>
             <Input id="renewal_date" type="date" aria-invalid={!!errors.renewal_date} {...register("renewal_date")} />
           </FormField>
+          {!editing && packageId && (
+            <fieldset className="sm:col-span-2">
+              <legend className="mb-1 text-sm font-medium">Services</legend>
+              <p className="text-muted-foreground mb-2 text-xs">From the package. Untick or add services for this client only; the fee stays the package price.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {services.data?.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={serviceIds.includes(s.id)} onCheckedChange={(v) => toggleService(s.id, v === true)} />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+              {serviceIds.length === 0 && <p className="text-destructive mt-1 text-xs">Pick at least one service</p>}
+            </fieldset>
+          )}
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{forClient ? "Skip for now" : "Cancel"}</Button>
-          <SubmitButton form="engagement-form" pending={save.isPending}>{editing ? "Save changes" : forClient ? "Activate package" : "Create draft"}</SubmitButton>
+          <Button variant="outline" onClick={() => close(false)}>{forClient ? "Skip for now" : "Cancel"}</Button>
+          <SubmitButton form="engagement-form" pending={save.isPending} disabled={!editing && !!packageId && serviceIds.length === 0}>{editing ? "Save changes" : forClient ? "Activate package" : "Create draft"}</SubmitButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

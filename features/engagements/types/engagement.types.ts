@@ -17,6 +17,10 @@ export interface Engagement {
   client_status: string;
   package_id: number;
   package_name: string;
+  /** Effective services, "||"-separated (the client's own list, else the package's). */
+  service_names: string | null;
+  /** 1 when this client has its own service list instead of the package's. */
+  custom_services: number;
   monthly_fee: number;
   billing_cycle: "monthly" | "quarterly" | "yearly";
   status: EngagementStatus;

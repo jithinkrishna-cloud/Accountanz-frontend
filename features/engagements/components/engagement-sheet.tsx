@@ -149,6 +149,7 @@ function Body({ row }: { row: Engagement }) {
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <Detail label="Package">{row.package_name}</Detail>
+            <Detail label={row.custom_services ? "Services (custom for this client)" : "Services"}>{row.service_names ? row.service_names.split("||").join(", ") : "—"}</Detail>
             <Detail label="Fee">
               <span className="tabular-nums">{formatINR(row.monthly_fee)}</span>
               <span className="text-muted-foreground">/mo, billed {row.billing_cycle}</span>
