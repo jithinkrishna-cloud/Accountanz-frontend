@@ -38,6 +38,7 @@ export const projectService = {
   keyAvailable: (key: string) => api<{ key: string; available: boolean }>("/projects/key-available", { query: { key } }),
   createSpace: (body: NewSpace) => api<Space>("/projects", { method: "POST", body }),
   clientSpace: (clientId: number) => api<ClientSpaceInfo>("/projects/client-space", { query: { client_id: clientId } }),
+  provisionClientSpace: (clientId: number) => api<Space>("/projects/client-space/provision", { method: "POST", body: { client_id: clientId } }),
   lookup: (key: string) => api<SpaceLookup>(`/projects/lookup/${encodeURIComponent(key)}`),
   space: (key: string) => api<SpaceDetail>(base(key)),
   updateSpace: (key: string, body: { name?: string; description?: string | null }) => api<SpaceDetail>(base(key), { method: "PATCH", body }),

@@ -47,6 +47,14 @@ export function useCreateSpace() {
   });
 }
 
+export function useProvisionClientSpace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (clientId: number) => s.provisionClientSpace(clientId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: PK.all }),
+  });
+}
+
 export function useUpdateSpace(key: string) {
   const qc = useQueryClient();
   return useMutation({
