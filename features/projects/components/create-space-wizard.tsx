@@ -109,7 +109,7 @@ function ClientSpacePanel({ clientId, isAdmin, onBlockedChange }: { clientId: nu
         </p>
       )}
       {isAdmin && atLimit && d.usage && (
-        <p className="text-destructive">The {d.usage.package_name} package allows {d.usage.limit} client workspaces. Archive one or ask a Super admin for more room.</p>
+        <p className="text-destructive">The {d.usage.package_name} package allows {d.usage.limit} client workspace{d.usage.limit === 1 ? "" : "s"}. Archive one or ask a Super admin for more room.</p>
       )}
     </div>
   );
