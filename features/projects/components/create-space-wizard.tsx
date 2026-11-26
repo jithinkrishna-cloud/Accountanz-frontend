@@ -102,6 +102,7 @@ function ClientSpacePanel({ clientId, isAdmin, onBlockedChange }: { clientId: nu
       ) : (
         <p className="text-muted-foreground">This client has no primary space.</p>
       )}
+      {isAdmin && !d.usage && p && <p className="text-destructive">This client has no active package</p>}
       {isAdmin && d.usage && (
         <p className="text-muted-foreground">
           {d.usage.used} of {d.usage.limit ?? "Unlimited"} client spaces used
