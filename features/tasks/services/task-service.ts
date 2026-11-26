@@ -34,7 +34,8 @@ const toBody = (v: TaskFormOutput) => ({
 export const taskService = {
   list: (portal: TaskPortal, params: TaskListParams) => api<Paged<TaskListItem> & { counts: TaskViewCounts }>(`/${portal}/tasks`, { query: { ...params } }),
   /** Accountant portal: clients with tasks in this scope, with open / overdue counts. */
-  clients: (scope: "mine" | "clients") => api<{ items: TaskClientSummary[] }>("/team/tasks/clients", { query: { scope } }).then((r) => r.items),
+  clients: (scope: "mine" | "clients", portal: TaskPortal = "team") =>
+    api<{ items: TaskClientSummary[] }>(`/${portal}/tasks/clients`, { query: portal === "team" ? { scope } : {} }).then((r) => r.items),
   options: (portal: TaskPortal, clientId?: number) => api<TaskOptions>(`/${portal}/tasks/options`, { query: { client_id: clientId } }),
   get: (portal: TaskPortal, id: number) => api<TaskDetail>(`/${portal}/tasks/${id}`),
   create: (portal: TaskPortal, v: TaskFormOutput) => api<TaskDetail>(`/${portal}/tasks`, { method: "POST", body: toBody(v) }),

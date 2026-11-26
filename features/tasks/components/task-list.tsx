@@ -96,8 +96,8 @@ const columns = (portal: TaskPortal, showClient = true): Column<TaskListItem>[] 
 ];
 
 /** My Tasks client navigation: all clients, then each client with its open and overdue counts. */
-function ClientNav({ scope, value, onChange }: { scope: "mine" | "clients"; value?: number; onChange: (id?: number) => void }) {
-  const clients = useTaskClients(scope);
+function ClientNav({ scope, value, onChange, portal }: { scope: "mine" | "clients"; value?: number; onChange: (id?: number) => void; portal: TaskPortal }) {
+  const clients = useTaskClients(scope, portal);
   const rows = clients.data ?? [];
   const open = rows.reduce((n, c) => n + c.open, 0);
   const overdue = rows.reduce((n, c) => n + c.overdue, 0);
@@ -121,7 +121,7 @@ function ClientNav({ scope, value, onChange }: { scope: "mine" | "clients"; valu
     </li>
   );
   return (
-    <nav aria-label="Clients" className="bg-card rounded-xl border p-2 shadow-xs lg:sticky lg:top-20 lg:self-start">
+    <nav aria-label="Clients" className="bg-card rounded-xl border p-2 shadow-xs lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto">
       <p className="text-muted-foreground hidden px-3 pt-1 pb-2 text-xs font-medium tracking-wide uppercase lg:block">Clients</p>
       <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
         {item("all", "All clients", value === undefined, () => onChange(undefined), { open, overdue })}
@@ -150,7 +150,7 @@ export function TaskList({ portal = "admin" }: { portal?: TaskPortal }) {
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
-  const query = useTasks({ q, status, source, page, view: view === "all" ? undefined : view, ...(grouped ? { group: "client" as const, pageSize: 100 } : {}), scope: portal === "team" ? scope : undefined, client_id: portal === "team" ? clientId : undefined }, portal);
+  const query = useTasks({ q, status, source, page, view: view === "all" ? undefined : view, ...(grouped && !clientId ? { group: "client" as const, pageSize: 100 } : {}), scope: portal === "team" ? scope : undefined, client_id: clientId }, portal);
   const filtered = !!(q || status || source || view !== "all");
 
   const header =
@@ -192,20 +192,20 @@ export function TaskList({ portal = "admin" }: { portal?: TaskPortal }) {
         </div>
       )}
       <ViewTiles value={view} counts={query.data?.counts} onChange={(v) => { setView(v); setStatus(undefined); setPage(1); }} />
-      <div className={cn(portal === "team" && "grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]")}>
-      {portal === "team" && <ClientNav scope={scope} value={clientId} onChange={(id) => { setClientId(id); setPage(1); }} />}
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <ClientNav portal={portal} scope={scope} value={clientId} onChange={(id) => { setClientId(id); setPage(1); }} />
       <div className="bg-card min-w-0 rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search tasks" />
           <FilterSelect allLabel="All statuses" value={status} onChange={(v) => { setStatus(v as TaskStatus | undefined); setPage(1); }} options={TASK_STATUSES.map((s) => ({ value: s, label: humanize(s) }))} />
-          {portal === "admin" && (
+          {portal === "admin" && !clientId && (
             <Button variant={grouped ? "secondary" : "outline"} className="shrink-0" aria-pressed={grouped} onClick={() => { setGrouped((g) => !g); setPage(1); }}>
               {grouped ? "Grouped by client" : "Group by client"}
             </Button>
           )}
           <FilterSelect allLabel="All sources" value={source} onChange={(v) => { setSource(v as TaskSource | undefined); setPage(1); }} options={TASK_SOURCES.map((s) => ({ value: s, label: SOURCE_LABEL[s] }))} />
         </div>
-        {grouped ? (
+        {grouped && !clientId ? (
           <GroupedTaskTable
             columns={columns(portal, false)}
             rows={query.data?.items}
