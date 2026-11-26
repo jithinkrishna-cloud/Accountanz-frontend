@@ -12,9 +12,14 @@ export interface TaskListParams {
   source?: TaskSource;
   scope?: "mine" | "clients";
   client_id?: number;
+  view?: TaskView;
   pageSize?: number;
   page?: number;
 }
+
+/** Quick views: what needs attention first. */
+export type TaskView = "open" | "overdue" | "due_week" | "review" | "done";
+export type TaskViewCounts = Record<TaskView, number>;
 
 const toBody = (v: TaskFormOutput) => ({
   ...v,
@@ -26,7 +31,7 @@ const toBody = (v: TaskFormOutput) => ({
 });
 
 export const taskService = {
-  list: (portal: TaskPortal, params: TaskListParams) => api<Paged<TaskListItem>>(`/${portal}/tasks`, { query: { ...params } }),
+  list: (portal: TaskPortal, params: TaskListParams) => api<Paged<TaskListItem> & { counts: TaskViewCounts }>(`/${portal}/tasks`, { query: { ...params } }),
   /** Accountant portal: clients with tasks in this scope, with open / overdue counts. */
   clients: (scope: "mine" | "clients") => api<{ items: TaskClientSummary[] }>("/team/tasks/clients", { query: { scope } }).then((r) => r.items),
   options: (portal: TaskPortal, clientId?: number) => api<TaskOptions>(`/${portal}/tasks/options`, { query: { client_id: clientId } }),
