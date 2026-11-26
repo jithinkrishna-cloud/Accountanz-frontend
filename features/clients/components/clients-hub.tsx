@@ -3,18 +3,16 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { EngagementList } from "@/features/engagements/components/engagement-list";
-import { OnboardingList } from "@/features/onboarding/components/onboarding-list";
 import { cn } from "@/lib/utils";
 import { ClientList } from "./client-list";
 
 export const CLIENT_TABS = [
   { id: "clients", label: "Clients", description: "Every business Accountanz manages, from first lead to exit." },
-  { id: "leads", label: "Leads", description: "Businesses you are trying to win, from first contact to an accepted proposal." },
   { id: "engagements", label: "Engagements", description: "Service agreements from draft to active, with the signed agreement on file." },
 ] as const;
 export type ClientTab = (typeof CLIENT_TABS)[number]["id"];
 
-/** Admin → Clients: one place for clients, leads (onboarding) and engagements (packages and services). */
+/** Admin → Clients: one place for clients and engagements (packages and services). */
 export function ClientsHub({ tab, openEngagementId }: { tab: ClientTab; openEngagementId?: number }) {
   const current = CLIENT_TABS.find((t) => t.id === tab) ?? CLIENT_TABS[0];
   return (
@@ -36,7 +34,6 @@ export function ClientsHub({ tab, openEngagementId }: { tab: ClientTab; openEnga
         ))}
       </nav>
       {current.id === "clients" && <ClientList embedded />}
-      {current.id === "leads" && <OnboardingList embedded />}
       {current.id === "engagements" && <EngagementList embedded initialOpenId={openEngagementId} />}
     </>
   );

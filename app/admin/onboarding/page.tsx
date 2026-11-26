@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { OnboardingList } from "@/features/onboarding/components/onboarding-list";
 
-/** Leads now live under Clients. Kept so old links keep working. */
+/** Portal sign-ups and their proposals. Not in the sidebar any more; kept so notification and dashboard links keep working. */
 export default function OnboardingPage() {
-  redirect("/admin/clients?tab=leads");
+  return <OnboardingList />;
 }

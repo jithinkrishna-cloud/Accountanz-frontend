@@ -70,7 +70,7 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
       // (signed agreement → activate) → Clients (served).
       label: "Clients",
       items: [
-        // Clients holds three tabs: Clients, Leads (onboarding) and Engagements (packages and services).
+        // Clients holds two tabs: Clients and Engagements (packages and services).
         { label: "Clients", href: "/admin/clients", icon: Building2 },
         // Clients asking for a specific accountant from Explore in their portal.
         { label: "Accountant Requests", href: "/admin/accountant-requests", icon: UserSearch },

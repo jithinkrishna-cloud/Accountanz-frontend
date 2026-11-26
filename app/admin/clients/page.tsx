@@ -2,7 +2,7 @@ import { ClientsHub, type ClientTab } from "@/features/clients/components/client
 
 // Kept here, not imported from the client component: values exported from a "use client" module are
 // only references on the server, so they can't be read in a server component.
-const TABS: readonly ClientTab[] = ["clients", "leads", "engagements"];
+const TABS: readonly ClientTab[] = ["clients", "engagements"];
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[]; open?: string | string[] }> }) {
