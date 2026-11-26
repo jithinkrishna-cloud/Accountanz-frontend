@@ -96,10 +96,11 @@ export interface SyncIssue {
   created_at: string;
 }
 
+/** POST /sync: user ids added and removed, and who is still blocked. */
 export interface SyncResult {
-  added: number;
-  removed: number;
-  issues: number;
+  added: number[];
+  removed: number[];
+  issues: { userId: number; reason: SyncIssueReason }[];
 }
 
 export interface Status {
