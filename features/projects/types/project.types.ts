@@ -120,6 +120,12 @@ export interface ItemDetail extends Item {
   attachments: Attachment[];
 }
 
+export interface Watcher {
+  user_id: number;
+  full_name: string;
+  email: string;
+}
+
 export interface Comment {
   id: number;
   author_id: number | null;

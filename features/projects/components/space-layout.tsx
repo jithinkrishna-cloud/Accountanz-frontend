@@ -27,7 +27,7 @@ export const useSpaceCtx = () => {
   return v;
 };
 
-function Tabs({ space }: { space: SpaceDetail }) {
+function Tabs({ space, isAdmin }: { space: SpaceDetail; isAdmin: boolean }) {
   const pathname = usePathname();
   const base = `/projects/${space.space_key}`;
   const tabs = [
@@ -35,6 +35,7 @@ function Tabs({ space }: { space: SpaceDetail }) {
     { href: `${base}/board`, label: "Board" },
     ...(space.template === "scrum" ? [{ href: `${base}/backlog`, label: "Backlog" }] : []),
     { href: `${base}/list`, label: "List" },
+    ...(isAdmin ? [{ href: `${base}/settings`, label: "Settings", icon: true }] : []),
   ];
   return (
     <nav className="-mb-px flex gap-1 overflow-x-auto border-b" aria-label="Space views">
@@ -45,8 +46,9 @@ function Tabs({ space }: { space: SpaceDetail }) {
             key={t.href}
             href={t.href}
             aria-current={active ? "page" : undefined}
-            className={cn("border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors", active ? "border-primary text-primary font-medium" : "text-muted-foreground hover:text-foreground border-transparent")}
+            className={cn("flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors", active ? "border-primary text-primary font-medium" : "text-muted-foreground hover:text-foreground border-transparent")}
           >
+            {"icon" in t && <Settings className="size-3.5" aria-hidden />}
             {t.label}
           </Link>
         );
@@ -95,15 +97,10 @@ function Inner({ spaceKey, children }: { spaceKey: string; children: React.React
             <Button variant="outline" size="sm" asChild>
               <Link href={`${base}/settings/access`}><Users className="size-4" /> People</Link>
             </Button>
-            {value.isAdmin && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`${base}/settings`}><Settings className="size-4" /> Settings</Link>
-              </Button>
-            )}
           </div>
         </div>
         <div className="mt-3">
-          <Tabs space={s} />
+          <Tabs space={s} isAdmin={value.isAdmin} />
         </div>
       </div>
       {children}

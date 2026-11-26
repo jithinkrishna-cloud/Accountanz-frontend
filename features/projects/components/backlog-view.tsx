@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useCreateSprint, useDeleteSprint, useItems, useMoveItem, useSprints, useStartSprint, useUpdateItem } from "../hooks/use-projects";
 import type { Item, Sprint } from "../types/project.types";
+import { InvitePeopleButton } from "./invite-people";
 import { InlineSelect } from "./item-fields";
 import { AssigneeFilter, PriorityIcon, TypeIcon, UserAvatar } from "./project-ui";
 import { QuickCreate } from "./quick-create";
@@ -214,7 +215,10 @@ export function BacklogView() {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput value={q} onChange={setQ} placeholder="Search backlog" className="sm:w-56" />
-        <AssigneeFilter members={members} value={assignees} onChange={setAssignees} />
+        <div className="flex items-center gap-2">
+          <AssigneeFilter members={members} value={assignees} onChange={setAssignees} />
+          <InvitePeopleButton />
+        </div>
         {isAdmin && (
           <SubmitButton variant="outline" size="sm" className="ml-auto" pending={createSprint.isPending} onClick={() => void createSprint.mutateAsync({}).catch((e) => applyApiError(e))}>
             <Plus className="size-4" /> Create sprint

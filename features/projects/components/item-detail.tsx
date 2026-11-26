@@ -36,6 +36,7 @@ import { DetailRow, InlineInput, InlineSelect } from "./item-fields";
 import { LogTimeDialog, TimeTrackingBar, WorklogList } from "./time-tracking";
 import { formatBytes, PriorityIcon, StatusPill, TypeIcon, UserAvatar } from "./project-ui";
 import { useSpaceCtx } from "./space-layout";
+import { WatchButton } from "./watch-button";
 
 const MAX_ATTACHMENTS = 10;
 
@@ -384,10 +385,17 @@ function DetailsPanel({ item, save }: { item: ItemDetail; save: (p: ItemPatch) =
   const withCurrent = (id: number | null, name: string | null) =>
     id && !members.some((m) => m.user_id === id) ? [...memberOpts, { value: id, label: <span>{name ?? "Former member"} (not in space)</span> }] : memberOpts;
   const openSprints = (sprints.data ?? []).filter((s) => s.status !== "completed");
+  // A space linked to a client only offers that client; keep an older, different value visible.
+  const clientOpts = space.client_id
+    ? [
+        { value: space.client_id, label: space.client_name ?? "Client" },
+        ...(item.client_id && item.client_id !== space.client_id ? [{ value: item.client_id, label: item.client_name ?? "Other client" }] : []),
+      ]
+    : (clients.data ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   return (
     <div className="divide-y rounded-xl border">
-      <div className="p-4">
+      <div className="flex items-center gap-2 p-4">
         <InlineSelect
           label="Status"
           value={item.status_id}
@@ -395,6 +403,9 @@ function DetailsPanel({ item, save }: { item: ItemDetail; save: (p: ItemPatch) =
           onChange={(v) => v && void save({ status_id: v })}
           className="bg-primary/10 text-primary w-auto min-w-36 font-semibold"
         />
+        <span className="ml-auto">
+          <WatchButton number={item.number} />
+        </span>
       </div>
       <div className="p-4">
         <p className="mb-2 text-sm font-semibold">Details</p>
@@ -457,7 +468,7 @@ function DetailsPanel({ item, save }: { item: ItemDetail; save: (p: ItemPatch) =
         </DetailRow>
         <DetailRow label="Start date"><InlineInput label="Start date" type="date" value={item.start_date} display={formatDate(item.start_date)} onSave={(v) => save({ start_date: v })} /></DetailRow>
         <DetailRow label="Due date"><InlineInput label="Due date" type="date" value={item.due_date} display={formatDate(item.due_date)} onSave={(v) => save({ due_date: v })} /></DetailRow>
-        <DetailRow label="Client"><InlineSelect label="Client" value={item.client_id} noneLabel="No client" options={(clients.data ?? []).map((c) => ({ value: c.id, label: c.name }))} onChange={(v) => void save({ client_id: v })} /></DetailRow>
+        <DetailRow label="Client"><InlineSelect label="Client" value={item.client_id} noneLabel="No client" options={clientOpts} onChange={(v) => void save({ client_id: v })} /></DetailRow>
       </div>
       <div className="text-muted-foreground space-y-1 p-4 text-xs">
         <p>Created {formatLocalDateTime(item.created_at)}</p>

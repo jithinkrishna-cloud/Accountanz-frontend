@@ -10,6 +10,7 @@ import { formatLocalDateTime, parseUtc } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSummary } from "../hooks/use-projects";
 import { ITEM_TYPE_LABELS, PRIORITIES, SPACE_ROLE_LABELS, type StatusCategory, type Summary } from "../types/project.types";
+import { InvitePeopleButton } from "./invite-people";
 import { AssigneeFilter, PriorityIcon, StatusPill, TypeIcon, UserAvatar } from "./project-ui";
 import { useSpaceCtx } from "./space-layout";
 
@@ -380,6 +381,7 @@ export function SpaceSummary() {
             </span>
           )}
           <AssigneeFilter members={members} value={focused ? [String(focused)] : []} onChange={(v) => { const last = v.filter((x) => x !== "unassigned").pop(); setFocused(last ? Number(last) : undefined); }} />
+          <InvitePeopleButton />
         </div>
       </div>
 

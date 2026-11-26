@@ -12,7 +12,20 @@ import { ITEM_TYPE_LABELS, type ItemType, type NewItem } from "../types/project.
 import { TypeIcon } from "./project-ui";
 
 /** Inline "+ Create" row: type + summary, Enter to create, stays open for the next one. */
-export function QuickCreate({ spaceKey, defaults, label = "Create", className }: { spaceKey: string; defaults?: Omit<NewItem, "title">; label?: string; className?: string }) {
+export function QuickCreate({
+  spaceKey,
+  defaults,
+  label = "Create",
+  className,
+  compact,
+}: {
+  spaceKey: string;
+  defaults?: Omit<NewItem, "title">;
+  label?: string;
+  className?: string;
+  /** Icon-only trigger (label kept for screen readers). */
+  compact?: boolean;
+}) {
   const create = useCreateItem(spaceKey);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -20,8 +33,8 @@ export function QuickCreate({ spaceKey, defaults, label = "Create", className }:
 
   if (!open) {
     return (
-      <Button variant="ghost" size="sm" className={className ?? "text-muted-foreground w-full justify-start"} onClick={() => setOpen(true)}>
-        <Plus className="size-4" /> {label}
+      <Button variant="ghost" size="sm" className={className ?? "text-muted-foreground w-full justify-start"} onClick={() => setOpen(true)} aria-label={compact ? label : undefined}>
+        <Plus className="size-4" /> {!compact && label}
       </Button>
     );
   }

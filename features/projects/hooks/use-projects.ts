@@ -100,7 +100,10 @@ export function useMoveItem(key: string) {
 }
 export const useDeleteItem = (key: string) => useSpaceMutation(key, (n: number) => s.deleteItem(key, n));
 
-export const useAddComment = (key: string, n: number) => useSpaceMutation(key, (body: string) => s.addComment(key, n, body));
+export const useWatchers = (key: string, n: number) => useQuery({ queryKey: PK.part(key, "watchers", n), queryFn: () => s.watchers(key, n) });
+export const useAddWatcher = (key: string, n: number) => useSpaceMutation(key, (userId: number) => s.addWatcher(key, n, userId));
+export const useRemoveWatcher = (key: string, n: number) => useSpaceMutation(key, (userId: number) => s.removeWatcher(key, n, userId));
+export const useAddComment =(key: string, n: number) => useSpaceMutation(key, (body: string) => s.addComment(key, n, body));
 export const useEditComment = (key: string, n: number) => useSpaceMutation(key, (v: { id: number; body: string }) => s.editComment(key, n, v.id, v.body));
 export const useDeleteComment = (key: string, n: number) => useSpaceMutation(key, (id: number) => s.deleteComment(key, n, id));
 export const useUploadAttachment = (key: string, n: number) => useSpaceMutation(key, (file: File) => s.uploadAttachment(key, n, file));

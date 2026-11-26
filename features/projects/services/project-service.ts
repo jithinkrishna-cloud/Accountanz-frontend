@@ -18,6 +18,7 @@ import type {
   StatusCategory,
   Summary,
   Template,
+  Watcher,
   Worklog,
 } from "../types/project.types";
 
@@ -69,6 +70,9 @@ export const projectService = {
   addWorklog: (key: string, n: number, body: { minutes: number; work_date: string; note: string | null }) => items(api<Items<Worklog>>(`${base(key)}/items/${n}/worklogs`, { method: "POST", body })),
   deleteWorklog: (key: string, n: number, id: number) => items(api<Items<Worklog>>(`${base(key)}/items/${n}/worklogs/${id}`, { method: "DELETE" })),
   activity: (key: string, n: number) => items(api<Items<Activity>>(`${base(key)}/items/${n}/activity`)),
+  watchers: (key: string, n: number) => items(api<Items<Watcher>>(`${base(key)}/items/${n}/watchers`)),
+  addWatcher: (key: string, n: number, userId: number) => items(api<Items<Watcher>>(`${base(key)}/items/${n}/watchers/${userId}`, { method: "PUT" })),
+  removeWatcher: (key: string, n: number, userId: number) => items(api<Items<Watcher>>(`${base(key)}/items/${n}/watchers/${userId}`, { method: "DELETE" })),
   comments: (key: string, n: number) => items(api<Items<Comment>>(`${base(key)}/items/${n}/comments`)),
   addComment: (key: string, n: number, body: string) => items(api<Items<Comment>>(`${base(key)}/items/${n}/comments`, { method: "POST", body: { body } })),
   editComment: (key: string, n: number, id: number, body: string) => items(api<Items<Comment>>(`${base(key)}/items/${n}/comments/${id}`, { method: "PATCH", body: { body } })),
