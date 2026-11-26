@@ -90,6 +90,8 @@ function ClientSpacePanel({ clientId, isAdmin, onBlockedChange }: { clientId: nu
         ) : (
           <p>{NO_ACCESS}</p>
         )
+      ) : isAdmin && !d.usage ? (
+        <p className="text-destructive">This client has no active package</p>
       ) : isAdmin && d.can_provision_primary ? (
         <div className="flex items-center justify-between gap-3">
           <p>This client has no primary space yet.</p>
