@@ -15,6 +15,7 @@ import type { PortalRole } from "@/types/auth";
 import { useChangeRole, useRemoveMember } from "../hooks/use-projects";
 import { SPACE_ROLE_LABELS, type SpaceRole } from "../types/project.types";
 import { AddPeopleDialog } from "./invite-people";
+import { SpaceLimitsPanel, SyncIssuesPanel } from "./space-limits";
 import { UserAvatar } from "./project-ui";
 import { useSpaceCtx } from "./space-layout";
 
@@ -35,6 +36,10 @@ export function AccessSettings() {
         description={isAdmin ? "Add Accountanz staff to this space and choose their role." : "People in this space. Ask an Administrator to add someone."}
         actions={isAdmin && <Button onClick={() => setAdding(true)}><UserPlus className="size-4" /> Add people</Button>}
       />
+      <div className="mb-4 grid gap-4">
+        <SpaceLimitsPanel />
+        <SyncIssuesPanel />
+      </div>
       <div className="bg-card rounded-xl border shadow-xs">
         <div className="border-b p-4">
           <SearchInput value={q} onChange={setQ} placeholder="Search people" />
