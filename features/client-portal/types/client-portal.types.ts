@@ -70,6 +70,8 @@ export interface PortalFolder {
   id: number;
   parent_id: number | null;
   name: string;
+  /** 1 = made by the accounting team (e.g. a document request folder): the team sees it and everything in it. */
+  staff_folder: 0 | 1;
   created_at: string;
   /** Accountants it is shared with directly (subfolders inherit). Empty = private to the company. */
   shared_with: { user_id: number; full_name: string }[];

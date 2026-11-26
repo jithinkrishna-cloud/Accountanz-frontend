@@ -3,7 +3,6 @@
 import { ChevronRight, Download, Eye, FileText, Folder, FolderInput, FolderPlus, Home, Lock, MoreHorizontal, Pencil, Search, Share2, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { FormField } from "@/components/shared/form-field";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buildFolderTree, FolderNameDialog, formatSize, MoveFileDialog } from "@/features/documents/components/folder-kit";
 import { CATEGORY_LABELS, type DocumentCategory } from "@/features/documents/types/document.types";
 import { ApiError } from "@/lib/api-client";
 import { formatDate, formatPeriod } from "@/lib/format";
@@ -27,51 +27,30 @@ import { UploadDialog } from "./upload-dialog";
 
 const DOC_STATUS_LABEL = { new: "Received", reviewed: "Reviewed", rejected: "Rejected" } as const;
 
-const formatSize = (bytes: number | null) => {
-  if (!bytes) return null;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-};
-
-/** Folder tree helpers over the flat list the API returns. */
+/** Folder tree helpers over the flat list the API returns, plus who can see each folder. */
 function buildTree(folders: PortalFolder[]) {
-  const byId = new Map(folders.map((f) => [f.id, f]));
-  const chain = (id: number | null): PortalFolder[] => {
-    const out: PortalFolder[] = [];
-    for (let f = id ? byId.get(id) : undefined; f && out.length < 500; f = f.parent_id ? byId.get(f.parent_id) : undefined) out.unshift(f);
-    return out;
-  };
-  const children = (id: number | null) => folders.filter((f) => f.parent_id === id).sort((a, b) => a.name.localeCompare(b.name));
-  const path = (id: number | null) => chain(id).map((f) => f.name).join(" / ");
-  /** Depth-first list for pickers: [folder, depth]. */
-  const flat = (): [PortalFolder, number][] => {
-    const out: [PortalFolder, number][] = [];
-    const walk = (parent: number | null, depth: number) => {
-      for (const f of children(parent)) {
-        out.push([f, depth]);
-        walk(f.id, depth + 1);
-      }
-    };
-    walk(null, 0);
-    return out;
-  };
-  /** Who can see a folder: people it's shared with directly, plus people a parent folder is shared with. */
+  const base = buildFolderTree(folders);
+  /**
+   * Who can see a folder: people it's shared with directly, plus people a parent folder is shared with. A folder
+   * made by the accounting team (or inside one) is visible to the whole team: `team`.
+   */
   const access = (id: number) => {
-    const direct = byId.get(id)?.shared_with ?? [];
+    const direct = base.byId.get(id)?.shared_with ?? [];
     const inherited: { user_id: number; full_name: string; via: string }[] = [];
-    for (const parent of chain(id).slice(0, -1)) {
+    for (const parent of base.chain(id).slice(0, -1)) {
       for (const p of parent.shared_with) if (!direct.some((d) => d.user_id === p.user_id) && !inherited.some((i) => i.user_id === p.user_id)) inherited.push({ ...p, via: parent.name });
     }
-    return { direct, inherited, shared: direct.length + inherited.length > 0 };
+    const team = base.inTeamTree(id);
+    return { direct, inherited, team, shared: team || direct.length + inherited.length > 0 };
   };
-  return { byId, chain, children, path, flat, access };
+  return { ...base, access };
 }
 
 const firstNames = (people: { full_name: string }[]) => people.map((p) => p.full_name.split(" ")[0]).join(", ");
 
 /** "Shared with Arun, Priya" / "Private" — the one-line sharing status shown under a folder. */
 function AccessLine({ access }: { access: ReturnType<ReturnType<typeof buildTree>["access"]> }) {
+  if (access.team) return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> Team folder · your accounting team can see it</span>;
   if (!access.shared) return <span className="inline-flex items-center gap-1"><Lock className="size-3" aria-hidden /> Private</span>;
   const all = [...access.direct, ...access.inherited];
   return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> Shared with {firstNames(all)}</span>;
@@ -156,94 +135,28 @@ function ShareDialog({ target, tree, onClose }: { target: ShareTarget; tree: Ret
   );
 }
 
-function FolderNameDialog({ mode, folder, parent, onClose }: { mode: "create" | "rename"; folder?: PortalFolder; parent: { id: number | null; path: string }; onClose: () => void }) {
+function ClientFolderNameDialog({ mode, folder, parent, onClose }: { mode: "create" | "rename"; folder?: PortalFolder; parent: { id: number | null; path: string }; onClose: () => void }) {
   const { create, rename } = useFolderActions();
-  const [name, setName] = useState(folder?.name ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const pending = create.isPending || rename.isPending;
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return setError("Enter a folder name");
-    if (/[\\/]/.test(trimmed)) return setError("Folder names can't contain / or \\");
-    try {
-      if (mode === "create") await create.mutateAsync({ name: trimmed, parent_id: parent.id });
-      else await rename.mutateAsync({ id: folder!.id, name: trimmed });
-      toast.success(mode === "create" ? `Folder "${trimmed}" created` : "Folder renamed");
-      onClose();
-    } catch (err) {
-      setError(err instanceof ApiError ? (err.fieldErrors.name?.[0] ?? err.message) : "Something went wrong");
-    }
+  const submit = async (name: string) => {
+    if (mode === "create") await create.mutateAsync({ name, parent_id: parent.id });
+    else await rename.mutateAsync({ id: folder!.id, name });
+    toast.success(mode === "create" ? `Folder "${name}" created` : "Folder renamed");
   };
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{mode === "create" ? "New folder" : "Rename folder"}</DialogTitle>
-          <DialogDescription>{mode === "create" ? <>Inside <span className="text-foreground font-medium">{parent.path ? `Documents / ${parent.path}` : "Documents"}</span></> : `Currently "${folder?.name}"`}</DialogDescription>
-        </DialogHeader>
-        <form id="folder-form" onSubmit={submit} noValidate>
-          <FormField id="folder-name" label="Folder name" error={error ?? undefined}>
-            <Input id="folder-name" autoFocus value={name} maxLength={100} placeholder="e.g. Bank statements" onChange={(e) => { setName(e.target.value); setError(null); }} aria-invalid={!!error} />
-          </FormField>
-        </form>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <SubmitButton form="folder-form" pending={pending}>{mode === "create" ? "Create folder" : "Save"}</SubmitButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  return <FolderNameDialog mode={mode} currentName={folder?.name} parentPath={parent.path} pending={create.isPending || rename.isPending} onSubmit={submit} onClose={onClose} />;
 }
 
 function MoveDialog({ doc, tree, onClose }: { doc: PortalDocument; tree: ReturnType<typeof buildTree>; onClose: () => void }) {
   const { move } = useFolderActions();
-  const [target, setTarget] = useState<number | null>(doc.folder_id);
-  const options: { id: number | null; label: string; depth: number }[] = [{ id: null, label: "Documents (top level)", depth: 0 }, ...tree.flat().map(([f, d]) => ({ id: f.id, label: f.name, depth: d + 1 }))];
-
-  const submit = async () => {
+  const submit = async (target: number | null) => {
     try {
       await move.mutateAsync({ id: doc.id, folderId: target });
       toast.success(`Moved to ${target ? tree.path(target) : "Documents"}`);
-      onClose();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't move the file");
+      throw err;
     }
   };
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Move file</DialogTitle>
-          <DialogDescription className="truncate">{doc.file_name}</DialogDescription>
-        </DialogHeader>
-        <div role="radiogroup" aria-label="Destination folder" className="max-h-72 overflow-y-auto rounded-lg border p-1">
-          {options.map((o) => (
-            <button
-              key={o.id ?? "root"}
-              type="button"
-              role="radio"
-              aria-checked={target === o.id}
-              onClick={() => setTarget(o.id)}
-              className={cn("flex w-full items-center gap-2 rounded-md py-1.5 pr-2 text-left text-sm", target === o.id ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
-              style={{ paddingLeft: `${8 + o.depth * 16}px` }}
-            >
-              {o.id === null ? <Home className="size-4 shrink-0" aria-hidden /> : <Folder className="size-4 shrink-0" aria-hidden />}
-              <span className="truncate">{o.label}</span>
-              {doc.folder_id === o.id && <span className={cn("ml-auto text-xs", target === o.id ? "text-primary-foreground/75" : "text-muted-foreground")}>current</span>}
-            </button>
-          ))}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <SubmitButton type="button" pending={move.isPending} disabled={target === doc.folder_id} onClick={() => void submit()}>Move here</SubmitButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  return <MoveFileDialog fileName={doc.file_name} currentFolderId={doc.folder_id} tree={tree} pending={move.isPending} onSubmit={submit} onClose={onClose} />;
 }
 
 // ───────────── Rows ─────────────
@@ -265,10 +178,14 @@ function FolderRow({ folder, count, access, onOpen, onShare, onRename, onDelete 
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={onOpen}><Folder className="size-4" /> Open</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onRename}><Pencil className="size-4" /> Rename</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={onDelete}><Trash2 className="size-4" /> Delete</DropdownMenuItem>
+          {!access.team && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
+          {!folder.staff_folder && (
+            <>
+              <DropdownMenuItem onSelect={onRename}><Pencil className="size-4" /> Rename</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}><Trash2 className="size-4" /> Delete</DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </li>
@@ -279,6 +196,7 @@ function FolderRow({ folder, count, access, onOpen, onShare, onRename, onDelete 
 function FileAccess({ doc, tree }: { doc: PortalDocument; tree: ReturnType<typeof buildTree> }) {
   if (!doc.from_client) return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> From your team</span>;
   if (doc.request_id !== null) return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> Sent for a request</span>;
+  if (tree.inTeamTree(doc.folder_id)) return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> In a team folder</span>;
   const people = [...doc.shared_with, ...fileInherited(doc, tree).filter((p) => !doc.shared_with.some((d) => d.user_id === p.user_id))];
   if (!people.length) return <span className="inline-flex items-center gap-1"><Lock className="size-3" aria-hidden /> Private</span>;
   return <span className="inline-flex items-center gap-1 text-sky-700"><Users className="size-3" aria-hidden /> Shared with {firstNames(people)}</span>;
@@ -310,7 +228,7 @@ function FileRow({ doc, path, tree, onView, onMove, onShare }: { doc: PortalDocu
           <DropdownMenuItem onSelect={onView}><Eye className="size-4" /> View</DropdownMenuItem>
           <DropdownMenuItem asChild><a href={portalFileUrl.document(doc.id)} download={doc.file_name}><Download className="size-4" /> Download</a></DropdownMenuItem>
           <DropdownMenuItem onSelect={onMove}><FolderInput className="size-4" /> Move to…</DropdownMenuItem>
-          {doc.from_client && doc.request_id === null && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
+          {doc.from_client && doc.request_id === null && !tree.inTeamTree(doc.folder_id) && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
     </li>
@@ -399,7 +317,8 @@ export function DocumentExplorer() {
               <span className="text-muted-foreground inline-flex items-center gap-1"><ChevronRight className="size-3.5" aria-hidden /> Search results</span>
             )}
           </nav>
-          {here !== null && !search && tree.byId.get(here) && (
+          {here !== null && !search && tree.inTeamTree(here) && <span className="text-muted-foreground text-xs"><AccessLine access={tree.access(here)} /></span>}
+          {here !== null && !search && tree.byId.get(here) && !tree.inTeamTree(here) && (
             <div className="text-muted-foreground flex items-center gap-2 text-xs">
               <AccessLine access={tree.access(here)} />
               <Button size="sm" variant="outline" onClick={() => setSharing({ kind: "folder", folder: tree.byId.get(here)! })}><Share2 className="size-3.5" /> Share</Button>
@@ -439,11 +358,11 @@ export function DocumentExplorer() {
             {files.map((d) => <FileRow key={d.id} doc={d} tree={tree} onView={() => setViewing(d)} onMove={() => setMoving(d)} onShare={() => setSharing({ kind: "file", doc: d })} />)}
           </ul>
         )}
-        <p className="text-muted-foreground border-t px-5 py-2.5 text-xs">Your files and folders are <span className="text-foreground font-medium">private until you share them</span> with someone on your accounting team. Files you send for a request are visible to your team.</p>
+        <p className="text-muted-foreground border-t px-5 py-2.5 text-xs">Your files and folders are <span className="text-foreground font-medium">private until you share them</span> with someone on your accounting team. Files you send for a request, and folders your team made (such as the folder for each request), are visible to your team.</p>
       </div>
 
       <UploadDialog open={uploading} onOpenChange={setUploading} folder={here === null ? null : { id: here, path: herePath }} />
-      {naming && <FolderNameDialog mode={naming.mode} folder={naming.folder} parent={{ id: here, path: herePath }} onClose={() => setNaming(null)} />}
+      {naming && <ClientFolderNameDialog mode={naming.mode} folder={naming.folder} parent={{ id: here, path: herePath }} onClose={() => setNaming(null)} />}
       <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
       {sharing && <ShareDialog target={sharing} tree={tree} onClose={() => setSharing(null)} />}
       {moving && <MoveDialog doc={moving} tree={tree} onClose={() => setMoving(null)} />}

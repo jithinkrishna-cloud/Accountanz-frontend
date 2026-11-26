@@ -113,7 +113,7 @@ export function RequestDocumentsDialog({ portal, clientId, open, onOpenChange }:
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.csv,.doc,.docx,.zip";
 
-function UploadForm({ portal, clientId, onDone }: { portal: StaffPortal; clientId?: number; onDone: () => void }) {
+function UploadForm({ portal, clientId, folder, onDone }: { portal: StaffPortal; clientId?: number; folder?: { id: number; path: string } | null; onDone: () => void }) {
   const upload = useUploadDocument(portal);
   const [client, setClient] = useState(clientId ? String(clientId) : "");
   const [category, setCategory] = useState<DocumentCategory>("other");
@@ -126,7 +126,7 @@ function UploadForm({ portal, clientId, onDone }: { portal: StaffPortal; clientI
     if (!client) return setErrorText("Choose a client");
     if (!file) return setErrorText("Choose a file");
     try {
-      await upload.mutateAsync({ file, client_id: Number(client), category, period: period || undefined });
+      await upload.mutateAsync({ file, client_id: Number(client), category, period: period || undefined, folder_id: folder?.id ?? null });
       toast.success(`${file.name} added`);
       onDone();
     } catch (err) {
@@ -138,7 +138,10 @@ function UploadForm({ portal, clientId, onDone }: { portal: StaffPortal; clientI
     <>
       <DialogHeader>
         <DialogTitle>Upload a document</DialogTitle>
-        <DialogDescription>For files the client sent another way, such as by email or WhatsApp. Up to 20 MB.</DialogDescription>
+        <DialogDescription>
+          For files the client sent another way, such as by email or WhatsApp. Up to 20 MB.
+          {clientId && <> Into <span className="text-foreground font-medium">{folder ? `Documents / ${folder.path}` : "Documents"}</span>.</>}
+        </DialogDescription>
       </DialogHeader>
       <form id="upload-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
         {!clientId && (
@@ -167,10 +170,10 @@ function UploadForm({ portal, clientId, onDone }: { portal: StaffPortal; clientI
   );
 }
 
-export function UploadDocumentDialog({ portal, clientId, open, onOpenChange }: { portal: StaffPortal; clientId?: number; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function UploadDocumentDialog({ portal, clientId, folder, open, onOpenChange }: { portal: StaffPortal; clientId?: number; folder?: { id: number; path: string } | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">{open && <UploadForm portal={portal} clientId={clientId} onDone={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="sm:max-w-lg">{open && <UploadForm portal={portal} clientId={clientId} folder={folder} onDone={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   );
 }

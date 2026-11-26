@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus2, FileText, Folder, Upload, X } from "lucide-react";
+import { FilePlus2, FileText, Folder, FolderOpen, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -9,12 +9,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStaffClientOptions } from "@/features/workspace/hooks/use-workspace";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate, formatPeriod, humanize } from "@/lib/format";
 import type { StaffPortal } from "@/types/auth";
-import { useCancelRequest, useDocumentRequests, useDocuments, useSetDocumentStatus } from "../hooks/use-documents";
+import { useCancelRequest, useDocumentRequests, useDocuments } from "../hooks/use-documents";
 import { documentFileUrl } from "../services/document-service";
 import {
   CATEGORY_LABELS,
@@ -28,6 +27,7 @@ import {
   type RequestStatus,
 } from "../types/document.types";
 import { RequestDocumentsDialog, UploadDocumentDialog } from "./document-dialogs";
+import { DocumentStatusCell, StaffFolderExplorer } from "./staff-folder-explorer";
 
 function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -38,24 +38,6 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
       </header>
       {children}
     </section>
-  );
-}
-
-function DocumentStatusCell({ portal, doc }: { portal: StaffPortal; doc: ClientDocument }) {
-  const setStatus = useSetDocumentStatus(portal);
-  const change = async (status: string) => {
-    try {
-      await setStatus.mutateAsync({ id: doc.id, status: status as DocumentStatus });
-      toast.success(`${doc.file_name} marked ${status}`);
-    } catch (err) {
-      applyApiError(err);
-    }
-  };
-  return (
-    <Select value={doc.status} onValueChange={change} disabled={setStatus.isPending}>
-      <SelectTrigger size="sm" className="w-32" aria-label={`Status of ${doc.file_name}`}><SelectValue /></SelectTrigger>
-      <SelectContent>{DOCUMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{humanize(s)}</SelectItem>)}</SelectContent>
-    </Select>
   );
 }
 
@@ -112,14 +94,27 @@ const docColumns = (portal: StaffPortal): Column<ClientDocument>[] => [
   { key: "status", header: "Status", cell: (d) => <DocumentStatusCell portal={portal} doc={d} /> },
 ];
 
-const requestColumns = (portal: StaffPortal): Column<DocumentRequest>[] => [
+const requestColumns = (portal: StaffPortal, openFolder?: (id: number) => void): Column<DocumentRequest>[] => [
   { key: "request", header: "Request", cell: (r) => <span className="font-medium">{r.description}</span> },
   { key: "client", header: "Client", cell: (r) => r.client_name },
   { key: "period", header: "Period", hideOnMobile: true, cell: (r) => (r.period ? formatPeriod(r.period) : "—") },
   { key: "asked", header: "Asked by", hideOnMobile: true, cell: (r) => <span className="text-muted-foreground">{r.requested_by_email ?? "—"}</span> },
   { key: "due", header: "Due", hideOnMobile: true, cell: (r) => formatDate(r.due_date) },
   { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
-  { key: "actions", header: "", cell: (r) => <CancelRequestButton portal={portal} request={r} /> },
+  {
+    key: "actions",
+    header: "",
+    cell: (r) => (
+      <div className="flex justify-end gap-1">
+        {openFolder && r.folder_id !== null && (
+          <Button variant="ghost" size="sm" onClick={() => openFolder(r.folder_id!)} aria-label={`Open the folder for: ${r.description}`}>
+            <FolderOpen className="size-4" /> Folder
+          </Button>
+        )}
+        <CancelRequestButton portal={portal} request={r} />
+      </div>
+    ),
+  },
 ];
 
 export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
@@ -134,7 +129,13 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
   const [reqPage, setReqPage] = useState(1);
   const [requesting, setRequesting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // The folder open in the explorer (one client selected); null = the client's top level.
+  const [folder, setFolder] = useState<number | null>(null);
   const docs = useDocuments(portal, { q: docQ, client_id: clientId, category, status, page: docPage });
+  const openRequestFolder = (id: number) => {
+    setFolder(id);
+    document.getElementById("client-folders")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const requests = useDocumentRequests(portal, { q: reqQ, client_id: clientId, status: reqStatus, page: reqPage });
   const filtered = !!(docQ || clientId || category || status);
 
@@ -151,7 +152,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
         }
       />
       <div className="mb-4">
-        <FilterSelect allLabel="All clients" value={clientId} onChange={(v) => { setClientId(v); setDocPage(1); setReqPage(1); }} options={clients.data ?? []} className="sm:w-64" />
+        <FilterSelect allLabel="All clients" value={clientId} onChange={(v) => { setClientId(v); setFolder(null); setDocPage(1); setReqPage(1); }} options={clients.data ?? []} className="sm:w-64" />
       </div>
       <div className="space-y-6">
         <Section title="Document requests" subtitle="What the team has asked clients for. Uploading against a request marks it fulfilled.">
@@ -165,7 +166,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
             />
           </div>
           <DataTable
-            columns={requestColumns(portal)}
+            columns={requestColumns(portal, clientId ? openRequestFolder : undefined)}
             rows={requests.data?.items}
             rowKey={(r) => r.id}
             isLoading={requests.isLoading}
@@ -176,6 +177,9 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
           />
         </Section>
 
+        {clientId ? (
+          <StaffFolderExplorer key={clientId} portal={portal} clientId={Number(clientId)} current={folder} onOpen={setFolder} />
+        ) : (
         <Section title="Documents" subtitle="Stored privately. Only people with access to the client can open them.">
           <div className="flex flex-col flex-wrap gap-3 border-b p-4 sm:flex-row">
             <SearchInput value={docQ} onChange={(v) => { setDocQ(v); setDocPage(1); }} placeholder="Search documents" />
@@ -203,6 +207,7 @@ export function DocumentCentre({ portal = "admin" }: { portal?: StaffPortal }) {
             pagination={docs.data && { ...docs.data, onPageChange: setDocPage }}
           />
         </Section>
+        )}
       </div>
       <RequestDocumentsDialog portal={portal} open={requesting} onOpenChange={setRequesting} />
       <UploadDocumentDialog portal={portal} open={uploading} onOpenChange={setUploading} />

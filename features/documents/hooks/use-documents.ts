@@ -30,7 +30,7 @@ export function useSetDocumentStatus(portal: StaffPortal) {
 export function useUploadDocument(portal: StaffPortal) {
   const refresh = useRefresh(portal);
   return useMutation({
-    mutationFn: (v: { file: File; client_id: number; category: DocumentCategory; period?: string }) => documentService.upload(portal, v.file, v),
+    mutationFn: (v: { file: File; client_id: number; category: DocumentCategory; period?: string; folder_id?: number | null }) => documentService.upload(portal, v.file, v),
     onSuccess: refresh,
   });
 }
@@ -38,6 +38,21 @@ export function useUploadDocument(portal: StaffPortal) {
 export function useCreateRequest(portal: StaffPortal) {
   const refresh = useRefresh(portal);
   return useMutation({ mutationFn: (body: NewRequest) => documentService.createRequest(portal, body), onSuccess: refresh });
+}
+
+/** One client's Document Centre folders (those this person can see). */
+export const useStaffFolders = (portal: StaffPortal, clientId: number | null) =>
+  useQuery({ queryKey: [...key(portal), "folders", clientId], queryFn: () => documentService.folders(portal, clientId!), enabled: clientId !== null });
+
+/** Create / rename / delete folders and move files; every change refreshes folders and documents. */
+export function useStaffFolderActions(portal: StaffPortal) {
+  const refresh = useRefresh(portal);
+  return {
+    create: useMutation({ mutationFn: (body: { client_id: number; parent_id: number | null; name: string }) => documentService.createFolder(portal, body), onSuccess: refresh }),
+    rename: useMutation({ mutationFn: ({ id, name }: { id: number; name: string }) => documentService.renameFolder(portal, id, name), onSuccess: refresh }),
+    remove: useMutation({ mutationFn: (id: number) => documentService.deleteFolder(portal, id), onSuccess: refresh }),
+    move: useMutation({ mutationFn: ({ id, folderId }: { id: number; folderId: number | null }) => documentService.moveDocument(portal, id, folderId), onSuccess: refresh }),
+  };
 }
 
 export function useCancelRequest(portal: StaffPortal) {
