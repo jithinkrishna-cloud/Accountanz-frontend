@@ -14,6 +14,7 @@ import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
 import { formatDate, humanize } from "@/lib/format";
 import { useClients } from "../hooks/use-clients";
 import { CLIENT_STATUSES, type Client, type ClientStatus } from "../types/client.types";
+import { EngagementFormDialog } from "@/features/engagements/components/engagement-form-dialog";
 import { ClientFormDialog } from "./client-form-dialog";
 
 const columns: Column<Client>[] = [
@@ -49,21 +50,26 @@ const columns: Column<Client>[] = [
 
 const ALL = "all";
 
-export function ClientList() {
+export function ClientList({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ClientStatus | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [attaching, setAttaching] = useState<{ id: number; name: string } | null>(null);
   const query = useClients({ q, status: status === ALL ? undefined : status, page });
 
   return (
     <>
-      <PageHeader
-        title="Clients"
-        description="Every business Accountanz manages, from first lead to exit."
-        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New client</Button>}
-      />
+      {embedded ? (
+        <div className="mb-4 flex justify-end">{<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New client</Button>}</div>
+      ) : (
+        <PageHeader
+          title="Clients"
+          description="Every business Accountanz manages, from first lead to exit."
+          actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New client</Button>}
+        />
+      )}
       <div className="bg-card rounded-xl border shadow-xs">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row">
           <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search by name, GSTIN or state" />
@@ -91,7 +97,16 @@ export function ClientList() {
           pagination={query.data && { ...query.data, onPageChange: setPage }}
         />
       </div>
-      <ClientFormDialog open={creating} onOpenChange={setCreating} onSaved={(c) => router.push(`/admin/clients/${c.id}`)} />
+      <ClientFormDialog open={creating} onOpenChange={setCreating} onSaved={(c) => setAttaching({ id: c.id, name: c.trade_name ?? c.legal_name })} />
+      {/* Right after creating a client, attach its package (services); skipping goes straight to the client. */}
+      <EngagementFormDialog
+        open={!!attaching}
+        forClient={attaching ?? undefined}
+        onOpenChange={(o) => {
+          if (!o && attaching) router.push(`/admin/clients/${attaching.id}`);
+          if (!o) setAttaching(null);
+        }}
+      />
     </>
   );
 }

@@ -55,7 +55,7 @@ const columns: Column<Engagement>[] = [
 
 type Filter = EngagementStatus | "all";
 
-export function EngagementList({ initialOpenId }: { initialOpenId?: number }) {
+export function EngagementList({ initialOpenId, embedded = false }: { initialOpenId?: number; embedded?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<Filter>("all");
@@ -68,16 +68,20 @@ export function EngagementList({ initialOpenId }: { initialOpenId?: number }) {
 
   const close = () => {
     setOpenId(null);
-    if (initialOpenId) router.replace("/admin/engagements", { scroll: false });
+    if (initialOpenId) router.replace(embedded ? "/admin/clients?tab=engagements" : "/admin/engagements", { scroll: false });
   };
 
   return (
     <>
-      <PageHeader
-        title="Engagements"
-        description="Service agreements from draft to active, with the signed agreement on file."
-        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New engagement</Button>}
-      />
+      {embedded ? (
+        <div className="mb-4 flex justify-end">{<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New engagement</Button>}</div>
+      ) : (
+        <PageHeader
+          title="Engagements"
+          description="Service agreements from draft to active, with the signed agreement on file."
+          actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New engagement</Button>}
+        />
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6" role="tablist" aria-label="Filter by status">
         {(["all", ...ENGAGEMENT_STATUSES] as Filter[]).map((f) => (

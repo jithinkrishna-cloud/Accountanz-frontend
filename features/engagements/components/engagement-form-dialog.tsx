@@ -17,8 +17,8 @@ import { useEngagementClientOptions, useSaveEngagement } from "../hooks/use-enga
 import { engagementFormSchema, type EngagementFormOutput, type EngagementFormValues } from "../schemas/engagement.schema";
 import type { Engagement } from "../types/engagement.types";
 
-const toValues = (e?: Engagement): EngagementFormValues => ({
-  client_id: e ? String(e.client_id) : "",
+const toValues = (e?: Engagement, clientId?: number): EngagementFormValues => ({
+  client_id: e ? String(e.client_id) : clientId ? String(clientId) : "",
   package_id: e ? String(e.package_id) : "",
   start_date: e?.start_date ?? "",
   renewal_date: e?.renewal_date ?? "",
@@ -29,13 +29,15 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   engagement?: Engagement;
   onSaved?: (row: Engagement) => void;
+  /** Create mode for a known client (e.g. right after creating it): the client is fixed and the picker hidden. */
+  forClient?: { id: number; name: string };
 }
 
-export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }: Props) {
+export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved, forClient }: Props) {
   const editing = !!engagement;
   const save = useSaveEngagement(engagement?.id);
   const packages = usePackages();
-  const clients = useEngagementClientOptions(open && !editing);
+  const clients = useEngagementClientOptions(open && !editing && !forClient);
   const packageLocked = editing && engagement.status !== "draft";
 
   const {
@@ -45,11 +47,11 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }
     reset,
     setError,
     formState: { errors },
-  } = useForm<EngagementFormValues, unknown, EngagementFormOutput>({ resolver: zodResolver(engagementFormSchema), defaultValues: toValues(engagement) });
+  } = useForm<EngagementFormValues, unknown, EngagementFormOutput>({ resolver: zodResolver(engagementFormSchema), defaultValues: toValues(engagement, forClient?.id) });
 
   useEffect(() => {
-    if (open) reset(toValues(engagement));
-  }, [open, engagement, reset]);
+    if (open) reset(toValues(engagement, forClient?.id));
+  }, [open, engagement, forClient?.id, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -68,13 +70,13 @@ export function EngagementFormDialog({ open, onOpenChange, engagement, onSaved }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit engagement" : "New engagement"}</DialogTitle>
+          <DialogTitle>{editing ? "Edit engagement" : forClient ? "Attach a package" : "New engagement"}</DialogTitle>
           <DialogDescription>
-            {editing ? engagement.client_name : "Starts as a draft. Send it, record acceptance, then activate it with the signed agreement."}
+            {editing ? engagement.client_name : forClient ? `Pick the package and services for ${forClient.name}. It starts as a draft engagement.` : "Starts as a draft. Send it, record acceptance, then activate it with the signed agreement."}
           </DialogDescription>
         </DialogHeader>
         <form id="engagement-form" onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
-          {!editing && (
+          {!editing && !forClient && (
             <FormField id="client_id" label="Client" error={errors.client_id?.message} className="sm:col-span-2">
               <Controller
                 control={control}

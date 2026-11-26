@@ -47,7 +47,7 @@ const columns: Column<OnboardingCase>[] = [
 
 type Filter = OnboardingStage | "all";
 
-export function OnboardingList() {
+export function OnboardingList({ embedded = false }: { embedded?: boolean } = {}) {
   const [q, setQ] = useState("");
   const [stage, setStage] = useState<Filter>("all");
   const [page, setPage] = useState(1);
@@ -64,11 +64,15 @@ export function OnboardingList() {
 
   return (
     <>
-      <PageHeader
-        title="Leads"
-        description="Businesses you are trying to win, from first contact to an accepted proposal."
-        actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New lead</Button>}
-      />
+      {embedded ? (
+        <div className="mb-4 flex justify-end">{<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New lead</Button>}</div>
+      ) : (
+        <PageHeader
+          title="Leads"
+          description="Businesses you are trying to win, from first contact to an accepted proposal."
+          actions={<Button onClick={() => setCreating(true)}><Plus className="size-4" /> New lead</Button>}
+        />
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6" role="tablist" aria-label="Filter by stage">
         {(["all", ...ONBOARDING_STAGES] as Filter[]).map((f) => (
