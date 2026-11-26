@@ -9,15 +9,21 @@ import type {
   ItemPatch,
   Member,
   NewItem,
+  NewOverride,
+  NewSpace,
+  ClientSpaceInfo,
   Space,
   SpaceDetail,
+  SpaceLimits,
+  SpaceLookup,
   SpaceRole,
   Sprint,
   StaffOption,
   Status,
   StatusCategory,
   Summary,
-  Template,
+  SyncIssue,
+  SyncResult,
   Watcher,
   Worklog,
 } from "../types/project.types";
@@ -27,15 +33,24 @@ const items = <T>(p: Promise<Items<T>>) => p.then((r) => r.items);
 const base = (key: string) => `/projects/${encodeURIComponent(key)}`;
 
 export const projectService = {
-  spaces: (params: { q?: string; client_id?: number }) => items(api<Items<Space>>("/projects", { query: params })),
+  spaces: (params: { q?: string; client_id?: number; archived?: boolean }) => items(api<Items<Space>>("/projects", { query: params })),
   clientOptions: () => items(api<Items<{ id: number; name: string }>>("/projects/client-options")),
   keyAvailable: (key: string) => api<{ key: string; available: boolean }>("/projects/key-available", { query: { key } }),
-  createSpace: (body: { name: string; space_key: string; template: Template; client_id: number | null; description: string | null }) =>
-    api<Space>("/projects", { method: "POST", body }),
+  createSpace: (body: NewSpace) => api<Space>("/projects", { method: "POST", body }),
+  clientSpace: (clientId: number) => api<ClientSpaceInfo>("/projects/client-space", { query: { client_id: clientId } }),
+  lookup: (key: string) => api<SpaceLookup>(`/projects/lookup/${encodeURIComponent(key)}`),
   space: (key: string) => api<SpaceDetail>(base(key)),
-  updateSpace: (key: string, body: { name?: string; client_id?: number | null; description?: string | null }) => api<SpaceDetail>(base(key), { method: "PATCH", body }),
+  updateSpace: (key: string, body: { name?: string; description?: string | null }) => api<SpaceDetail>(base(key), { method: "PATCH", body }),
   /** Permanent. The server checks that confirm_key repeats the space key. */
   deleteSpace: (key: string, confirmKey: string) => api<void>(base(key), { method: "DELETE", body: { confirm_key: confirmKey } }),
+  archive: (key: string) => api<SpaceDetail>(`${base(key)}/archive`, { method: "POST" }),
+  unarchive: (key: string) => api<SpaceDetail>(`${base(key)}/unarchive`, { method: "POST" }),
+  /** null for internal spaces. */
+  limits: (key: string) => api<SpaceLimits | null>(`${base(key)}/limits`),
+  grantOverride: (key: string, body: NewOverride) => api<SpaceLimits>(`${base(key)}/overrides`, { method: "POST", body }),
+  revokeOverride: (key: string, id: number) => api<SpaceLimits>(`${base(key)}/overrides/${id}`, { method: "DELETE" }),
+  syncIssues: (key: string) => items(api<Items<SyncIssue>>(`${base(key)}/sync-issues`)),
+  syncNow: (key: string) => api<SyncResult>(`${base(key)}/sync`, { method: "POST" }),
   summary: (key: string, assigneeId?: number) => api<Summary>(`${base(key)}/summary`, { query: { assignee_id: assigneeId } }),
 
   createStatus: (key: string, body: { name: string; category: StatusCategory }) => items(api<Items<Status>>(`${base(key)}/statuses`, { method: "POST", body })),

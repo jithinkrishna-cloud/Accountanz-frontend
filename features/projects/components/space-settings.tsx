@@ -53,7 +53,7 @@ function Details() {
           disabled={name.trim().length < 2}
           onClick={() =>
             void update
-              .mutateAsync({ name: name.trim(), client_id: clientId === "none" ? null : Number(clientId), description: description.trim() || null })
+              .mutateAsync({ name: name.trim(), description: description.trim() || null })
               .then(() => toast.success("Space updated"))
               .catch((e) => applyApiError(e))
           }

@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectService as s } from "../services/project-service";
-import type { ItemFilters, ItemPatch, NewItem, SpaceRole, StatusCategory, Template } from "../types/project.types";
+import type { ItemFilters, ItemPatch, NewItem, NewOverride, NewSpace, SpaceRole, StatusCategory } from "../types/project.types";
 
 /** Query keys: everything for one space sits under ["projects", KEY] so one invalidation refreshes it. */
 export const PK = {
@@ -12,7 +12,7 @@ export const PK = {
   part: (key: string, part: string, ...rest: unknown[]) => ["projects", key, part, ...rest] as const,
 };
 
-export const useSpaces = (p: { q?: string; client_id?: number }) => useQuery({ queryKey: PK.spaces(p), queryFn: () => s.spaces(p), placeholderData: keepPreviousData });
+export const useSpaces = (p: { q?: string; client_id?: number; archived?: boolean }) => useQuery({ queryKey: PK.spaces(p), queryFn: () => s.spaces(p), placeholderData: keepPreviousData });
 export const useClientOptions = () => useQuery({ queryKey: ["projects", "client-options"], queryFn: s.clientOptions, staleTime: 5 * 60_000 });
 export const useSpace = (key: string) => useQuery({ queryKey: PK.space(key), queryFn: () => s.space(key) });
 export const useSummary = (key: string, assigneeId?: number) => useQuery({ queryKey: PK.part(key, "summary", assigneeId), queryFn: () => s.summary(key, assigneeId) });
@@ -27,6 +27,10 @@ export const useComments = (key: string, n: number) => useQuery({ queryKey: PK.p
 export const useWorklogs = (key: string, n: number, enabled: boolean) => useQuery({ queryKey: PK.part(key, "worklogs", n), queryFn: () => s.worklogs(key, n), enabled });
 export const useAddWorklog = (key: string, n: number) => useSpaceMutation(key, (b: { minutes: number; work_date: string; note: string | null }) => s.addWorklog(key, n, b));
 export const useDeleteWorklog = (key: string, n: number) => useSpaceMutation(key, (id: number) => s.deleteWorklog(key, n, id));
+export const useClientSpace = (clientId: number, enabled = true) => useQuery({ queryKey: ["projects", "client-space", clientId], queryFn: () => s.clientSpace(clientId), enabled });
+export const useSpaceLookup = (key: string, enabled = true) => useQuery({ queryKey: ["projects", "lookup", key], queryFn: () => s.lookup(key), enabled, retry: false });
+export const useLimits = (key: string, enabled = true) => useQuery({ queryKey: PK.part(key, "limits"), queryFn: () => s.limits(key), enabled });
+export const useSyncIssues = (key: string, enabled = true) => useQuery({ queryKey: PK.part(key, "sync-issues"), queryFn: () => s.syncIssues(key), enabled });
 export const useActivity = (key: string, n: number, enabled: boolean) => useQuery({ queryKey: PK.part(key, "activity", n), queryFn: () => s.activity(key, n), enabled });
 
 /** Any write in a space refreshes that space's queries (board, backlog, list, summary, item). */
@@ -38,7 +42,7 @@ function useSpaceMutation<V, R>(key: string, fn: (v: V) => Promise<R>) {
 export function useCreateSpace() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (b: { name: string; space_key: string; template: Template; client_id: number | null; description: string | null }) => s.createSpace(b),
+    mutationFn: (b: NewSpace) => s.createSpace(b),
     onSuccess: () => void qc.invalidateQueries({ queryKey: PK.all }),
   });
 }
@@ -46,7 +50,7 @@ export function useCreateSpace() {
 export function useUpdateSpace(key: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (b: { name?: string; client_id?: number | null; description?: string | null }) => s.updateSpace(key, b),
+    mutationFn: (b: { name?: string; description?: string | null }) => s.updateSpace(key, b),
     onSuccess: () => void qc.invalidateQueries({ queryKey: PK.all }),
   });
 }
@@ -62,6 +66,12 @@ export function useDeleteSpace(key: string) {
     },
   });
 }
+
+export const useArchiveSpace = (key: string) => useSpaceMutation(key, () => s.archive(key));
+export const useUnarchiveSpace = (key: string) => useSpaceMutation(key, () => s.unarchive(key));
+export const useGrantOverride = (key: string) => useSpaceMutation(key, (b: NewOverride) => s.grantOverride(key, b));
+export const useRevokeOverride = (key: string) => useSpaceMutation(key, (id: number) => s.revokeOverride(key, id));
+export const useSyncNow = (key: string) => useSpaceMutation(key, () => s.syncNow(key));
 
 export const useCreateStatus = (key: string) => useSpaceMutation(key, (b: { name: string; category: StatusCategory }) => s.createStatus(key, b));
 export const useUpdateStatus = (key: string) => useSpaceMutation(key, (v: { id: number; name?: string; category?: StatusCategory }) => s.updateStatus(key, v.id, { name: v.name, category: v.category }));

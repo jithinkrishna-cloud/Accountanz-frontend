@@ -1,5 +1,6 @@
 export type Template = "scrum" | "kanban";
 export type SpaceRole = "admin" | "member";
+export type SpaceKind = "client_primary" | "client_project" | "internal";
 export type StatusCategory = "todo" | "in_progress" | "done";
 export type ItemType = "task" | "bug" | "story" | "subtask";
 export type Priority = "highest" | "high" | "medium" | "low" | "lowest";
@@ -19,11 +20,86 @@ export interface Space {
   template: Template;
   client_id: number | null;
   client_name: string | null;
+  kind: SpaceKind;
+  /** Set when the space is archived (read-only). */
+  archived_at: string | null;
   created_at: string;
   item_count: number;
   member_count: number;
   admins: string | null;
   my_role: SpaceRole | null;
+}
+
+export interface NewSpace {
+  name: string;
+  space_key: string;
+  template: Template;
+  kind: "internal" | "client_project";
+  client_id: number | null;
+  description: string | null;
+}
+
+/** GET /projects/client-space: a client's primary space, package usage and what the caller may do next. */
+export interface ClientSpaceInfo {
+  primary: { space_key: string; name: string; accessible: boolean; archived: boolean } | null;
+  /** limit null = Unlimited; the whole object is null when the client has no active package. */
+  usage: { used: number; limit: number | null; package_name: string } | null;
+  can_create_project: boolean;
+  can_provision_primary: boolean;
+}
+
+/** GET /projects/lookup/:key */
+export interface SpaceLookup {
+  space_key: string;
+  name: string;
+  kind: SpaceKind;
+  accessible: boolean;
+}
+
+export type OverrideLimitType = "workspaces" | "staff_per_workspace";
+
+export interface EntitlementOverride {
+  id: number;
+  limit_type: OverrideLimitType;
+  extra: number;
+  reason: string;
+  /** YYYY-MM-DD, null = never. */
+  expires_at: string | null;
+  created_by: number;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+/** GET /projects/:key/limits (the API returns null for internal spaces). null limit = Unlimited. */
+export interface SpaceLimits {
+  package_name: string | null;
+  base: { workspaces: number | null; staff: number | null } | null;
+  overrides: EntitlementOverride[];
+  effective: { workspaces: number | null; staff: number | null } | null;
+  usage: { workspaces: number; staff: number };
+}
+
+export interface NewOverride {
+  limit_type: OverrideLimitType;
+  extra: number;
+  reason: string;
+  expires_at?: string | null;
+}
+
+export type SyncIssueReason = "staff_limit" | "role_not_included" | "no_active_package";
+
+export interface SyncIssue {
+  user_id: number;
+  full_name: string;
+  email: string;
+  reason: SyncIssueReason;
+  created_at: string;
+}
+
+export interface SyncResult {
+  added: number;
+  removed: number;
+  issues: number;
 }
 
 export interface Status {

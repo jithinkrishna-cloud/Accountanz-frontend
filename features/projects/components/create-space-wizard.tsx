@@ -106,6 +106,7 @@ function DetailsStep({ template, onBack }: { template: Template; onBack: () => v
         name: v.name,
         space_key: v.space_key,
         template,
+        kind: v.client_id === "none" ? "internal" : "client_project",
         client_id: v.client_id === "none" ? null : Number(v.client_id),
         description: v.description.trim() || null,
       });

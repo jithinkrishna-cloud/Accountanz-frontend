@@ -26,6 +26,10 @@ export interface ServicePackage {
   scope_notes: string | null;
   /** The team the client gets with this package. */
   team_roles: PackageRole[];
+  /** Client workspaces the package allows; null = Unlimited. */
+  workspace_limit: number | null;
+  /** Staff per workspace the package allows; null = Unlimited. */
+  staff_per_workspace: number | null;
   is_active: boolean;
   services: Pick<Service, "id" | "code" | "name">[];
 }
