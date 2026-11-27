@@ -19,7 +19,8 @@ export function useQueryState<T extends string = string>(key: string, fallback: 
       if (!next || next === fallback) p.delete(key);
       else p.set(key, next);
       const qs = p.toString();
-      window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+      // null state, as Next's docs do: passing Next's own history state back makes the router ignore the change.
+      window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
     },
     [key, fallback],
   );
