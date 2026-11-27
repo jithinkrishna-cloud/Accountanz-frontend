@@ -28,6 +28,9 @@ export interface PersonProgress {
   period: string;
   periods: string[];
   person: ProgressSummary;
+  profile: { phone: string | null; verification_status: string; expertise: string[]; hourly_rate: number | null; member_since: string; last_login_at: string | null } | null;
+  groups: { group_id: number; name: string; team_role: string }[];
+  assignments: { id: number; client_id: number; client_name: string; team_role: string; valid_from: string; valid_to: string | null; phase: "current" | "scheduled" | "expired" | "ended"; source_group_name: string | null }[];
   clients: {
     client_id: number;
     client_name: string;
@@ -83,4 +86,29 @@ export interface FirmProgress {
   };
   clients: FirmClient[];
   groups: FirmGroup[];
+}
+
+export const TASK_VIEWS = ["open", "overdue", "review", "returned", "approved", "all"] as const;
+export type PersonTaskView = (typeof TASK_VIEWS)[number];
+
+export interface PersonTask {
+  id: number;
+  title: string;
+  client_id: number;
+  client_name: string;
+  period: string;
+  status: string;
+  due_date: string | null;
+  overdue: boolean;
+  reviewer_name: string | null;
+  hours: number;
+  updated_at: string;
+}
+
+export interface PersonTaskList {
+  items: PersonTask[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<PersonTaskView, number>;
 }
