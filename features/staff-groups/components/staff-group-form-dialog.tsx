@@ -21,7 +21,6 @@ import { TEAM_ROLE_LABELS, TEAM_ROLES, type TeamRole } from "@/features/assignme
 import { applyApiError } from "@/lib/form-errors";
 import { useSaveStaffGroup } from "../hooks/use-staff-groups";
 import type { StaffGroup } from "../services/staff-group-service";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 // Mirrors backend staffGroupBodySchema.
 const schema = z.object({
@@ -114,7 +113,7 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
               // A blank row shows its picker straight away; a filled one opens it on "Change". An open picker takes the full row.
               const pickerOpen = !options.isLoading && (picking === i || (picking === null && !memberValues?.[i]?.user_id));
               return (
-                <div key={f.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto_auto] sm:items-start">
+                <div key={f.id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-start">
                   <div className={pickerOpen ? "grid min-w-0 gap-1 sm:col-span-full" : "grid min-w-0 gap-1"}>
                     <Controller control={control} name={`members.${i}.user_id`} render={({ field }) => {
                       const chosen = staff.find((s) => String(s.user_id) === field.value);
@@ -165,12 +164,6 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
                     )} />
                     {rowErr?.team_role && <p className="text-destructive text-xs">{rowErr.team_role.message}</p>}
                   </div>
-                  {!JOURNL_INTEGRATION ? <span aria-hidden /> : <Controller control={control} name={`members.${i}.journl_access`} render={({ field }) => (
-                    <div className="flex h-9 items-center gap-2">
-                      <Checkbox id={`member-journl-${i}`} checked={field.value} onCheckedChange={(c) => field.onChange(c === true)} />
-                      <Label htmlFor={`member-journl-${i}`} className="font-normal">JournL</Label>
-                    </div>
-                  )} />}
                   <Button type="button" variant="ghost" size="icon" onClick={() => { members.remove(i); setPicking(null); }} disabled={members.fields.length === 1} aria-label={`Remove member ${i + 1}`}>
                     <Trash2 className="size-4" />
                   </Button>

@@ -1,5 +1,3 @@
-import type { JournlLinkState } from "@/features/integrations/components/open-in-journl";
-import type { AssignmentPermissions } from "@/features/journl-permissions/types/journl-permission.types";
 export type ClosingStatus = "open" | "ready" | "closed";
 
 export interface WorkspaceTask {
@@ -52,11 +50,6 @@ export interface ClientOverview {
   contacts: { full_name: string; email: string; role: string; can_approve: 0 | 1 }[];
   summary: MyClient | null;
   can_review: boolean;
-  /** The viewer's own JournL module permissions, one per active assignment (empty for admins). */
-  journl: AssignmentPermissions[];
-  /** The client's JournL connection; `session_until` is set while its books can be read. */
-  journl_link: JournlLinkState;
-  journl_connection: { status: string; org_id: string | null; org_name: string | null; session_until: string | null; link: JournlLinkState } | null;
 }
 
 export interface ChecklistItem {

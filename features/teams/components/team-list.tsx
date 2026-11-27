@@ -20,7 +20,6 @@ import { formatDate, initials } from "@/lib/format";
 import type { Team } from "../services/team-service";
 import { useRenameTeam, useTeams } from "../hooks/use-teams";
 import { CreateTeamDialog } from "./create-team-dialog";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 /** Gaps worth flagging: work needs someone to do it and someone to review it. */
 function gaps(team: Team) {
@@ -62,7 +61,6 @@ function TeamCard({ team, onRename }: { team: Team; onRename: () => void }) {
                   <p className="truncate text-sm font-medium">{m.full_name}</p>
                   <p className="text-muted-foreground truncate text-xs">
                     {TEAM_ROLE_LABELS[m.team_role]}
-                    {JOURNL_INTEGRATION && m.journl_access && " · JournL"}
                     {m.valid_to && ` · until ${formatDate(m.valid_to)}`}
                     {m.source_group_name && ` · via ${m.source_group_name}`}
                   </p>

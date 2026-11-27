@@ -17,7 +17,6 @@ import { useDeleteStaffGroup, useStaffGroups } from "../hooks/use-staff-groups";
 import type { StaffGroup } from "../services/staff-group-service";
 import { AssignGroupDialog } from "./assign-group-dialog";
 import { StaffGroupFormDialog } from "./staff-group-form-dialog";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 function GroupCard({ group, onEdit, onAssign, onDelete }: { group: StaffGroup; onEdit: () => void; onAssign: () => void; onDelete: () => void }) {
   const blocked = group.members.filter((m) => !m.assignable);
@@ -46,7 +45,6 @@ function GroupCard({ group, onEdit, onAssign, onDelete }: { group: StaffGroup; o
                 <p className="truncate text-sm font-medium">{m.full_name}</p>
                 <p className="text-muted-foreground truncate text-xs">
                   {TEAM_ROLE_LABELS[m.team_role]}
-                  {JOURNL_INTEGRATION && m.journl_access && " · JournL"}
                 </p>
               </div>
             </li>

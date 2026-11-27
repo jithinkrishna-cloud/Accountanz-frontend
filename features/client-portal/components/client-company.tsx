@@ -19,7 +19,6 @@ import type { PortalTask, PortalTeamMember } from "../types/client-portal.types"
 import { STAGE_OF } from "./client-progress";
 import { AccountantOverview } from "./accountant-overview";
 import { CompanyGate } from "./company-gate";
-import { BizpoleConnection } from "./bizpole-connection";
 import { Card, ListBody } from "./portal-ui";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
@@ -291,19 +290,6 @@ export function ClientTeam() {
         <>
           <PageHeader title="My Accounting Team" description="Who looks after your accounts. Pick an accountant to track their details, tasks, progress, document requests and messages." />
           <TeamBody />
-        </>
-      )}
-    </CompanyGate>
-  );
-}
-
-export function ClientSoftware() {
-  return (
-    <CompanyGate>
-      {(company) => (
-        <>
-          <PageHeader title="Accounting Software" description="Where your books live." />
-          <BizpoleConnection company={company} />
         </>
       )}
     </CompanyGate>

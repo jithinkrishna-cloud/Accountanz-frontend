@@ -230,18 +230,6 @@ export interface PortalSettings {
   can_approve: boolean;
 }
 
-export interface PortalSoftware {
-  provider: string;
-  external_org_name: string | null;
-  external_org_id: string | null;
-  status: string;
-  last_health_check: string | null;
-  verified_at: string | null;
-  authorized_at: string | null;
-  /** While set, Accountanz can read this JournL company (the session from the owner's sign-in). */
-  session_until: string | null;
-}
-
 export interface PortalPackage {
   id: number;
   name: string;

@@ -12,15 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ModulePermissionsDialog } from "@/features/journl-permissions/components/module-permissions-dialog";
 import { applyApiError } from "@/lib/form-errors";
 import { formatDate } from "@/lib/format";
 import { useAssignmentOptions, useAssignments, useEndAssignment } from "../hooks/use-assignments";
-import { JOURNL_ACCESS_LABELS, PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment, type AssignmentStatus, type TeamRole } from "../types/assignment.types";
+import { PHASE_LABELS, TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment, type AssignmentStatus, type TeamRole } from "../types/assignment.types";
 import { AssignmentEditDialog } from "./assignment-edit-dialog";
 import { AssignmentFormDialog } from "./assignment-form-dialog";
 import { AssignGroupDialog } from "@/features/staff-groups/components/assign-group-dialog";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const ALL = "all";
 
@@ -35,7 +33,6 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [replacing, setReplacing] = useState<Assignment | undefined>();
   const [ending, setEnding] = useState<Assignment | null>(null);
-  const [modules, setModules] = useState<Assignment | null>(null);
   const end = useEndAssignment();
   const options = useAssignmentOptions(!!clientId);
   const clientName = options.data?.clients.find((c) => c.id === clientId)?.name;
@@ -101,17 +98,6 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
         </div>
       ),
     },
-    ...(!JOURNL_INTEGRATION ? [] : [{
-      key: "journl",
-      header: "JournL",
-      hideOnMobile: true,
-      // Access counts only once a to-do confirms it was given in JournL.
-      cell: (a) => (
-        <span className={a.journl_access_state === "granted" ? "" : a.journl_access_state === "none" ? "text-muted-foreground" : "text-warning text-xs font-medium"} title={a.journl_access_state === "unconfirmed" ? "Turned on before access to-dos existed; nobody has confirmed it in JournL" : undefined}>
-          {JOURNL_ACCESS_LABELS[a.journl_access_state]}
-        </span>
-      ),
-    } satisfies Column<Assignment>]),
     {
       key: "actions",
       header: "",
@@ -125,8 +111,7 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> {JOURNL_INTEGRATION ? "Edit dates & access" : "Edit dates"}</DropdownMenuItem>
-              {JOURNL_INTEGRATION && <DropdownMenuItem onSelect={() => setModules(a)}><KeyRound className="size-4" /> JournL features</DropdownMenuItem>}
+              <DropdownMenuItem onSelect={() => setEditing(a)}><Pencil className="size-4" /> Edit dates</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setReplacing(a)}><ArrowRightLeft className="size-4" /> Hand over to someone else</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setEnding(a)}><UserMinus className="size-4" /> End assignment</DropdownMenuItem>
@@ -196,7 +181,6 @@ export function AssignmentList({ clientId }: { clientId?: number }) {
       <AssignGroupDialog open={assigningGroup} onOpenChange={setAssigningGroup} clientId={clientId} />
       <AssignmentFormDialog open={!!replacing} onOpenChange={(open) => !open && setReplacing(undefined)} replacing={replacing} />
       <AssignmentEditDialog assignment={editing} onOpenChange={(open) => !open && setEditing(null)} />
-      <ModulePermissionsDialog assignment={modules} onClose={() => setModules(null)} />
 
       <Dialog open={!!ending} onOpenChange={(open) => !open && setEnding(null)}>
         <DialogContent className="sm:max-w-md">

@@ -16,7 +16,6 @@ import { useAssignmentOptions } from "@/features/assignments/hooks/use-assignmen
 import { TEAM_ROLE_LABELS } from "@/features/assignments/types/assignment.types";
 import { applyApiError } from "@/lib/form-errors";
 import { useAssignStaffGroup, useStaffGroups } from "../hooks/use-staff-groups";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const today = () => new Date().toLocaleDateString("en-CA");
 
@@ -95,7 +94,6 @@ export function AssignGroupDialog({ open, onOpenChange, groupId, clientId }: Pro
               {group.members.map((m) => (
                 <li key={`${m.user_id}-${m.team_role}`} className={m.assignable ? "" : "text-muted-foreground line-through"}>
                   {m.full_name} · {TEAM_ROLE_LABELS[m.team_role]}
-                  {JOURNL_INTEGRATION && m.journl_access && " · JournL"}
                   {!m.assignable && <span className="ml-1 no-underline">(will be skipped: not verified)</span>}
                 </li>
               ))}

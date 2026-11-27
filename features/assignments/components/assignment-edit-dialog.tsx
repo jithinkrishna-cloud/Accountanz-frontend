@@ -16,7 +16,6 @@ import { formatDate } from "@/lib/format";
 import { useUpdateAssignment } from "../hooks/use-assignments";
 import { assignmentEditSchema, type AssignmentEditOutput, type AssignmentEditValues } from "../schemas/assignment.schema";
 import { TEAM_ROLE_LABELS, type Assignment } from "../types/assignment.types";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const toValues = (a: Assignment): AssignmentEditValues => ({ valid_to: a.valid_to ?? "", journl_access: a.journl_access });
 
@@ -67,16 +66,6 @@ function EditForm({ assignment, onDone }: { assignment: Assignment; onDone: () =
         <FormField id="edit_valid_to" label="Ends" error={errors.valid_to?.message} hint="Leave empty for no end date. Access stops after this day.">
           <Input id="edit_valid_to" type="date" min={assignment.valid_from} aria-invalid={!!errors.valid_to} {...register("valid_to")} />
         </FormField>
-        {JOURNL_INTEGRATION && <Controller
-          control={control}
-          name="journl_access"
-          render={({ field }) => (
-            <div className="flex items-center gap-3">
-              <Checkbox id="edit_journl_access" checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
-              <Label htmlFor="edit_journl_access">JournL access</Label>
-            </div>
-          )}
-        />}
       </form>
       <DialogFooter>
         <Button variant="outline" onClick={onDone}>Cancel</Button>

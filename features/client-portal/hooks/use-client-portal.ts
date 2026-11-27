@@ -10,7 +10,6 @@ export const usePortalDashboard = () => useQuery({ queryKey: K("dashboard"), que
 export const usePortalBusiness = () => useQuery({ queryKey: K("business"), queryFn: s.business });
 export const usePortalTeam = () => useQuery({ queryKey: K("team"), queryFn: s.team });
 export const usePortalMember = (userId: number | null) => useQuery({ queryKey: K("team", userId ?? 0), queryFn: () => s.teamMember(userId!), enabled: userId !== null });
-export const usePortalSoftware = () => useQuery({ queryKey: K("software"), queryFn: s.software });
 export const usePortalDocuments = () => useQuery({ queryKey: K("documents"), queryFn: s.documents });
 export const usePortalRequests = () => useQuery({ queryKey: K("requests"), queryFn: s.requests });
 export const usePortalTasks = (period?: string) => useQuery({ queryKey: K("tasks", period), queryFn: () => s.tasks(period) });

@@ -32,7 +32,6 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { JOURNL_INTEGRATION, JOURNL_INTEGRATION_HREFS } from "@/lib/features";
 import type { Portal } from "@/types/auth";
 
 export interface NavItem {
@@ -57,7 +56,7 @@ export const PORTAL_LABEL: Record<Portal, string> = {
  * team  = my day → my clients' books → review & close → deliver → talk;
  * app   = what's waiting on the client → their books → contact → their company → account.
  */
-const ALL_NAV: Record<Portal, NavGroup[]> = {
+export const NAV: Record<Portal, NavGroup[]> = {
   admin: [
     {
       label: "Overview",
@@ -131,8 +130,6 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
       label: "Setup",
       items: [
         { label: "Task Templates", href: "/admin/task-templates", icon: ListChecks },
-        { label: "JournL Access", href: "/admin/journl-access", icon: KeyRound },
-        { label: "Integrations", href: "/admin/integrations", icon: Plug },
         { label: "Knowledge Base", href: "/admin/knowledge-base", icon: BookOpen },
         { label: "Audit Logs", href: "/admin/audit", icon: ScrollText },
         { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -154,8 +151,6 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
       label: "Clients",
       items: [
         { label: "My Clients", href: "/team/clients", icon: Building2 },
-        // Opens the JournL area, which has its own module sub-sidebar (read-only, live from JournL).
-        { label: "JournL Books", href: "/team/journl", icon: BookOpen },
         { label: "Documents", href: "/team/documents", icon: FolderOpen },
       ],
     },
@@ -229,13 +224,3 @@ const ALL_NAV: Record<Portal, NavGroup[]> = {
     },
   ],
 };
-
-/** The sidebars, without the JournL integration links while that integration is off (see lib/features.ts). */
-export const NAV: Record<Portal, NavGroup[]> = JOURNL_INTEGRATION
-  ? ALL_NAV
-  : (Object.fromEntries(
-      Object.entries(ALL_NAV).map(([portal, groups]) => [
-        portal,
-        groups.map((g) => ({ ...g, items: g.items.filter((i) => !JOURNL_INTEGRATION_HREFS.includes(i.href)) })).filter((g) => g.items.length > 0),
-      ]),
-    ) as Record<Portal, NavGroup[]>);

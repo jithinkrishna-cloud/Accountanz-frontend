@@ -1,6 +1,6 @@
 "use client";
 
-import { OpenInJournl } from "@/features/integrations/components/open-in-journl";
+import { OpenInJournl } from "@/components/shared/open-in-journl";
 import { ArrowLeft, BookOpen, CalendarPlus, CircleCheck, FilePlus2, FileText, MessageSquarePlus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -16,10 +16,8 @@ import { RequestDocumentsDialog, UploadDocumentDialog } from "@/features/documen
 import { NewReportDialog } from "@/features/reports/components/new-report-dialog";
 import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
 import { formatDate, humanize, formatLocalDateTime } from "@/lib/format";
-import { JournlDataSheet, type JournlDataSource } from "@/features/integrations/components/journl-data-sheet";
 import { useClientOverview } from "../hooks/use-workspace";
 import { workspaceService } from "../services/workspace-service";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 type Action = "request" | "upload" | "message" | "meeting" | "approval" | "report" | null;
 
@@ -44,7 +42,6 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 export function ClientOverviewView({ id }: { id: number }) {
   const { data, isLoading, error, refetch } = useClientOverview(id);
   const [action, setAction] = useState<Action>(null);
-  const [books, setBooks] = useState<JournlDataSource | null>(null);
   const close = (o: boolean) => !o && setAction(null);
 
   const back = (
@@ -55,9 +52,7 @@ export function ClientOverviewView({ id }: { id: number }) {
   if (error) return <>{back}<ErrorState error={error} onRetry={() => void refetch()} /></>;
   if (isLoading || !data) return <>{back}<Skeleton className="mb-6 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></>;
 
-  const { client, engagement, team, contacts, summary, journl, journl_connection: jc, journl_link } = data;
-  const myModules = journl.flatMap((p) => p.modules.filter((m) => m.effective_actions.length > 0));
-  const journlOn = journl.some((p) => p.journl_access);
+  const { client, engagement, team, contacts, summary } = data;
   return (
     <>
       {back}
@@ -124,66 +119,10 @@ export function ClientOverviewView({ id }: { id: number }) {
               ))}
             </ul>
           </Card>
-          {!JOURNL_INTEGRATION ? (
-            <Card title="JournL books">
-              <p className="text-muted-foreground text-sm">Work on this client&apos;s books in JournL, signed in with your own JournL login for the client.</p>
-              <OpenInJournl link={journl_link} className="mt-3" />
-            </Card>
-          ) : (
           <Card title="JournL books">
-            {!jc || jc.status !== "connected" ? (
-              <p className="text-muted-foreground text-sm">The client hasn&apos;t connected JournL yet. They do it from their portal (Accounting Software).</p>
-            ) : (
-              <>
-                <p className="text-sm">
-                  {jc.org_name ?? "JournL company"} <span className="text-muted-foreground font-mono text-xs">· ID {jc.org_id}</span>
-                </p>
-                {!journlOn && journl.length > 0 ? (
-                  <p className="text-muted-foreground mt-2 text-sm">Your assignment doesn&apos;t include JournL access. An admin can turn it on.</p>
-                ) : jc.session_until ? (
-                  <>
-                    <p className="text-muted-foreground mt-1 text-xs">Readable until {formatLocalDateTime(jc.session_until)}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() =>
-                        setBooks({
-                          key: ["team", "workspace", "journl-data", client.id],
-                          title: client.name,
-                          orgId: jc.org_id,
-                          sessionUntil: jc.session_until,
-                          load: (period) => workspaceService.journlData(client.id, period),
-                        })
-                      }
-                    >
-                      <BookOpen className="size-4" aria-hidden /> View JournL data
-                    </Button>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground mt-2 text-sm">The JournL session has expired. Ask the client owner to refresh it from their portal (Accounting Software).</p>
-                )}
-                {(journlOn || journl.length === 0) && <OpenInJournl link={jc.link} className="mt-3 border-t pt-3" />}
-              </>
-            )}
+            <p className="text-muted-foreground text-sm">Work on this client&apos;s books in JournL, signed in with the JournL login the client invited you with.</p>
+            <OpenInJournl className="mt-3" />
           </Card>
-          )}
-          {JOURNL_INTEGRATION && journl.length > 0 && (
-            <Card title="My JournL access">
-              {!journlOn ? (
-                <p className="text-muted-foreground text-sm">JournL access is off for your assignment. An admin can turn it on.</p>
-              ) : myModules.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No JournL modules have been granted to you yet.</p>
-              ) : (
-                <ul className="flex flex-wrap gap-2">
-                  {[...new Map(myModules.map((m) => [m.module_key, m])).values()].map((m) => (
-                    <li key={m.module_key} className="bg-muted rounded-full px-2.5 py-0.5 text-xs">{m.label}</li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-muted-foreground mt-3 text-xs">Read-only for now: open them under Accounting — JournL in the sidebar. The client&apos;s JournL plan also applies.</p>
-            </Card>
-          )}
           <Card title="Client contacts">
             {contacts.length === 0 ? (
               <p className="text-muted-foreground text-sm">No portal users yet. An admin invites them from the client page.</p>
@@ -207,7 +146,6 @@ export function ClientOverviewView({ id }: { id: number }) {
       <ScheduleMeetingDialog portal="team" clientId={id} open={action === "meeting"} onOpenChange={close} />
       <RequestApprovalDialog portal="team" clientId={id} open={action === "approval"} onOpenChange={close} />
       <NewReportDialog portal="team" clientId={id} open={action === "report"} onOpenChange={close} />
-      <JournlDataSheet source={books} onClose={() => setBooks(null)} />
     </>
   );
 }

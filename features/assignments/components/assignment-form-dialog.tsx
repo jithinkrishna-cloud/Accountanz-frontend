@@ -17,7 +17,6 @@ import { useAssignmentOptions, useCreateAssignment } from "../hooks/use-assignme
 import { assignmentFormSchema, type AssignmentFormOutput, type AssignmentFormValues } from "../schemas/assignment.schema";
 import { TEAM_ROLE_LABELS, TEAM_ROLES, type Assignment } from "../types/assignment.types";
 import { StaffPicker } from "./staff-picker";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
 
@@ -145,19 +144,6 @@ export function AssignmentFormDialog({ open, onOpenChange, replacing, clientId }
           <FormField id="valid_to" label="Ends" error={errors.valid_to?.message} hint="Leave empty for no end date.">
             <Input id="valid_to" type="date" aria-invalid={!!errors.valid_to} {...register("valid_to")} />
           </FormField>
-          {JOURNL_INTEGRATION && <Controller
-            control={control}
-            name="journl_access"
-            render={({ field }) => (
-              <div className="flex items-start gap-3 rounded-lg border p-3 sm:col-span-2">
-                <Checkbox id="journl_access" checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
-                <div className="grid gap-0.5">
-                  <Label htmlFor="journl_access">JournL access</Label>
-                  <p className="text-muted-foreground text-xs">This person also needs a login to the client&apos;s books in JournL.</p>
-                </div>
-              </div>
-            )}
-          />}
         </form>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

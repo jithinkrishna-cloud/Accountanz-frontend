@@ -1,6 +1,6 @@
 "use client";
 
-import { OpenInJournl } from "@/features/integrations/components/open-in-journl";
+import { OpenInJournl } from "@/components/shared/open-in-journl";
 import { ArrowLeft, Pencil, Plus, Trash2, TriangleAlert, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -22,7 +22,6 @@ import { FinancialProfileDialog } from "./financial-profile-dialog";
 import { InviteClientUserDialog } from "./invite-client-user-dialog";
 import { RemoveStakeholderDialog, StakeholderDialog } from "./stakeholder-dialogs";
 import { TaxDetailsDialog } from "./tax-details-dialog";
-import { JOURNL_INTEGRATION } from "@/lib/features";
 
 /** "ABCDE1234F · Registered", or just the status when no number is recorded yet. */
 function registration(number: string | null, status: RegistrationStatus | null) {
@@ -217,17 +216,9 @@ export function ClientDetailView({ id }: { id: number }) {
               </ul>
             )}
           </Section>
-          <Section
-            title="JournL"
-            aside={JOURNL_INTEGRATION && <Link href="/admin/journl-access" className="text-primary text-xs font-medium hover:underline">Access to-dos</Link>}
-          >
-            {JOURNL_INTEGRATION && client.journl.status === "connected" && (
-              <p className="mb-3 text-sm">
-                {client.journl.org_name ?? "JournL company"}
-                {client.journl.org_id && <span className="text-muted-foreground font-mono text-xs"> · ID {client.journl.org_id}</span>}
-              </p>
-            )}
-            <OpenInJournl link={client.journl.link} />
+          <Section title="JournL">
+            <p className="text-muted-foreground mb-2 text-sm">The client invites accountants to their books in JournL directly.</p>
+            <OpenInJournl />
           </Section>
           <Section
             title="Portal users"
