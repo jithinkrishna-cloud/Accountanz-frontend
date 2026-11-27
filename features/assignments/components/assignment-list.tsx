@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeft, Group, KeyRound, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
+import { ArrowRightLeft, Group, MoreHorizontal, Pencil, Plus, UserMinus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

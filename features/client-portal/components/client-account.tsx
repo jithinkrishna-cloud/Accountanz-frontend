@@ -25,7 +25,7 @@ import { applyApiError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
 import { formatDate, formatINR, formatPeriod, humanize } from "@/lib/format";
 import { usePayInvoice, usePortalBilling, usePortalBusiness, usePortalSettings, useUpdateClient, useUpdateSettings } from "../hooks/use-client-portal";
-import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalCompany, PortalSettings } from "../types/client-portal.types";
+import type { NotificationPrefs, PortalBilling, PortalBusiness, PortalSettings } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { Card } from "./portal-ui";
 
@@ -303,7 +303,7 @@ function NotificationsForm({ settings }: { settings: PortalSettings }) {
 type SettingsTab = "profile" | "notifications";
 const SETTINGS_TABS: SettingsTab[] = ["profile", "notifications"];
 
-function SettingsBody({ company }: { company: PortalCompany }) {
+function SettingsBody() {
   const { data, isLoading, error, refetch } = usePortalSettings();
   const params = useSearchParams();
   const requested = params.get("tab") as SettingsTab | null;
@@ -335,10 +335,10 @@ function SettingsBody({ company }: { company: PortalCompany }) {
 export function ClientSettings() {
   return (
     <CompanyGate>
-      {(company) => (
+      {() => (
         <>
           <PageHeader title="Settings" description="Your profile and notification preferences." />
-          <SettingsBody company={company} />
+          <SettingsBody />
         </>
       )}
     </CompanyGate>

@@ -1,7 +1,7 @@
 "use client";
 
 import { OpenInJournl } from "@/components/shared/open-in-journl";
-import { ArrowLeft, BookOpen, CalendarPlus, CircleCheck, FilePlus2, FileText, MessageSquarePlus, Upload } from "lucide-react";
+import { ArrowLeft, CalendarPlus, CircleCheck, FilePlus2, FileText, MessageSquarePlus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -15,9 +15,8 @@ import { ScheduleMeetingDialog } from "@/features/communication/components/sched
 import { RequestDocumentsDialog, UploadDocumentDialog } from "@/features/documents/components/document-dialogs";
 import { NewReportDialog } from "@/features/reports/components/new-report-dialog";
 import { ACCOUNTING_SOFTWARE_LABELS } from "@/lib/constants";
-import { formatDate, humanize, formatLocalDateTime } from "@/lib/format";
+import { formatDate, humanize } from "@/lib/format";
 import { useClientOverview } from "../hooks/use-workspace";
-import { workspaceService } from "../services/workspace-service";
 
 type Action = "request" | "upload" | "message" | "meeting" | "approval" | "report" | null;
 
