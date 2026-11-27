@@ -46,7 +46,7 @@ export interface MyClient {
 export interface ClientOverview {
   client: { id: number; name: string; legal_name: string; gstin: string | null; pan: string | null; state: string | null; status: string; accounting_software: string };
   engagement: { id: number; package_name: string; scope_notes: string | null; start_date: string | null; renewal_date: string | null; services: string[] } | null;
-  team: { user_id: number; full_name: string; email: string; team_role: string; journl_access: 0 | 1 }[];
+  team: { user_id: number; full_name: string; email: string; team_role: string }[];
   contacts: { full_name: string; email: string; role: string; can_approve: 0 | 1 }[];
   summary: MyClient | null;
   can_review: boolean;

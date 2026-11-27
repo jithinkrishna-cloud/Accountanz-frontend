@@ -29,7 +29,6 @@ const schema = z.object({
       z.object({
         user_id: z.string().min(1, "Choose a person"),
         team_role: z.string().refine((v) => (TEAM_ROLES as readonly string[]).includes(v), "Choose a role"),
-        journl_access: z.boolean(),
       }),
     )
     .min(1, "Add at least one member")
@@ -37,12 +36,12 @@ const schema = z.object({
 });
 type Values = z.infer<typeof schema>;
 
-const blank: Values["members"][number] = { user_id: "", team_role: "", journl_access: false };
+const blank: Values["members"][number] = { user_id: "", team_role: "" };
 
 const toValues = (g?: StaffGroup | null): Values => ({
   name: g?.name ?? "",
   description: g?.description ?? "",
-  members: g?.members.length ? g.members.map((m) => ({ user_id: String(m.user_id), team_role: m.team_role, journl_access: m.journl_access })) : [{ ...blank }],
+  members: g?.members.length ? g.members.map((m) => ({ user_id: String(m.user_id), team_role: m.team_role })) : [{ ...blank }],
 });
 
 /** Creates a group, or edits one (`group`). Editing never changes assignments already made from the group. */
@@ -74,7 +73,7 @@ export function StaffGroupFormDialog({ open, onOpenChange, group }: { open: bool
       const saved = await save.mutateAsync({
         name: v.name,
         description: v.description || null,
-        members: v.members.map((m) => ({ user_id: Number(m.user_id), team_role: m.team_role as TeamRole, journl_access: m.journl_access })),
+        members: v.members.map((m) => ({ user_id: Number(m.user_id), team_role: m.team_role as TeamRole })),
       });
       toast.success(group ? `${saved.name} saved` : `${saved.name} created`);
       close(false);

@@ -10,6 +10,7 @@ import { formatPeriod } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PortalRole } from "@/types/auth";
 import { useProgressList } from "../hooks/use-progress";
+import { useQueryState } from "../hooks/use-query-state";
 import type { ProgressSummary } from "../types/progress.types";
 import { PeriodSelect } from "./period-select";
 
@@ -18,9 +19,9 @@ const n = (v: number, warn = false) => <span className={cn("tabular-nums", v ===
 /** Admin → Individual Progress: everyone's workload and output for a month. Click a person for their page. */
 export function ProgressListView() {
   const router = useRouter();
-  const [period, setPeriod] = useState<string>();
-  const [q, setQ] = useState("");
-  const { data, isLoading, error, refetch } = useProgressList(period);
+  const [month, setMonth] = useQueryState("month", "");
+  const [q, setQ] = useQueryState("q", "");
+  const { data, isLoading, error, refetch } = useProgressList(month || undefined);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -59,7 +60,7 @@ export function ProgressListView() {
       <PageHeader
         title="Individual Progress"
         description="Each person's open work today, and what they got approved and logged in the month. Select a person for details."
-        actions={data && <PeriodSelect value={data.period} periods={data.periods} onChange={setPeriod} />}
+        actions={data && <PeriodSelect value={data.period} periods={data.periods} onChange={setMonth} />}
       />
       <div className="mb-4">
         <SearchInput value={q} onChange={setQ} placeholder="Search by name or email" />
@@ -71,7 +72,7 @@ export function ProgressListView() {
         isLoading={isLoading}
         error={error}
         onRetry={() => void refetch()}
-        onRowClick={(p) => router.push(`/admin/progress/${p.user_id}`)}
+        onRowClick={(p) => router.push(`/admin/progress/${p.user_id}${month ? `?month=${month}` : ""}`)}
         empty={{ title: q ? "Nobody matches" : "No active team members yet" }}
       />
     </>

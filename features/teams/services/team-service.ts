@@ -7,7 +7,6 @@ export interface TeamMember {
   full_name: string;
   email: string;
   team_role: TeamRole;
-  journl_access: boolean;
   valid_to: string | null;
   /** Staff group the assignment came from, if any. */
   source_group_name: string | null;

@@ -32,7 +32,6 @@ export interface Assignment {
   valid_to: string | null;
   status: AssignmentStatus;
   phase: AssignmentPhase;
-  journl_access: boolean;
   replaced_by_assignment_id: number | null;
   replaced_by_name: string | null;
   /** The staff group this assignment was created from, if any (null once the group is deleted). */

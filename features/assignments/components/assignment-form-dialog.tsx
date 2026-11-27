@@ -24,7 +24,6 @@ const toValues = (replacing?: Assignment, clientId?: number): AssignmentFormValu
   team_role: replacing?.team_role ?? "",
   valid_from: today(),
   valid_to: "",
-  journl_access: replacing?.journl_access ?? false,
 });
 
 interface Props {

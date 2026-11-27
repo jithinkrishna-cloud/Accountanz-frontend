@@ -38,7 +38,7 @@ interface Props {
   clientId?: number;
 }
 
-/** Assigns every member of a group to a client: one assignment each, with the member's role and JournL setting. */
+/** Assigns every member of a group to a client: one assignment each, with the member's role. */
 export function AssignGroupDialog({ open, onOpenChange, groupId, clientId }: Props) {
   const groups = useStaffGroups(open);
   const options = useAssignmentOptions(open);

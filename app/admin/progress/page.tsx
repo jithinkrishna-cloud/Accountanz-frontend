@@ -1,5 +1,10 @@
 import { ProgressListView } from "@/features/progress/components/progress-list";
+import { Suspense } from "react";
 
 export default function TeamProgressPage() {
-  return <ProgressListView />;
+  return (
+    <Suspense>
+      <ProgressListView />
+    </Suspense>
+  );
 }

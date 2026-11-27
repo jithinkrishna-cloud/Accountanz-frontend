@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatPeriod, humanize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useFirmProgress } from "../hooks/use-progress";
+import { useQueryState } from "../hooks/use-query-state";
 import type { FirmClient } from "../types/progress.types";
 import { PeriodSelect } from "./period-select";
 
@@ -59,10 +60,12 @@ function PersonLink({ id, name }: { id: number; name: string }) {
 
 /** Admin → Insights → Firm Progress: how every client's work is going this month, and each staff group's load. */
 export function FirmProgressView() {
-  const [period, setPeriod] = useState<string>();
-  const [q, setQ] = useState("");
-  const [attention, setAttention] = useState(false);
-  const { data, isLoading, error, refetch } = useFirmProgress(period);
+  const [month, setMonth] = useQueryState("month", "");
+  const [q, setQ] = useQueryState("q", "");
+  const [attentionParam, setAttentionParam] = useQueryState("attention", "");
+  const attention = attentionParam === "1";
+  const setAttention = (on: boolean) => setAttentionParam(on ? "1" : "");
+  const { data, isLoading, error, refetch } = useFirmProgress(month || undefined);
 
   const clients = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -79,7 +82,7 @@ export function FirmProgressView() {
       description="How every client's work is going this month, and who is on it. Click a person to open their Individual Progress."
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          {data && <PeriodSelect value={data.period} periods={data.periods} onChange={setPeriod} />}
+          {data && <PeriodSelect value={data.period} periods={data.periods} onChange={setMonth} />}
           <Button variant="outline" asChild>
             <Link href="/admin/progress"><TrendingUp className="size-4" aria-hidden /> Individual Progress</Link>
           </Button>

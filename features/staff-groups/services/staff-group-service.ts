@@ -6,7 +6,6 @@ export interface StaffGroupMember {
   full_name: string;
   email: string;
   team_role: TeamRole;
-  journl_access: boolean;
   /** False when the person is no longer an active, verified accountant (skipped on assign). */
   assignable: boolean;
 }
@@ -25,7 +24,7 @@ export interface StaffGroup {
 export interface StaffGroupInput {
   name: string;
   description: string | null;
-  members: { user_id: number; team_role: TeamRole; journl_access: boolean }[];
+  members: { user_id: number; team_role: TeamRole }[];
 }
 
 export interface AssignGroupInput {

@@ -47,7 +47,7 @@ function ReviewBody({ r, onClose }: { r: AccountantRequest; onClose: () => void 
   const [done, setDone] = useState<AccountantRequest | null>(null);
   // Assign in the same step: role starts at the accountant's own role, start at the client's preferred date (or today).
   // A replacement is always approved by handing over: same role as the person being replaced, starting today
-  // (the old assignment ends today), and their JournL permissions carry over.
+  // (the old assignment ends today).
   const isReplace = r.kind === "replace";
   const [assign, setAssign] = useState(true);
   const [role, setRole] = useState<TeamRole | "">(
@@ -95,7 +95,7 @@ function ReviewBody({ r, onClose }: { r: AccountantRequest; onClose: () => void 
           <DialogDescription>
             {done.assignment_id
               ? isReplace
-                ? `${done.accountant_name} replaces ${r.replaces_name ?? "the previous team member"} as ${TEAM_ROLE_LABELS[role as TeamRole]?.toLowerCase() ?? "team member"} on ${done.client_name} from ${formatDate(from)}, with the same JournL permissions. ${done.client_name} has been told, and ${r.replaces_name?.split(" ")[0] ?? "the previous team member"} was told only that their assignment ended.`
+                ? `${done.accountant_name} replaces ${r.replaces_name ?? "the previous team member"} as ${TEAM_ROLE_LABELS[role as TeamRole]?.toLowerCase() ?? "team member"} on ${done.client_name} from ${formatDate(from)}. ${done.client_name} has been told, and ${r.replaces_name?.split(" ")[0] ?? "the previous team member"} was told only that their assignment ended.`
                 : `${done.accountant_name} now works on ${done.client_name} from ${formatDate(from)}. ${done.client_name} has been told.`
               : `${done.client_name} has been told. Assign ${done.accountant_name} when you're ready.`}
           </DialogDescription>
@@ -133,7 +133,7 @@ function ReviewBody({ r, onClose }: { r: AccountantRequest; onClose: () => void 
               <p className="font-medium">Approve and hand over</p>
               <ul className="text-muted-foreground mt-1 list-disc space-y-0.5 pl-5 text-xs">
                 <li>{r.replaces_name ?? "The current team member"}&apos;s assignment ends today.</li>
-                <li>{r.accountant_name} starts as {TEAM_ROLE_LABELS[role as TeamRole]?.toLowerCase() ?? "the same role"}, with the same JournL access and feature permissions.</li>
+                <li>{r.accountant_name} starts as {TEAM_ROLE_LABELS[role as TeamRole]?.toLowerCase() ?? "the same role"}.</li>
                 <li>{r.replaces_name?.split(" ")[0] ?? "They"} {r.replaces_name ? "is" : "are"} only told their assignment ended, not why.</li>
               </ul>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

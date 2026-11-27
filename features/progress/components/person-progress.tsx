@@ -16,11 +16,13 @@ import { formatDate, formatINR, formatLocalDateTime, formatPeriod, humanize, ini
 import { cn } from "@/lib/utils";
 import type { PortalRole } from "@/types/auth";
 import { usePersonProgress } from "../hooks/use-progress";
+import { useQueryState } from "../hooks/use-query-state";
 import type { PersonProgress, PersonTaskView } from "../types/progress.types";
 import { PeriodSelect } from "./period-select";
 import { PersonTasks } from "./person-tasks";
 
-type Tab = "overview" | "tasks" | "clients" | "profile";
+const TAB_KEYS = ["overview", "tasks", "clients", "profile"] as const;
+type Tab = (typeof TAB_KEYS)[number];
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "tasks", label: "Tasks" },
@@ -59,10 +61,12 @@ const Num = ({ v, warn }: { v: number; warn?: boolean }) => (
 
 /** Admin → Insights → Individual Progress → one person: overview, every task, their clients and their profile. */
 export function PersonProgressView({ id }: { id: number }) {
-  const [period, setPeriod] = useState<string>();
-  const [tab, setTab] = useState<Tab>("overview");
-  const [taskView, setTaskView] = useState<PersonTaskView>("open");
-  const { data, isLoading, error, refetch } = usePersonProgress(id, period);
+  // Tab and month live in the URL (?tab=&month=), as do the Tasks tab's filters.
+  const [tab, setTab] = useQueryState<Tab>("tab", "overview", TAB_KEYS);
+  const [month, setMonth] = useQueryState("month", "");
+  const [, setTaskView] = useQueryState<PersonTaskView>("view", "open");
+  const [, setTaskPage] = useQueryState("page", "1");
+  const { data, isLoading, error, refetch } = usePersonProgress(id, month || undefined);
 
   const back = (
     <Link href="/admin/progress" className="text-muted-foreground mb-4 inline-flex items-center gap-1 text-sm hover:underline">
@@ -83,7 +87,7 @@ export function PersonProgressView({ id }: { id: number }) {
   const p = data.person;
   const profileHref = `/admin/${p.staff_type === "accountant" ? "accountants" : "employees"}/${p.user_id}`;
   /** Jump to the Tasks tab with a view already picked. */
-  const showTasks = (v: PersonTaskView) => { setTaskView(v); setTab("tasks"); };
+  const showTasks = (v: PersonTaskView) => { setTaskView(v); setTaskPage(""); setTab("tasks"); };
 
   return (
     <>
@@ -98,7 +102,7 @@ export function PersonProgressView({ id }: { id: number }) {
             description={`${ROLE_LABELS[p.portal_role as PortalRole] ?? humanize(p.portal_role)} · ${p.email}`}
             actions={
               <div className="flex flex-wrap items-center gap-2">
-                {(tab === "overview" || tab === "clients") && <PeriodSelect value={data.period} periods={data.periods} onChange={setPeriod} />}
+                {(tab === "overview" || tab === "clients") && <PeriodSelect value={data.period} periods={data.periods} onChange={setMonth} />}
                 <Button variant="outline" asChild><Link href={profileHref}><Pencil className="size-4" aria-hidden /> Edit profile</Link></Button>
               </div>
             }
@@ -130,9 +134,7 @@ export function PersonProgressView({ id }: { id: number }) {
       {tab === "overview" && <Overview data={data} showTasks={showTasks} showClients={() => setTab("clients")} />}
       {tab === "tasks" && (
         <PersonTasks
-          key={taskView}
           userId={p.user_id}
-          initialView={taskView}
           clients={data.clients.map((c) => ({ value: String(c.client_id), label: c.client_name }))}
         />
       )}

@@ -9,6 +9,7 @@ import { TaskDetailSheet } from "@/features/tasks/components/task-detail-sheet";
 import { formatDate, formatPeriod } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePersonTasks } from "../hooks/use-progress";
+import { useQueryState } from "../hooks/use-query-state";
 import { TASK_VIEWS, type PersonTask, type PersonTaskView } from "../types/progress.types";
 
 const VIEW_LABELS: Record<PersonTaskView, string> = {
@@ -21,15 +22,19 @@ const VIEW_LABELS: Record<PersonTaskView, string> = {
 };
 
 /** Every task assigned to one person, by view; a row opens the task in the side panel. */
-export function PersonTasks({ userId, clients, initialView = "open" }: { userId: number; clients: { value: string; label: string }[]; initialView?: PersonTaskView }) {
-  const [view, setView] = useState<PersonTaskView>(initialView);
-  const [q, setQ] = useState("");
-  const [clientId, setClientId] = useState<string>();
-  const [page, setPage] = useState(1);
+export function PersonTasks({ userId, clients }: { userId: number; clients: { value: string; label: string }[] }) {
+  // All in the URL (?view=&q=&client=&page=), so a filtered list survives refresh and can be shared.
+  const [view, setView] = useQueryState<PersonTaskView>("view", "open", TASK_VIEWS);
+  const [q, setQ] = useQueryState("q", "");
+  const [clientParam, setClientId] = useQueryState("client", "");
+  const [pageParam, setPageParam] = useQueryState("page", "1");
+  const clientId = clientParam || undefined;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const setPage = (n: number) => setPageParam(String(n));
   const [openTask, setOpenTask] = useState<number | null>(null);
   const { data, isLoading, error, refetch } = usePersonTasks(userId, { view, q: q.trim() || undefined, client_id: clientId ? Number(clientId) : undefined, page });
 
-  const reset = <T,>(fn: (v: T) => void) => (v: T) => { fn(v); setPage(1); };
+  const reset = <T,>(fn: (v: T) => void) => (v: T) => { fn(v); setPageParam(""); };
 
   const columns: Column<PersonTask>[] = [
     {

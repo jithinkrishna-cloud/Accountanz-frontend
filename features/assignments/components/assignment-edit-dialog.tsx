@@ -15,7 +15,7 @@ import { useUpdateAssignment } from "../hooks/use-assignments";
 import { assignmentEditSchema, type AssignmentEditOutput, type AssignmentEditValues } from "../schemas/assignment.schema";
 import { TEAM_ROLE_LABELS, type Assignment } from "../types/assignment.types";
 
-const toValues = (a: Assignment): AssignmentEditValues => ({ valid_to: a.valid_to ?? "", journl_access: a.journl_access });
+const toValues = (a: Assignment): AssignmentEditValues => ({ valid_to: a.valid_to ?? "" });
 
 export function AssignmentEditDialog({ assignment, onOpenChange }: { assignment: Assignment | null; onOpenChange: (open: boolean) => void }) {
   return (
