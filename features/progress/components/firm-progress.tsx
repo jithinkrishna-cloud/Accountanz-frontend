@@ -58,7 +58,7 @@ function PersonLink({ id, name }: { id: number; name: string }) {
   return <Link href={`/admin/progress/${id}`} className="hover:text-primary hover:underline">{name}</Link>;
 }
 
-/** Admin → Insights → Firm Progress: how every client's work is going this month, and each staff group's load. */
+/** Admin → Insights → Client Progress: how every client's work is going this month, and each staff group's load. */
 export function FirmProgressView() {
   const [monthParam, setMonth] = useQueryState("month", "");
   const [q, setQ] = useQueryState("q", "");
@@ -78,7 +78,7 @@ export function FirmProgressView() {
 
   const header = (
     <PageHeader
-      title="Firm Progress"
+      title="Client Progress"
       description="How every client's work is going this month, and who is on it. Click a person to open their Individual Progress."
       actions={
         <div className="flex flex-wrap items-center gap-2">
