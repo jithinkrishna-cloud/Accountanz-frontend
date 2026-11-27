@@ -42,3 +42,45 @@ export interface PersonProgress {
   open_tasks: { id: number; title: string; client_id: number; client_name: string; period: string; status: string; due_date: string | null; overdue: boolean }[];
   recent_reviews: { id: number; task_id: number; task_title: string; client_name: string; decision: "approved" | "returned"; comments: string | null; reviewer_name: string | null; created_at: string }[];
 }
+
+export interface FirmClient {
+  client_id: number;
+  client_name: string;
+  status: string;
+  package_name: string | null;
+  period_total: number;
+  period_approved: number;
+  open_tasks: number;
+  overdue: number;
+  awaiting_review: number;
+  closing_status: "open" | "ready" | "closed";
+  team: { user_id: number; full_name: string; team_role: string }[];
+}
+
+export interface FirmGroup {
+  /** null for the "Not in a group" row. */
+  group_id: number | null;
+  name: string;
+  members: { user_id: number; full_name: string }[];
+  open_tasks: number;
+  overdue: number;
+  awaiting_review: number;
+  approved: number;
+}
+
+export interface FirmProgress {
+  period: string;
+  periods: string[];
+  totals: {
+    active_clients: number;
+    open_tasks: number;
+    overdue: number;
+    awaiting_review: number;
+    awaiting_over_two_days: number;
+    period_total: number;
+    period_approved: number;
+    closing_done: number;
+  };
+  clients: FirmClient[];
+  groups: FirmGroup[];
+}

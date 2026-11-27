@@ -68,7 +68,7 @@ export const NAV: Record<Portal, NavGroup[]> = {
       // How the firm is doing: progress by client, by person, and the numbers over time.
       label: "Insights",
       items: [
-        { label: "Firm Progress", href: "/admin/workspace", icon: Activity },
+        { label: "Firm Progress", href: "/admin/firm-progress", icon: Activity },
         { label: "Individual Progress", href: "/admin/progress", icon: TrendingUp },
         { label: "Analytics", href: "/admin/analytics", icon: ChartColumn },
       ],

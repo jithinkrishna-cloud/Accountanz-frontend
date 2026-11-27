@@ -8,7 +8,6 @@ const KEY = ["team", "workspace"] as const;
 
 export const useWorkspaceDashboard = () => useQuery({ queryKey: [...KEY, "dashboard"], queryFn: workspaceService.dashboard });
 export const useMyClients = () => useQuery({ queryKey: [...KEY, "clients"], queryFn: () => workspaceService.clients("team") });
-export const useAdminWorkspaceClients = () => useQuery({ queryKey: ["admin", "workspace", "clients"], queryFn: () => workspaceService.clients("admin") });
 export const useClientOverview = (id: number | null, portal: StaffPortal = "team") =>
   useQuery({ queryKey: [portal, "workspace", "client", id], queryFn: () => workspaceService.client(id!, portal), enabled: id !== null });
 export const useChecklist = (period?: string) => useQuery({ queryKey: [...KEY, "closing", period ?? "current"], queryFn: () => workspaceService.checklist(period) });
