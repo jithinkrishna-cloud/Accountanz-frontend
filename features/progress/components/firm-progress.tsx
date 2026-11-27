@@ -2,7 +2,7 @@
 
 import { ArrowRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -60,12 +60,12 @@ function PersonLink({ id, name }: { id: number; name: string }) {
 
 /** Admin → Insights → Firm Progress: how every client's work is going this month, and each staff group's load. */
 export function FirmProgressView() {
-  const [month, setMonth] = useQueryState("month", "");
+  const [monthParam, setMonth] = useQueryState("month", "");
   const [q, setQ] = useQueryState("q", "");
   const [attentionParam, setAttentionParam] = useQueryState("attention", "");
   const attention = attentionParam === "1";
   const setAttention = (on: boolean) => setAttentionParam(on ? "1" : "");
-  const { data, isLoading, error, refetch } = useFirmProgress(month || undefined);
+  const { data, isLoading, error, refetch } = useFirmProgress(monthParam || undefined);
 
   const clients = useMemo(() => {
     const term = q.trim().toLowerCase();

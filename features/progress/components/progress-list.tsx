@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -19,9 +19,9 @@ const n = (v: number, warn = false) => <span className={cn("tabular-nums", v ===
 /** Admin → Individual Progress: everyone's workload and output for a month. Click a person for their page. */
 export function ProgressListView() {
   const router = useRouter();
-  const [month, setMonth] = useQueryState("month", "");
+  const [monthParam, setMonth] = useQueryState("month", "");
   const [q, setQ] = useQueryState("q", "");
-  const { data, isLoading, error, refetch } = useProgressList(month || undefined);
+  const { data, isLoading, error, refetch } = useProgressList(monthParam || undefined);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -72,7 +72,7 @@ export function ProgressListView() {
         isLoading={isLoading}
         error={error}
         onRetry={() => void refetch()}
-        onRowClick={(p) => router.push(`/admin/progress/${p.user_id}${month ? `?month=${month}` : ""}`)}
+        onRowClick={(p) => router.push(`/admin/progress/${p.user_id}${monthParam ? `?month=${monthParam}` : ""}`)}
         empty={{ title: q ? "Nobody matches" : "No active team members yet" }}
       />
     </>

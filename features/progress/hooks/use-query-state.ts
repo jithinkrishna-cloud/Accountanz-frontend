@@ -8,7 +8,7 @@ import { useCallback } from "react";
  * Writes with history.replaceState (Next keeps useSearchParams in sync), so filtering doesn't pile up history
  * entries. The fallback, or a value not in `allowed`, reads back as the fallback and is left out of the URL.
  */
-export function useQueryState<T extends string>(key: string, fallback: T, allowed?: readonly T[]): [T, (value: T | "" | undefined) => void] {
+export function useQueryState<T extends string = string>(key: string, fallback: NoInfer<T>, allowed?: readonly T[]): [T, (value: T | "" | undefined) => void] {
   const params = useSearchParams();
   const raw = params.get(key);
   const value = raw !== null && (!allowed || allowed.includes(raw as T)) ? (raw as T) : fallback;
