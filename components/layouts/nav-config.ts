@@ -29,6 +29,8 @@ import {
   UserSearch,
   Users,
   Wallet,
+  ListTodo,
+  TrendingUp,
 } from "lucide-react";
 import type { Portal } from "@/types/auth";
 
@@ -50,7 +52,7 @@ export const PORTAL_LABEL: Record<Portal, string> = {
 
 /**
  * Each portal's sidebar, ordered by how the work flows and how often it's used:
- * admin = see the firm → win & onboard clients → run the work → deliver → bill → people → setup;
+ * admin = see the firm → clients → run the work → deliver → bill → people → setup;
  * team  = my day → my clients' books → review & close → deliver → talk;
  * app   = what's waiting on the client → their books → contact → their company → account.
  */
@@ -63,8 +65,15 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
-      // One business record moving through the pipeline: Leads (first contact → accepted proposal) → Engagements
-      // (signed agreement → activate) → Clients (served).
+      // How the firm is doing: progress by client, by person, and the numbers over time.
+      label: "Insights",
+      items: [
+        { label: "Firm Progress", href: "/admin/workspace", icon: Activity },
+        { label: "Individual Progress", href: "/admin/progress", icon: TrendingUp },
+        { label: "Analytics", href: "/admin/analytics", icon: ChartColumn },
+      ],
+    },
+    {
       label: "Clients",
       items: [
         // Clients holds two tabs: Clients and Engagements (packages and services).
@@ -74,28 +83,19 @@ export const NAV: Record<Portal, NavGroup[]> = {
       ],
     },
     {
-      // The catalogue clients buy from: building blocks first (services → packages).
-      label: "Configuration",
-      items: [
-        { label: "Services", href: "/admin/services", icon: Briefcase },
-        { label: "Packages", href: "/admin/packages", icon: Package },
-      ],
-    },
-    {
-      // Daily operations, in the order work moves: plan → do → review → close.
-      label: "Operations",
+      // Daily work, in the order it moves: plan → do → review → close.
+      label: "Work",
       items: [
         // Switches into the project Workspace (its own layout; "Back to Accountanz" returns here).
         { label: "Workspace", href: "/projects", icon: SquareKanban },
-        { label: "Task Management", href: "/admin/tasks", icon: ClipboardList },
-        { label: "Document Centre", href: "/admin/documents", icon: FolderOpen },
-        { label: "Reviews & Approvals", href: "/admin/reviews", icon: CircleCheck },
+        { label: "Tasks", href: "/admin/tasks", icon: ListTodo },
+        { label: "Documents", href: "/admin/documents", icon: FolderOpen },
+        { label: "Reviews", href: "/admin/reviews", icon: CircleCheck },
         { label: "Month-End Closing", href: "/admin/closing", icon: CalendarCheck },
-        { label: "Team Progress", href: "/admin/workspace", icon: Activity },
-        { label: "Reports & Analytics", href: "/admin/analytics", icon: ChartColumn },
       ],
     },
     {
+      // What the client sees and talks to us about.
       label: "Client delivery",
       items: [
         { label: "Reports", href: "/admin/reports", icon: FileText },
@@ -107,26 +107,28 @@ export const NAV: Record<Portal, NavGroup[]> = {
     {
       label: "Finance",
       items: [
-        { label: "Service Invoices", href: "/admin/invoices", icon: Receipt },
+        { label: "Invoices", href: "/admin/invoices", icon: Receipt },
         { label: "Payments", href: "/admin/payments", icon: CreditCard },
         { label: "Accountant Payouts", href: "/admin/payouts", icon: Wallet },
       ],
     },
     {
-      // Who works on what first (most used), then the people records.
+      // The people first, then who works on what.
       label: "People",
       items: [
+        { label: "Accountants", href: "/admin/accountants", icon: UserCog },
+        { label: "Employees", href: "/admin/employees", icon: Users },
         { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
         { label: "Teams", href: "/admin/teams", icon: UsersRound },
         { label: "Groups", href: "/admin/groups", icon: Group },
-        { label: "Accountants", href: "/admin/accountants", icon: UserCog },
-        { label: "Employees", href: "/admin/employees", icon: Users },
       ],
     },
     {
-      // Configured once, revisited rarely.
+      // Configured once, revisited rarely: the catalogue clients buy from, templates and system settings.
       label: "Setup",
       items: [
+        { label: "Services", href: "/admin/services", icon: Briefcase },
+        { label: "Packages", href: "/admin/packages", icon: Package },
         { label: "Task Templates", href: "/admin/task-templates", icon: ListChecks },
         { label: "Knowledge Base", href: "/admin/knowledge-base", icon: BookOpen },
         { label: "Audit Logs", href: "/admin/audit", icon: ScrollText },

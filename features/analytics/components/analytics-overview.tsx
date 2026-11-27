@@ -25,7 +25,7 @@ const inrK = (n: number) => (n >= 1000 ? `₹${Math.round(n / 1000)}k` : formatI
 
 export function AnalyticsOverview() {
   const { data, isLoading, error, refetch } = useAnalytics();
-  const header = <PageHeader title="Reports & Analytics" description="Throughput, turnaround, revenue and portfolio mix." />;
+  const header = <PageHeader title="Analytics" description="Throughput, turnaround, revenue and portfolio mix." />;
   if (error) return <>{header}<ErrorState error={error} onRetry={() => void refetch()} /></>;
   const loading = isLoading || !data;
 

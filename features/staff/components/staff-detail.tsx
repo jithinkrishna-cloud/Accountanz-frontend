@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Check, Pencil, Trash2, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -78,6 +78,7 @@ export function StaffDetail({ id, staffType }: { id: number; staffType: StaffTyp
                 <Check className="size-4" /> {approving || approve.isPending ? "Approving..." : "Approve"}
               </Button>
             )}
+            <Button variant="outline" asChild><Link href={`/admin/progress/${m.user_id}`}><TrendingUp className="size-4" /> Progress</Link></Button>
             <Button variant="outline" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit</Button>
             {m.user_id !== session?.id && (
               <Button variant="destructive" onClick={() => setDeleting(true)}><Trash2 className="size-4" /> Delete</Button>
