@@ -103,6 +103,9 @@ export const clientPortalService = {
   addStakeholder: (body: BusinessStakeholderBody) => api<PortalBusiness>("/app/business/stakeholders", { method: "POST", body }),
   updateStakeholder: ({ id, ...body }: BusinessStakeholderBody & { id: number }) => api<PortalBusiness>(`/app/business/stakeholders/${id}`, { method: "PATCH", body }),
   removeStakeholder: (id: number) => api<PortalBusiness>(`/app/business/stakeholders/${id}`, { method: "DELETE" }),
+  addBranch: (body: BusinessBranchBody) => api<PortalBusiness>("/app/business/branches", { method: "POST", body }),
+  updateBranch: ({ id, ...body }: BusinessBranchBody & { id: number }) => api<PortalBusiness>(`/app/business/branches/${id}`, { method: "PATCH", body }),
+  removeBranch: (id: number) => api<PortalBusiness>(`/app/business/branches/${id}`, { method: "DELETE" }),
   saveFinancialProfile: (body: BusinessFinancialBody) => api<PortalBusiness>("/app/business/financial-profile", { method: "PUT", body }),
   saveServices: (body: BusinessServicesBody) => api<PortalBusiness>("/app/business/services", { method: "PUT", body }),
 };
@@ -116,6 +119,7 @@ export interface BusinessTaxBody {
 export interface BusinessStakeholderBody {
   stakeholder_type: "director" | "partner" | "owner" | "proprietor"; full_name: string; designation: string | null; ownership_percentage: number | null; is_primary: boolean;
 }
+export interface BusinessBranchBody { name: string; gstin: string | null }
 export interface BusinessFinancialBody {
   financial_year_start_month: number | null; annual_turnover: number | null; monthly_transaction_volume: number | null;
   monthly_invoice_count: number | null; employee_count: number | null; current_accounting_software: string | null;

@@ -19,7 +19,7 @@ import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-c
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
 import { STAGE_OF } from "./client-progress";
 import { AccountantOverview } from "./accountant-overview";
-import { EditButton, FinancialProfileDialog, SERVICES, ServicesDialog, StakeholderDialog, TaxDetailsDialog } from "./business-edit-dialogs";
+import { BranchDialog, EditButton, FinancialProfileDialog, SERVICES, ServicesDialog, StakeholderDialog, TaxDetailsDialog } from "./business-edit-dialogs";
 import { CompanyGate } from "./company-gate";
 import { Card, ListBody } from "./portal-ui";
 
@@ -51,8 +51,9 @@ function registration(number: string | null, status: RegistrationStatus | null) 
 function BusinessBody({ isOwner }: { isOwner: boolean }) {
   const { data: b, isLoading, error, refetch } = usePortalBusiness();
   // Which section editor is open; "person" holds the owner/director being edited (null = adding one).
-  const [open, setOpen] = useState<null | "tax" | "person" | "financial" | "services">(null);
+  const [open, setOpen] = useState<null | "tax" | "person" | "branch" | "financial" | "services">(null);
   const [person, setPerson] = useState<NonNullable<typeof b>["stakeholders"][number] | null>(null);
+  const [branch, setBranch] = useState<NonNullable<typeof b>["branches"][number] | null>(null);
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !b) return <Skeleton className="h-48 w-full rounded-xl" />;
   const tax = b.tax_details;
@@ -62,6 +63,10 @@ function BusinessBody({ isOwner }: { isOwner: boolean }) {
   const editPerson = (p: typeof person) => {
     setPerson(p);
     setOpen("person");
+  };
+  const editBranch = (br: typeof branch) => {
+    setBranch(br);
+    setOpen("branch");
   };
   const services = req ? [...SERVICES.filter(([k]) => req[k]).map(([, label]) => label), ...splitList(req.other_services)] : [];
   return (
@@ -151,15 +156,22 @@ function BusinessBody({ isOwner }: { isOwner: boolean }) {
             </ul>
           ) : <Empty>{req ? "None selected yet." : "Your services come with your plan."}</Empty>}
         </Card>
-        <Card title="Branches">
+        <Card title="Branches" actions={isOwner ? <EditButton label="Add" onClick={() => editBranch(null)} /> : undefined}>
           {b.branches.length === 0 ? (
-            <p className="text-muted-foreground p-5 text-sm">No branches recorded.</p>
+            <p className="text-muted-foreground p-5 text-sm">{isOwner ? "No branches yet. Add any other shop, office or warehouse you run." : "No branches recorded."}</p>
           ) : (
             <ul className="divide-y">
               {b.branches.map((br) => (
-                <li key={br.id} className="px-5 py-3 text-sm">
-                  <p className="font-medium">{br.name}</p>
-                  <p className="text-muted-foreground font-mono text-xs">{br.gstin ?? "No GSTIN"}</p>
+                <li key={br.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium">{br.name}</p>
+                    <p className="text-muted-foreground font-mono text-xs">{br.gstin ?? "No GSTIN"}</p>
+                  </div>
+                  {isOwner && (
+                    <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" aria-label={`Edit ${br.name}`} onClick={() => editBranch(br)}>
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -170,6 +182,7 @@ function BusinessBody({ isOwner }: { isOwner: boolean }) {
         <>
           <TaxDetailsDialog b={b} {...editor("tax")} />
           <StakeholderDialog person={person} {...editor("person")} />
+          <BranchDialog branch={branch} {...editor("branch")} />
           <FinancialProfileDialog b={b} {...editor("financial")} />
           {req && <ServicesDialog b={b} {...editor("services")} />}
         </>

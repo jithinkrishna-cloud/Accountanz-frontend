@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Pencil, Plus, Stamp, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDashed, CircleDot, Clock, FileUp, Minus, MessageSquare, Pencil, Plus, SearchCheck, Stamp, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -26,9 +26,9 @@ import { NewTaskDialog } from "./new-task-dialog";
  */
 export const STAGES = [
   { label: "Not started", help: "Scheduled for this month. Your team hasn't begun yet.", pill: "bg-muted text-muted-foreground ring-border", dot: "bg-muted-foreground/40" },
-  { label: "Working on it", help: "Your accountant is doing this job now.", pill: "bg-amber-50 text-amber-800 ring-amber-200", dot: "bg-amber-400" },
-  { label: "Being checked", help: "Finished, and a senior accountant is reviewing it before it's final.", pill: "bg-sky-50 text-sky-800 ring-sky-200", dot: "bg-sky-500" },
-  { label: "Done", help: "Checked and complete. Nothing more needed.", pill: "bg-emerald-50 text-emerald-800 ring-emerald-200", dot: "bg-emerald-500" },
+  { label: "Working on it", help: "Your accountant is doing this job now.", pill: "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30", dot: "bg-amber-400" },
+  { label: "Being checked", help: "Finished, and a senior accountant is reviewing it before it's final.", pill: "bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30", dot: "bg-sky-500" },
+  { label: "Done", help: "Checked and complete. Nothing more needed.", pill: "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30", dot: "bg-emerald-500" },
 ] as const;
 
 export const STAGE_OF: Record<PortalTask["status"], number> = { todo: 0, in_progress: 1, returned: 1, submitted: 2, approved: 3 };
@@ -116,7 +116,254 @@ function StageTracker({ stage }: { stage: number }) {
 
 const stepCount = (t: PortalTask) => `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}`;
 
-// ───────────── Month summary and "waiting on you" ─────────────
+// ───────────── Month overview ─────────────
+
+/** Each job counts for its stage (not started 0, working 40%, being checked 80%, done 100%). */
+const monthPercent = (tasks: PortalTask[]) =>
+  tasks.length ? Math.round((tasks.reduce((n, t) => n + STAGE_WEIGHT[STAGE_OF[t.status]]!, 0) / tasks.length) * 100) : 0;
+
+function ProgressRing({ percent }: { percent: number }) {
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative size-24 shrink-0" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label="Month progress">
+      <svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
+        <circle cx="40" cy="40" r={r} fill="none" strokeWidth="8" className="stroke-muted" />
+        <circle
+          cx="40" cy="40" r={r} fill="none" strokeWidth="8" strokeLinecap="round"
+          className="stroke-emerald-500 transition-[stroke-dashoffset] duration-700"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - percent / 100)}
+        />
+      </svg>
+      <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+        <span className="text-xl font-semibold tabular-nums">{percent}%</span>
+        <span className="text-muted-foreground mt-1 text-[10px]">done</span>
+      </span>
+    </div>
+  );
+}
+
+/** The month at a glance. The four counts double as filters for the job list. */
+function MonthOverview({ period, tasks, filter, onFilter }: { period: string; tasks: PortalTask[]; filter: number | null; onFilter: (stage: number | null) => void }) {
+  const counts = [0, 0, 0, 0];
+  for (const t of tasks) counts[STAGE_OF[t.status]]! += 1;
+  const done = counts[3]!;
+  const nextTarget = tasks.filter((t) => STAGE_OF[t.status] < 3 && t.due_date).map((t) => t.due_date!).sort()[0];
+  const lastTarget = tasks.map((t) => t.due_date).filter(Boolean).sort().at(-1);
+  const late = tasks.filter(isLate).length;
+  const headline =
+    tasks.length === 0 ? "Nothing scheduled yet" : done === tasks.length ? "All done. Your books for this month are complete." : `${done} of ${tasks.length} jobs finished`;
+  const sub =
+    tasks.length === 0
+      ? "Your team plans each month's jobs at the start of the month."
+      : done === tasks.length
+        ? "Every job has been checked. Nothing more is needed."
+        : [nextTarget && `Next job due ${shortDate(nextTarget)}`, lastTarget && `everything planned by ${shortDate(lastTarget)}`].filter(Boolean).join(" · ") || "Your team is on it.";
+  return (
+    <section className="bg-card overflow-hidden rounded-xl border shadow-xs" aria-labelledby="month-heading">
+      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+        <ProgressRing percent={monthPercent(tasks)} />
+        <div className="min-w-0 flex-1">
+          <p id="month-heading" className="text-muted-foreground text-sm">Your {formatPeriod(period)} books</p>
+          <p className="mt-0.5 text-xl font-semibold tracking-tight">{headline}</p>
+          <p className="text-muted-foreground mt-1 text-sm">{sub}</p>
+          {late > 0 && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <Clock className="size-3.5" aria-hidden /> {late} {late === 1 ? "job is" : "jobs are"} taking a little longer than planned
+            </p>
+          )}
+        </div>
+      </div>
+      {tasks.length > 0 && (
+        <div className="bg-border grid grid-cols-2 gap-px border-t sm:grid-cols-4">
+          {STAGES.map((s, i) => {
+            const active = filter === i;
+            return (
+              <button
+                key={s.label}
+                type="button"
+                aria-pressed={active}
+                title={active ? "Show all jobs" : `Show only jobs that are ${s.label.toLowerCase()}`}
+                onClick={() => onFilter(active ? null : i)}
+                className={cn(
+                  "bg-card hover:bg-muted/50 focus-visible:bg-muted/50 flex items-center gap-3 px-4 py-3.5 text-left transition-colors focus-visible:outline-none sm:px-5",
+                  active && "bg-muted hover:bg-muted",
+                )}
+              >
+                <StageIcon stage={i} />
+                <span className="min-w-0">
+                  <span className="block text-lg leading-tight font-semibold tabular-nums">{counts[i]}</span>
+                  <span className="text-muted-foreground block text-xs leading-tight">{s.label}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ───────────── Waiting on you ─────────────
+
+/** Open document requests for a month (or with no month). These are what can hold the month's jobs up. */
+const blockingRequests = (requests: PortalRequest[] | undefined, period: string) => (requests ?? []).filter((r) => r.status === "open" && (!r.period || r.period === period));
+
+function WaitingOnYou({ period }: { period: string }) {
+  const requests = usePortalRequests();
+  const approvals = usePortalApprovals();
+  const docs = blockingRequests(requests.data, period).length;
+  const signoffs = (approvals.data ?? []).filter((a) => a.status === "pending").length;
+  if (!docs && !signoffs) return null;
+  const item = (icon: React.ReactNode, title: string, text: string, href: string, action: string) => (
+    <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300" aria-hidden>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-muted-foreground text-xs">{text}</p>
+      </div>
+      <Button asChild size="sm" className="shrink-0"><Link href={href}>{action}</Link></Button>
+    </div>
+  );
+  return (
+    <section aria-labelledby="waiting-heading">
+      <h2 id="waiting-heading" className="mb-2 text-sm font-medium">Waiting on you</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        {docs > 0 && item(<FileUp className="size-4" />, `${docs} document${docs === 1 ? "" : "s"} to upload`, `Some jobs can't finish until ${docs === 1 ? "it arrives" : "they arrive"}.`, "/app/requests", "Upload")}
+        {signoffs > 0 && item(<Stamp className="size-4" />, `${signoffs} item${signoffs === 1 ? "" : "s"} to approve`, "Your team needs your sign-off to finish the month.", "/app/approvals", "Review")}
+      </div>
+    </section>
+  );
+}
+
+// ───────────── Jobs ─────────────
+
+const STAGE_ICON = [
+  { icon: CircleDashed, tone: "bg-muted text-muted-foreground" },
+  { icon: CircleDot, tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+  { icon: SearchCheck, tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  { icon: CheckCircle2, tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+] as const;
+
+function StageIcon({ stage, small }: { stage: number; small?: boolean }) {
+  const { icon: Icon, tone } = STAGE_ICON[stage]!;
+  return (
+    <span className={cn("flex shrink-0 items-center justify-center rounded-full", small ? "size-6" : "size-9", tone)} aria-hidden>
+      <Icon className={small ? "size-3.5" : "size-4.5"} />
+    </span>
+  );
+}
+
+function StepBar({ task }: { task: PortalTask }) {
+  const done = task.checklist.filter((c) => c.done).length;
+  const pct = Math.round((done / task.checklist.length) * 100);
+  return (
+    <span className="flex items-center gap-2" title={`${done} of ${task.checklist.length} steps done`}>
+      <span className="bg-muted h-1.5 w-20 overflow-hidden rounded-full" aria-hidden>
+        <span className="block h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-muted-foreground text-xs tabular-nums">{done}/{task.checklist.length}</span>
+    </span>
+  );
+}
+
+function JobRow({ task, onOpen }: { task: PortalTask; onOpen: () => void }) {
+  const stage = STAGE_OF[task.status];
+  const meaning = explain(task);
+  return (
+    <li>
+      <button type="button" onClick={onOpen} className="hover:bg-muted/40 focus-visible:bg-muted/40 group flex w-full items-start gap-4 px-5 py-4 text-left transition-colors focus-visible:outline-none">
+        <StageIcon stage={stage} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-medium">{task.title}</p>
+            {!!task.created_by_client && <span className="bg-secondary text-muted-foreground rounded-md px-1.5 py-0.5 text-[11px] font-medium">Added by you</span>}
+            {isLate(task) && <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">Taking a little longer</span>}
+          </div>
+          {meaning && <p className="text-muted-foreground mt-0.5 line-clamp-1 text-sm">{meaning}</p>}
+          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+            {task.handled_by && (
+              <span className="inline-flex items-center gap-1.5">
+                <Avatar size="sm"><AvatarFallback className="bg-primary/15 text-primary text-[9px] font-semibold">{initials(task.handled_by)}</AvatarFallback></Avatar>
+                {task.handled_by}
+              </span>
+            )}
+            {task.due_date && (
+              <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" aria-hidden />{stage === 3 ? `Planned for ${shortDate(task.due_date)}` : `Due ${shortDate(task.due_date)}`}</span>
+            )}
+            {task.checklist.length > 0 && <span className="sm:hidden">{stepCount(task)} steps</span>}
+          </div>
+        </div>
+        <div className="hidden shrink-0 flex-col items-end gap-2 sm:flex">
+          <StagePill stage={stage} />
+          {task.checklist.length > 0 && <StepBar task={task} />}
+        </div>
+        <ChevronRight className="text-muted-foreground mt-2.5 size-4 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
+      </button>
+    </li>
+  );
+}
+
+const GROUPS = [
+  { title: "In progress", hint: "Your team is working on these, or checking them.", stages: [1, 2] },
+  { title: "Coming up", hint: "Scheduled for this month. Not started yet.", stages: [0] },
+  { title: "Done", hint: "Checked and complete.", stages: [3] },
+] as const;
+
+function JobGroup({ title, hint, tasks, onOpen, collapsible }: { title: string; hint: string; tasks: PortalTask[]; onOpen: (t: PortalTask) => void; collapsible?: boolean }) {
+  const [shown, setShown] = useState(!collapsible);
+  return (
+    <section className="bg-card overflow-hidden rounded-xl border shadow-xs">
+      <header className={cn("flex items-center justify-between gap-3 px-5 py-3", shown && "border-b")}>
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 font-medium">{title} <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs tabular-nums">{tasks.length}</span></h3>
+          <p className="text-muted-foreground text-xs">{hint}</p>
+        </div>
+        {collapsible && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setShown((s) => !s)} aria-expanded={shown}>
+            {shown ? "Hide" : "Show"} <ChevronDown className={cn("size-4 transition-transform", shown && "rotate-180")} aria-hidden />
+          </Button>
+        )}
+      </header>
+      {shown && <ul className="divide-y">{tasks.map((t) => <JobRow key={t.id} task={t} onOpen={() => onOpen(t)} />)}</ul>}
+    </section>
+  );
+}
+
+function Jobs({ tasks, filter, onClearFilter, onOpen }: { tasks: PortalTask[]; filter: number | null; onClearFilter: () => void; onOpen: (t: PortalTask) => void }) {
+  if (tasks.length === 0) {
+    return <div className="bg-card rounded-xl border shadow-xs"><EmptyState title="No work scheduled for this month yet" description="Your team plans each month's jobs at the start of the month." /></div>;
+  }
+  if (filter !== null) {
+    const items = tasks.filter((t) => STAGE_OF[t.status] === filter);
+    const label = STAGES[filter]!.label;
+    return (
+      <div className="space-y-3">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+          Showing jobs that are <span className="text-foreground font-medium">{label.toLowerCase()}</span>
+          <Button type="button" variant="ghost" size="sm" onClick={onClearFilter}><X className="size-3.5" /> Show all</Button>
+        </div>
+        {items.length ? <JobGroup title={label} hint={STAGES[filter]!.help} tasks={items} onOpen={onOpen} /> : (
+          <div className="bg-card text-muted-foreground rounded-xl border p-6 text-center text-sm">No jobs are {label.toLowerCase()} right now.</div>
+        )}
+      </div>
+    );
+  }
+  const anyOpen = tasks.some((t) => STAGE_OF[t.status] < 3);
+  return (
+    <div className="space-y-4">
+      {GROUPS.map((g) => {
+        const items = tasks.filter((t) => (g.stages as readonly number[]).includes(STAGE_OF[t.status]));
+        if (!items.length) return null;
+        // While work is still open, finished jobs fold away so the list leads with what's happening.
+        return <JobGroup key={g.title} title={g.title} hint={g.hint} tasks={items} onOpen={onOpen} collapsible={g.title === "Done" && anyOpen} />;
+      })}
+    </div>
+  );
+}
+
+// ───────────── Side column: the month's path and what the statuses mean ─────────────
 
 type MilestoneState = "done" | "current" | "you" | "upcoming" | "skipped";
 
@@ -124,7 +371,7 @@ type MilestoneState = "done" | "current" | "you" | "upcoming" | "skipped";
  * The month as client-friendly milestones, worked out from what already exists: open document requests, the jobs'
  * stages, approvals waiting on the client, and reports published for the month.
  */
-function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[] }) {
+function MonthPath({ period, tasks }: { period: string; tasks: PortalTask[] }) {
   const requests = usePortalRequests().data;
   const approvals = usePortalApprovals().data;
   const reports = usePortalReports().data;
@@ -137,8 +384,8 @@ function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[
   const bookkeepingDone = stages.length > 0 && stages.every((s) => s >= 2);
   const reviewDone = stages.length > 0 && stages.every((s) => s === 3);
 
-  const steps: { label: string; state: MilestoneState; note: string }[] = [
-    { label: "Documents received", state: openDocs ? "you" : "done", note: openDocs ? `Waiting for ${openDocs} from you` : "All received" },
+  const steps: { label: string; state: MilestoneState; note: string; href?: string }[] = [
+    { label: "Documents received", state: openDocs ? "you" : "done", note: openDocs ? `Waiting for ${openDocs} from you` : "All received", href: openDocs ? "/app/requests" : undefined },
     {
       label: "Bookkeeping",
       state: bookkeepingDone ? "done" : stages.some((s) => s >= 1) ? "current" : "upcoming",
@@ -151,197 +398,67 @@ function MonthMilestones({ period, tasks }: { period: string; tasks: PortalTask[
     },
     // Sign-off is only asked for when something needs it: tell "you approved" apart from "nothing was asked".
     pendingApprovals
-      ? { label: "Your approval", state: "you", note: `${pendingApprovals} waiting for you` }
+      ? { label: "Your approval", state: "you", note: `${pendingApprovals} waiting for you`, href: "/app/approvals" }
       : monthApprovals.some((a) => a.status === "rejected") && !monthApprovals.some((a) => a.status === "approved")
         ? { label: "Your approval", state: "current", note: "Changes requested" }
         : monthApprovals.length
           ? { label: "Your approval", state: "done", note: "Approved" }
           : reviewDone
             ? { label: "Your approval", state: "skipped", note: "None needed" }
-            : { label: "Your approval", state: "upcoming", note: "If anything needs your sign-off" },
-    { label: "Reports ready", state: reportsReady ? "done" : reviewDone ? "current" : "upcoming", note: reportsReady ? "Published" : reviewDone ? "Being prepared" : "At month end" },
+            : { label: "Your approval", state: "upcoming", note: "Only if something needs your sign-off" },
+    { label: "Reports ready", state: reportsReady ? "done" : reviewDone ? "current" : "upcoming", note: reportsReady ? "Published" : reviewDone ? "Being prepared" : "At month end", href: reportsReady ? "/app/reports" : undefined },
   ];
   const dot: Record<MilestoneState, string> = {
     done: "bg-emerald-500 text-white",
-    current: "border-2 border-sky-500 bg-white text-sky-700",
-    you: "border-2 border-amber-400 bg-amber-50 text-amber-800",
-    upcoming: "border border-border bg-white text-muted-foreground",
+    current: "border-2 border-sky-500 bg-card text-sky-600 dark:text-sky-400",
+    you: "border-2 border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    upcoming: "border bg-card text-muted-foreground",
     skipped: "bg-muted text-muted-foreground",
   };
   return (
-    <ol className="mt-4 grid grid-cols-5 gap-1" aria-label={`${formatPeriod(period)} milestones`}>
-      {steps.map((s, i) => (
-        <li key={s.label} className="relative flex flex-col items-center text-center">
-          {i > 0 && <span className={cn("absolute top-3 right-1/2 h-0.5 w-full -translate-x-3", steps[i - 1]!.state === "done" || steps[i - 1]!.state === "skipped" ? "bg-emerald-400" : "bg-border")} aria-hidden />}
-          <span className={cn("relative z-10 flex size-6 items-center justify-center rounded-full text-[11px] font-semibold", dot[s.state])} aria-hidden>
-            {s.state === "done" ? <Check className="size-3.5" /> : s.state === "skipped" ? <Minus className="size-3.5" /> : i + 1}
-          </span>
-          <span className="mt-1.5 text-xs font-medium">{s.label}</span>
-          <span className={cn("text-[11px]", s.state === "you" ? "font-medium text-amber-700" : "text-muted-foreground")}>{s.note}</span>
-          <span className="sr-only">{s.state === "done" ? "done" : s.state === "skipped" ? "not needed" : s.state === "you" ? "waiting for you" : s.state === "current" ? "in progress" : "not started"}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function MonthSummary({ period, tasks }: { period: string; tasks: PortalTask[] }) {
-  const counts = [0, 0, 0, 0];
-  for (const t of tasks) counts[STAGE_OF[t.status]]! += 1;
-  const done = counts[3]!;
-  const nextTarget = tasks.filter((t) => STAGE_OF[t.status] < 3 && t.due_date).map((t) => t.due_date!).sort()[0];
-  const lastTarget = tasks.map((t) => t.due_date).filter(Boolean).sort().at(-1);
-  const headline =
-    tasks.length === 0 ? "Nothing scheduled yet" : done === tasks.length ? "All done. Your books for this month are complete." : `${done} of ${tasks.length} jobs finished`;
-  // How far the month is: each job counts for its stage (not started 0, working 40%, being checked 80%, done 100%).
-  const percent = tasks.length ? Math.round((tasks.reduce((n, t) => n + STAGE_WEIGHT[STAGE_OF[t.status]]!, 0) / tasks.length) * 100) : 0;
-  return (
-    <section className="bg-card rounded-xl border shadow-xs" aria-labelledby="month-heading">
-      <div className="px-5 pt-5 pb-4 sm:px-6">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase" id="month-heading">Your {formatPeriod(period)} books</p>
-        <p className="mt-1 text-lg font-semibold">{headline}</p>
-        {done < tasks.length && (
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            {nextTarget ? `Next job due ${shortDate(nextTarget)}` : "Your team is on it"}
-            {lastTarget ? ` · everything planned to finish by ${shortDate(lastTarget)}` : ""}.
-          </p>
-        )}
-      </div>
-      {tasks.length > 0 && (
-        <div className="border-t px-5 py-4 sm:px-6">
-          <div className="flex items-baseline justify-between">
-            <p className="text-xs tracking-wide uppercase"><span className="text-muted-foreground">Month</span> <span className="font-semibold">progress</span></p>
-            <p className="text-lg font-semibold tabular-nums">{percent}%</p>
-          </div>
-          <div
-            className="bg-muted mt-2 h-2 overflow-hidden rounded-full"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-            aria-label="Month progress"
-          >
-            <div className={cn("h-full rounded-full transition-[width] duration-500", percent === 100 ? "bg-emerald-500" : "from-primary bg-linear-to-r to-emerald-500")} style={{ width: `${percent}%` }} />
-          </div>
-          <MonthMilestones period={period} tasks={tasks} />
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** Open document requests for a month (or with no month). These are what can hold the month's jobs up. */
-const blockingRequests = (requests: PortalRequest[] | undefined, period: string) => (requests ?? []).filter((r) => r.status === "open" && (!r.period || r.period === period));
-
-function WaitingOnYou({ period }: { period: string }) {
-  const requests = usePortalRequests();
-  const approvals = usePortalApprovals();
-  const docs = blockingRequests(requests.data, period).length;
-  const signoffs = (approvals.data ?? []).filter((a) => a.status === "pending").length;
-  if (!docs && !signoffs) return null;
-  const item = (icon: React.ReactNode, text: string, href: string, action: string) => (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-      {icon}
-      <p className="min-w-0 flex-1 text-sm">{text}</p>
-      <Button asChild size="sm" variant="outline" className="border-amber-300 bg-white"><Link href={href}>{action}</Link></Button>
-    </div>
-  );
-  return (
-    <section aria-label="Waiting on you" className="grid gap-2">
-      {docs > 0 && item(<FileUp className="size-5 shrink-0" aria-hidden />, `Your team is waiting for ${docs} document${docs === 1 ? "" : "s"} from you. Some jobs can't finish until ${docs === 1 ? "it arrives" : "they arrive"}.`, "/app/requests", "Upload documents")}
-      {signoffs > 0 && item(<Stamp className="size-5 shrink-0" aria-hidden />, `${signoffs} item${signoffs === 1 ? " needs" : "s need"} your approval.`, "/app/approvals", "Review")}
-    </section>
-  );
-}
-
-// ───────────── Board ─────────────
-
-function JobCard({ task, onOpen }: { task: PortalTask; onOpen: () => void }) {
-  const stage = STAGE_OF[task.status];
-  const meaning = explain(task);
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="bg-card hover:border-primary/40 focus-visible:ring-ring w-full rounded-xl border p-4 text-left shadow-xs transition hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-medium">{task.title}</p>
-        {!!task.created_by_client && <span className="bg-secondary text-muted-foreground shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium">Added by you</span>}
-      </div>
-      {meaning && <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{meaning}</p>}
-      <div className="mt-3"><Person name={task.handled_by} /></div>
-      {isLate(task) && (
-        <div className="mt-3">
-          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200 ring-inset">Taking a little longer</span>
-        </div>
-      )}
-      <div className="text-muted-foreground mt-3 flex items-center gap-4 border-t pt-3 text-xs">
-        {task.due_date && <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" aria-hidden />{stage === 3 ? "Finished" : `Due ${shortDate(task.due_date)}`}</span>}
-        {task.checklist.length > 0 && <span className="inline-flex items-center gap-1" title="Steps done"><ListChecks className="size-3.5" aria-hidden />{stepCount(task)} steps</span>}
-      </div>
-    </button>
-  );
-}
-
-function Board({ tasks, onOpen }: { tasks: PortalTask[]; onOpen: (t: PortalTask) => void }) {
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {STAGES.map((s, i) => {
-        const items = tasks.filter((t) => STAGE_OF[t.status] === i);
-        return (
-          <section key={s.label} aria-labelledby={`stage-${i}`} className="bg-muted/40 flex min-w-0 flex-col rounded-xl border">
-            <header className="flex items-center gap-2 px-4 py-3">
-              <h2 id={`stage-${i}`}><StagePill stage={i} /></h2>
-              <span className="text-muted-foreground text-sm tabular-nums">{items.length}</span>
-            </header>
-            <div className="flex-1 space-y-3 px-3 pb-3">
-              {items.length === 0 ? (
-                <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-6 text-center text-xs">{i === 3 ? "Finished jobs appear here" : "Nothing here"}</p>
+    <section className="bg-card rounded-xl border shadow-xs" aria-labelledby="path-heading">
+      <header className="border-b px-5 py-3">
+        <h3 id="path-heading" className="font-medium">How the month is going</h3>
+        <p className="text-muted-foreground text-xs">The steps to close your {formatPeriod(period)} books.</p>
+      </header>
+      <ol className="px-5 py-4">
+        {steps.map((s, i) => (
+          <li key={s.label} className="relative flex gap-3 pb-5 last:pb-0">
+            {i < steps.length - 1 && (
+              <span className={cn("absolute top-7 bottom-1 left-3 w-0.5 -translate-x-1/2 rounded", s.state === "done" || s.state === "skipped" ? "bg-emerald-500/60" : "bg-border")} aria-hidden />
+            )}
+            <span className={cn("relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold", dot[s.state])} aria-hidden>
+              {s.state === "done" ? <Check className="size-3.5" /> : s.state === "skipped" ? <Minus className="size-3.5" /> : i + 1}
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="text-sm leading-tight font-medium">{s.label}</p>
+              {s.href ? (
+                <Link href={s.href} className={cn("text-xs hover:underline", s.state === "you" ? "font-medium text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>{s.note}</Link>
               ) : (
-                items.map((t) => <JobCard key={t.id} task={t} onOpen={() => onOpen(t)} />)
+                <p className="text-muted-foreground text-xs">{s.note}</p>
               )}
+              <span className="sr-only">{s.state === "done" ? "done" : s.state === "skipped" ? "not needed" : s.state === "you" ? "waiting for you" : s.state === "current" ? "in progress" : "not started"}</span>
             </div>
-          </section>
-        );
-      })}
-    </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
-// ───────────── List ─────────────
-
-function JobList({ tasks, onOpen }: { tasks: PortalTask[]; onOpen: (t: PortalTask) => void }) {
+function StageGuide() {
   return (
     <section className="bg-card rounded-xl border shadow-xs">
-      <ul className="divide-y">
-        {tasks.map((t) => {
-          const stage = STAGE_OF[t.status];
-          const meaning = explain(t);
-          return (
-            <li key={t.id}>
-              <button type="button" onClick={() => onOpen(t)} className="hover:bg-muted/40 grid w-full gap-3 px-5 py-4 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-                <div className="min-w-0">
-                  <p className="font-medium">{t.title}</p>
-                  {meaning && <p className="text-muted-foreground mt-0.5 text-sm">{meaning}</p>}
-                  {t.handled_by && <p className="text-muted-foreground mt-1 text-xs">Handled by {t.handled_by}</p>}
-                </div>
-                <div className="flex flex-col gap-1.5 sm:items-end">
-                  <StageTracker stage={stage} />
-                  <p className="text-xs">
-                    <span className="font-medium">{STAGES[stage]!.label}</span>
-                    {stage < 3 && t.due_date && (
-                      <span className={isLate(t) ? "text-amber-700" : "text-muted-foreground"}>
-                        {" · "}{isLate(t) ? `planned for ${shortDate(t.due_date)}, taking a little longer` : `due ${shortDate(t.due_date)}`}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </button>
-            </li>
-          );
-        })}
+      <header className="border-b px-5 py-3"><h3 className="font-medium">What the statuses mean</h3></header>
+      <ul className="grid gap-3 px-5 py-4 text-sm">
+        {STAGES.map((s, i) => (
+          <li key={s.label} className="flex gap-3">
+            <StageIcon stage={i} small />
+            <span><span className="font-medium">{s.label}</span><span className="text-muted-foreground block text-xs">{s.help}</span></span>
+          </li>
+        ))}
       </ul>
+      <p className="text-muted-foreground border-t px-5 py-3 text-xs">Your team also does some internal checks that aren&apos;t listed. You don&apos;t need to do anything unless something shows under &ldquo;Waiting on you&rdquo;.</p>
     </section>
   );
 }
@@ -416,12 +533,12 @@ export function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: Por
               </div>
 
               {blockers.length > 0 && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-800 dark:text-red-300">
                   <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="size-4" aria-hidden /> Waiting on you</p>
                   <ul className="mt-2.5 list-disc space-y-1.5 pl-5">
                     {blockers.map((r) => <li key={r.id}>{r.description}{r.due_date ? ` (by ${shortDate(r.due_date)})` : ""}</li>)}
                   </ul>
-                  <Button asChild size="sm" variant="outline" className="mt-4 border-red-200 bg-white text-red-800 hover:text-red-900"><Link href="/app/requests"><FileUp className="size-4" /> Upload documents</Link></Button>
+                  <Button asChild size="sm" className="mt-4"><Link href="/app/requests"><FileUp className="size-4" /> Upload documents</Link></Button>
                 </div>
               )}
 
@@ -463,43 +580,32 @@ export function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: Por
 
 // ───────────── Page ─────────────
 
-function HowItWorks() {
-  const [open, setOpen] = useState(false);
+/** Month picker with previous / next buttons. */
+function MonthPicker({ value, periods, onChange }: { value: string; periods: string[]; onChange: (p: string) => void }) {
+  const sorted = [...new Set([...periods, value])].sort();
+  const i = sorted.indexOf(value);
   return (
-    <section className="bg-card rounded-xl border shadow-xs">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between px-5 py-4 text-left">
-        <span className="font-medium">How this works</span>
-        <ChevronDown className={cn("text-muted-foreground size-4 transition-transform", open && "rotate-180")} aria-hidden />
-      </button>
-      {open && (
-        <div className="border-t px-5 py-4 text-sm">
-          <p className="text-muted-foreground">Every month your accounting team does a set of jobs to keep your books up to date. Each job goes through four steps:</p>
-          <ol className="mt-3 grid gap-2 sm:grid-cols-2">
-            {STAGES.map((s) => (
-              <li key={s.label} className="flex gap-2">
-                <span className={cn("mt-1 size-2.5 shrink-0 rounded-full", s.dot)} aria-hidden />
-                <span><span className="font-medium">{s.label}.</span> <span className="text-muted-foreground">{s.help}</span></span>
-              </li>
-            ))}
-          </ol>
-          <p className="text-muted-foreground mt-3">Click any job to see its steps and who&apos;s on it. You don&apos;t need to do anything unless something appears under &ldquo;waiting on you&rdquo;.</p>
-        </div>
-      )}
-    </section>
+    <div className="flex items-center gap-1">
+      <Button type="button" variant="outline" size="icon" disabled={i <= 0} onClick={() => onChange(sorted[i - 1]!)} aria-label="Previous month"><ChevronLeft className="size-4" /></Button>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-36" aria-label="Month"><SelectValue /></SelectTrigger>
+        <SelectContent>{[...sorted].reverse().map((p) => <SelectItem key={p} value={p}>{formatPeriod(p)}</SelectItem>)}</SelectContent>
+      </Select>
+      <Button type="button" variant="outline" size="icon" disabled={i >= sorted.length - 1} onClick={() => onChange(sorted[i + 1]!)} aria-label="Next month"><ChevronRight className="size-4" /></Button>
+    </div>
   );
 }
-
-const VIEWS = [
-  { key: "board", label: "Board", icon: Kanban },
-  { key: "list", label: "List", icon: List },
-] as const;
 
 function ProgressBody({ isOwner }: { isOwner: boolean }) {
   // ?task=&period= (e.g. from a document request) opens that job straight away, in its month.
   const params = useSearchParams();
   const router = useRouter();
-  const [period, setPeriod] = useState<string | undefined>(() => params.get("period") ?? undefined);
-  const [view, setView] = useState<"board" | "list">("board");
+  const [period, setPeriodState] = useState<string | undefined>(() => params.get("period") ?? undefined);
+  const [filter, setFilter] = useState<number | null>(null);
+  const setPeriod = (p: string) => {
+    setPeriodState(p);
+    setFilter(null);
+  };
   const [openId, setOpenId] = useState<number | null>(() => Number(params.get("task")) || null);
   const closeJob = () => {
     setOpenId(null);
@@ -508,7 +614,8 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<PortalTask | null>(null);
   const { data, isLoading, error, refetch } = usePortalTasks(period);
-  const tasks = [...(data?.tasks ?? [])].sort((a, b) => STAGE_OF[a.status] - STAGE_OF[b.status] || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  // Late jobs first, then by due date.
+  const tasks = [...(data?.tasks ?? [])].sort((a, b) => Number(isLate(b)) - Number(isLate(a)) || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
   const open = tasks.find((t) => t.id === openId) ?? null;
 
   return (
@@ -518,12 +625,7 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
         description="What your accounting team is doing on your books, and how far along it is."
         actions={
           <>
-            {data && (
-              <Select value={data.period} onValueChange={setPeriod}>
-                <SelectTrigger className="w-40" aria-label="Month"><SelectValue /></SelectTrigger>
-                <SelectContent>{data.periods.map((p) => <SelectItem key={p} value={p}>{formatPeriod(p)}</SelectItem>)}</SelectContent>
-              </Select>
-            )}
+            {data && <MonthPicker value={data.period} periods={data.periods} onChange={setPeriod} />}
             {isOwner && <Button onClick={() => setCreating(true)}><Plus className="size-4" /> New task</Button>}
           </>
         }
@@ -533,41 +635,24 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : isLoading || !data ? (
-        <div className="space-y-4"><Skeleton className="h-36 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /></div>
+        <div className="space-y-4"><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-72 w-full rounded-xl" /></div>
       ) : (
         <div className="space-y-6">
-          <MonthSummary period={data.period} tasks={tasks} />
+          <MonthOverview period={data.period} tasks={tasks} filter={filter} onFilter={setFilter} />
           <WaitingOnYou period={data.period} />
-          <div>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0 space-y-3">
               <div>
-                <h2 className="font-medium">This month&apos;s jobs</h2>
-                <p className="text-muted-foreground text-xs">Click a job to see its steps. Your team also does some internal checks that aren&apos;t listed.</p>
+                <h2 className="font-medium">Jobs this month</h2>
+                <p className="text-muted-foreground text-xs">Click a job to see its steps, who&apos;s on it and when it&apos;s due.</p>
               </div>
-              <div role="tablist" aria-label="View" className="bg-muted inline-flex rounded-lg p-1">
-                {VIEWS.map((v) => (
-                  <button
-                    key={v.key}
-                    role="tab"
-                    type="button"
-                    aria-selected={view === v.key}
-                    onClick={() => setView(v.key)}
-                    className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium", view === v.key ? "bg-card shadow-xs" : "text-muted-foreground hover:text-foreground")}
-                  >
-                    <v.icon className="size-4" aria-hidden /> {v.label}
-                  </button>
-                ))}
-              </div>
+              <Jobs tasks={tasks} filter={filter} onClearFilter={() => setFilter(null)} onOpen={(t) => setOpenId(t.id)} />
             </div>
-            {tasks.length === 0 ? (
-              <div className="bg-card rounded-xl border shadow-xs"><EmptyState title="No work scheduled for this month yet" description="Your team plans each month's jobs at the start of the month." /></div>
-            ) : view === "board" ? (
-              <Board tasks={tasks} onOpen={(t) => setOpenId(t.id)} />
-            ) : (
-              <JobList tasks={tasks} onOpen={(t) => setOpenId(t.id)} />
-            )}
+            <aside className="space-y-4 lg:sticky lg:top-6">
+              {tasks.length > 0 && <MonthPath period={data.period} tasks={tasks} />}
+              <StageGuide />
+            </aside>
           </div>
-          <HowItWorks />
           <JobSheet task={open} period={data.period} onClose={closeJob} isOwner={isOwner} onEdit={(t) => setEditing(t)} />
         </div>
       )}

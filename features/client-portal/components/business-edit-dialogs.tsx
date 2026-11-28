@@ -233,6 +233,70 @@ export function StakeholderDialog({ person, open, onOpenChange }: { person: Stak
   );
 }
 
+/* ---------- Branches ---------- */
+
+type Branch = PortalBusiness["branches"][number];
+
+/** Add (branch = null) or edit a branch. Branches in the same state may share the company's GSTIN. */
+export function BranchDialog({ branch, open, onOpenChange }: { branch: Branch | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const add = useSaveBusiness(s.addBranch);
+  const update = useSaveBusiness(s.updateBranch);
+  const remove = useSaveBusiness(s.removeBranch);
+  const [confirming, setConfirming] = useState(false);
+  const form = useForm<{ name: string; gstin: string }>({ values: { name: branch?.name ?? "", gstin: branch?.gstin ?? "" } });
+  const close = (o: boolean) => {
+    if (!o) setConfirming(false);
+    onOpenChange(o);
+  };
+  const submit = form.handleSubmit(async (v) => {
+    if (v.name.trim().length < 2) return form.setError("name", { message: "Enter the branch name" });
+    const body = { name: v.name.trim(), gstin: blank(v.gstin)?.toUpperCase() ?? null };
+    try {
+      if (branch) await update.mutateAsync({ id: branch.id, ...body });
+      else await add.mutateAsync(body);
+      toast.success(branch ? "Branch saved" : `${body.name} added`);
+      close(false);
+    } catch (err) {
+      applyApiError(err, form.setError, ["name", "gstin"]);
+    }
+  });
+  const removeNow = async () => {
+    if (!branch) return;
+    try {
+      await remove.mutateAsync(branch.id);
+      toast.success(`${branch.name} removed`);
+      close(false);
+    } catch (err) {
+      applyApiError(err);
+    }
+  };
+  return (
+    <EditDialog
+      open={open}
+      onOpenChange={close}
+      formId="branch-form"
+      pending={add.isPending || update.isPending}
+      title={branch ? `Edit ${branch.name}` : "Add a branch"}
+      description="Another place your company does business from, such as a shop, office or warehouse."
+      footerStart={branch && (confirming ? (
+        <span className="flex items-center gap-2">
+          <Button type="button" variant="destructive" size="sm" disabled={remove.isPending} onClick={() => void removeNow()}>Yes, remove</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>Keep</Button>
+        </span>
+      ) : (
+        <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirming(true)}>Remove</Button>
+      ))}
+    >
+      <form id="branch-form" onSubmit={submit} noValidate className="grid gap-4">
+        <TextField form={form} name="name" label="Branch name" placeholder="e.g. Kochi warehouse" />
+        <FormField id="gstin" label="GSTIN" hint="Leave blank if it has none. A branch in the same state can use your company's GSTIN." error={form.formState.errors.gstin?.message}>
+          <Input id="gstin" placeholder="15 characters" className="font-mono uppercase placeholder:normal-case" aria-invalid={!!form.formState.errors.gstin} {...form.register("gstin")} />
+        </FormField>
+      </form>
+    </EditDialog>
+  );
+}
+
 /* ---------- Financial profile ---------- */
 
 interface FinancialValues { financial_year_start_month: string; annual_turnover: string; monthly_transaction_volume: string; monthly_invoice_count: string; employee_count: string; current_accounting_software: string }
