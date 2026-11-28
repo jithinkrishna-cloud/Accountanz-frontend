@@ -32,6 +32,7 @@ import {
   useRequestAccountant,
   useWithdrawAccountantRequest,
 } from "./explore";
+import { AccountantProfileDetails } from "./accountant-profile-details";
 
 const ROLE_FILTERS = [
   { key: "all", label: "Everyone" },
@@ -209,6 +210,7 @@ function ProfileDialog({ a, company, onClose }: { a: ExploreAccountant | null; c
               <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <CalendarDays className="size-3.5" aria-hidden /> With Accountanz since {sinceLabel(a.member_since)}
               </p>
+              <AccountantProfileDetails a={a} />
               {a.team_roles.length > 0 && (
                 <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">
                   Already on your team as {a.team_roles.map(roleLabel).join(" and ")}.

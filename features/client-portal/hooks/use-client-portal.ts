@@ -38,6 +38,7 @@ export function useOwnTaskActions() {
   const onSuccess = () => {
     void qc.invalidateQueries({ queryKey: K("tasks") });
     void qc.invalidateQueries({ queryKey: K("dashboard") });
+    void qc.invalidateQueries({ queryKey: K("team") });
   };
   return {
     update: useMutation({ mutationFn: ({ id, body }: { id: number; body: Parameters<typeof s.updateTask>[1] }) => s.updateTask(id, body), onSuccess }),
@@ -61,7 +62,19 @@ export const usePayInvoice = () => useMutation({ mutationFn: s.payInvoice });
 
 export function useUpdateClient() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: s.updateClient, onSuccess: () => void qc.invalidateQueries({ queryKey: K("business") }) });
+  return useMutation({
+    mutationFn: s.updateClient,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: K("business") });
+      void qc.invalidateQueries({ queryKey: K("context") }); // company name in the header
+    },
+  });
+}
+
+/** Saves one My Business section (owners only); the response is the refreshed business, so it replaces the cache. */
+export function useSaveBusiness<A>(fn: (arg: A) => Promise<import("../types/client-portal.types").PortalBusiness>) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: fn, onSuccess: (data) => qc.setQueryData(K("business"), data) });
 }
 
 function useInvalidate(...keys: string[]) {

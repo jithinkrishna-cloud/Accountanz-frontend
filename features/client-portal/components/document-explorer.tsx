@@ -228,7 +228,7 @@ function FileRow({ doc, path, tree, onView, onMove, onShare }: { doc: PortalDocu
           <DropdownMenuItem onSelect={onView}><Eye className="size-4" /> View</DropdownMenuItem>
           <DropdownMenuItem asChild><a href={portalFileUrl.document(doc.id)} download={doc.file_name}><Download className="size-4" /> Download</a></DropdownMenuItem>
           <DropdownMenuItem onSelect={onMove}><FolderInput className="size-4" /> Move to…</DropdownMenuItem>
-          {doc.from_client && doc.request_id === null && !tree.inTeamTree(doc.folder_id) && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
+          {doc.from_client === 1 && doc.request_id === null && !tree.inTeamTree(doc.folder_id) && <DropdownMenuItem onSelect={onShare}><Share2 className="size-4" /> Share…</DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
     </li>

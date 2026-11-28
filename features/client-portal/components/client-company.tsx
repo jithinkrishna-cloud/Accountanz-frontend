@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, ChevronRight, MessageSquare } from "lucide-react";
+import { Check, ChevronRight, Pencil } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState } from "@/components/shared/states";
@@ -18,6 +19,7 @@ import { usePortalBusiness, usePortalTasks, usePortalTeam } from "../hooks/use-c
 import type { PortalTask, PortalTeamMember } from "../types/client-portal.types";
 import { STAGE_OF } from "./client-progress";
 import { AccountantOverview } from "./accountant-overview";
+import { EditButton, FinancialProfileDialog, SERVICES, ServicesDialog, StakeholderDialog, TaxDetailsDialog } from "./business-edit-dialogs";
 import { CompanyGate } from "./company-gate";
 import { Card, ListBody } from "./portal-ui";
 
@@ -27,17 +29,6 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="mt-0.5 text-sm break-words">{value || "—"}</dd>
     </div>
-  );
-}
-
-/** Opens a new message to the accounting team about this section (the team updates the record). */
-function RequestCorrection({ section }: { section: string }) {
-  return (
-    <Button asChild variant="outline" size="sm">
-      <Link href={`/app/messages?subject=${encodeURIComponent(`Correction: ${section}`)}`}>
-        <MessageSquare className="size-4" /> Request correction
-      </Link>
-    </Button>
   );
 }
 
@@ -57,26 +48,31 @@ function registration(number: string | null, status: RegistrationStatus | null) 
   );
 }
 
-const SERVICES = [
-  ["bookkeeping", "Bookkeeping"],
-  ["gst_filing", "GST filing"],
-  ["income_tax_filing", "Income tax filing"],
-  ["payroll", "Payroll"],
-  ["audit_support", "Audit support"],
-] as const;
-
-function BusinessBody() {
+function BusinessBody({ isOwner }: { isOwner: boolean }) {
   const { data: b, isLoading, error, refetch } = usePortalBusiness();
+  // Which section editor is open; "person" holds the owner/director being edited (null = adding one).
+  const [open, setOpen] = useState<null | "tax" | "person" | "financial" | "services">(null);
+  const [person, setPerson] = useState<NonNullable<typeof b>["stakeholders"][number] | null>(null);
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading || !b) return <Skeleton className="h-48 w-full rounded-xl" />;
   const tax = b.tax_details;
   const fin = b.financial_profile;
   const req = b.service_requirements;
+  const editor = (key: NonNullable<typeof open>) => ({ open: open === key, onOpenChange: (o: boolean) => setOpen(o ? key : null) });
+  const editPerson = (p: typeof person) => {
+    setPerson(p);
+    setOpen("person");
+  };
   const services = req ? [...SERVICES.filter(([k]) => req[k]).map(([, label]) => label), ...splitList(req.other_services)] : [];
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
-        <Card title="Company details" actions={<RequestCorrection section="Company details" />}>
+        <Card
+          title="Company details"
+          actions={isOwner ? (
+            <Button asChild variant="outline" size="sm"><Link href="/app/settings?tab=profile#business-form"><Pencil className="size-4" /> Edit</Link></Button>
+          ) : undefined}
+        >
           <dl className="grid gap-4 p-5 sm:grid-cols-2">
             <Fact label="Legal name" value={b.legal_name} />
             <Fact label="Trade name" value={b.trade_name} />
@@ -91,7 +87,7 @@ function BusinessBody() {
             <Fact label="Status" value={<StatusBadge status={b.status} />} />
           </dl>
         </Card>
-        <Card title="Tax & registrations" actions={<RequestCorrection section="Tax & registrations" />}>
+        <Card title="Tax & registrations" actions={isOwner ? <EditButton onClick={() => setOpen("tax")} /> : undefined}>
           {tax || b.pan || b.gstin ? (
             <dl className="grid gap-4 p-5 sm:grid-cols-2">
               <Fact label="PAN" value={registration(tax?.pan_number ?? b.pan, tax?.pan_status ?? null)} />
@@ -102,9 +98,9 @@ function BusinessBody() {
               <Fact label="MSME / Udyam" value={tax && registration(tax.msme_udyam_number, tax.msme_status)} />
               <Fact label="Professional tax" value={tax && registration(tax.professional_tax_registration, tax.professional_tax_status)} />
             </dl>
-          ) : <Empty>Your team hasn&apos;t recorded your registrations yet.</Empty>}
+          ) : <Empty>{isOwner ? "No registrations recorded yet. Add your PAN, GSTIN and other numbers with Edit." : "No registrations recorded yet."}</Empty>}
         </Card>
-        <Card title="Owners & directors" actions={<RequestCorrection section="Owners & directors" />}>
+        <Card title="Owners & directors" actions={isOwner ? <EditButton label="Add" onClick={() => editPerson(null)} /> : undefined}>
           {b.stakeholders.length ? (
             <ul className="divide-y">
               {b.stakeholders.map((s) => (
@@ -116,13 +112,20 @@ function BusinessBody() {
                     </p>
                     <p className="text-muted-foreground text-xs">{[humanize(s.stakeholder_type), s.designation !== humanize(s.stakeholder_type) && s.designation].filter(Boolean).join(" · ")}</p>
                   </div>
-                  {s.ownership_percentage != null && <span className="text-muted-foreground shrink-0 text-xs">{s.ownership_percentage}%</span>}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {s.ownership_percentage != null && <span className="text-muted-foreground text-xs">{Number(s.ownership_percentage)}%</span>}
+                    {isOwner && (
+                      <Button type="button" variant="ghost" size="icon" className="size-7" aria-label={`Edit ${s.full_name}`} onClick={() => editPerson(s)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
           ) : <Empty>No owners or directors recorded yet.</Empty>}
         </Card>
-        <Card title="Financial profile" actions={<RequestCorrection section="Financial profile" />}>
+        <Card title="Financial profile" actions={isOwner ? <EditButton onClick={() => setOpen("financial")} /> : undefined}>
           {fin ? (
             <dl className="grid gap-4 p-5 sm:grid-cols-2">
               <Fact label="Financial year starts" value={fin.financial_year_start_month && MONTHS[fin.financial_year_start_month - 1]} />
@@ -132,16 +135,21 @@ function BusinessBody() {
               <Fact label="Employees" value={fin.employee_count?.toLocaleString("en-IN")} />
               <Fact label="Current accounting software" value={fin.current_accounting_software} />
             </dl>
-          ) : <Empty>Your team hasn&apos;t recorded your financial profile yet.</Empty>}
+          ) : <Empty>Not filled in yet.</Empty>}
         </Card>
       </div>
       <div className="space-y-6">
-        <Card title="Services" actions={<RequestCorrection section="Services" />}>
+        <Card
+          title="Services"
+          actions={!isOwner ? undefined : req ? <EditButton onClick={() => setOpen("services")} /> : (
+            <Button asChild variant="outline" size="sm"><Link href="/app/packages">Your plan</Link></Button>
+          )}
+        >
           {services.length ? (
             <ul className="space-y-2 p-5 text-sm">
               {services.map((s) => <li key={s} className="flex items-center gap-2"><Check className="text-primary size-4 shrink-0" aria-hidden />{s}</li>)}
             </ul>
-          ) : <Empty>Not captured yet. Your team records this while setting up your account.</Empty>}
+          ) : <Empty>{req ? "None selected yet." : "Your services come with your plan."}</Empty>}
         </Card>
         <Card title="Branches">
           {b.branches.length === 0 ? (
@@ -158,6 +166,14 @@ function BusinessBody() {
           )}
         </Card>
       </div>
+      {isOwner && (
+        <>
+          <TaxDetailsDialog b={b} {...editor("tax")} />
+          <StakeholderDialog person={person} {...editor("person")} />
+          <FinancialProfileDialog b={b} {...editor("financial")} />
+          {req && <ServicesDialog b={b} {...editor("services")} />}
+        </>
+      )}
     </div>
   );
 }
@@ -165,10 +181,13 @@ function BusinessBody() {
 export function ClientBusiness() {
   return (
     <CompanyGate>
-      {() => (
+      {(company) => (
         <>
-          <PageHeader title="My Business" description="The details we hold for your company. Your accounting team keeps these up to date; use Request correction if anything is wrong." />
-          <BusinessBody />
+          <PageHeader
+            title="My Business"
+            description={company.role === "owner" ? "The details we hold for your company. Keep them up to date any time; changes apply straight away and your accounting team sees them." : "The details we hold for your company. Your company owner can edit them."}
+          />
+          <BusinessBody isOwner={company.role === "owner"} />
         </>
       )}
     </CompanyGate>
@@ -230,13 +249,22 @@ function people(rows: PortalTeamMember[]) {
   return [...byUser.values()];
 }
 
-function TeamBody() {
+function TeamBody({ isOwner }: { isOwner: boolean }) {
   const q = usePortalTeam();
   const tasks = usePortalTasks();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const params = useSearchParams();
+  const memberParam = Number(params.get("member")) || null;
+  const [selectedId, setSelectedId] = useState<number | null>(memberParam);
+  // Follow ?member= when a link changes it while this page is already open (e.g. from a task's "Handled by").
+  const [seenParam, setSeenParam] = useState(memberParam);
+  if (memberParam !== seenParam) {
+    setSeenParam(memberParam);
+    setSelectedId(memberParam);
+  }
   const monthTasks = tasks.data?.tasks ?? [];
   const list = people(q.data ?? []);
-  const selected = selectedId ?? list[0]?.member.user_id ?? null;
+  // A ?member= that isn't on the team falls back to the first person.
+  const selected = (selectedId && list.some((x) => x.member.user_id === selectedId) ? selectedId : null) ?? list[0]?.member.user_id ?? null;
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -278,7 +306,7 @@ function TeamBody() {
           )}
         </ListBody>
       </Card>
-      {selected !== null && <AccountantOverview key={selected} userId={selected} />}
+      {selected !== null && <AccountantOverview key={selected} userId={selected} isOwner={isOwner} />}
     </div>
   );
 }
@@ -286,10 +314,10 @@ function TeamBody() {
 export function ClientTeam() {
   return (
     <CompanyGate>
-      {() => (
+      {(company) => (
         <>
           <PageHeader title="My Accounting Team" description="Who looks after your accounts. Pick an accountant to track their details, tasks, progress, document requests and messages." />
-          <TeamBody />
+          <TeamBody isOwner={company.role === "owner"} />
         </>
       )}
     </CompanyGate>

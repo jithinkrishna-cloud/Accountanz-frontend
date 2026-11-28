@@ -95,7 +95,31 @@ export const clientPortalService = {
   settings: () => api<PortalSettings>("/app/settings"),
   updateSettings: (body: { full_name?: string; phone?: string | null; notification_prefs?: NotificationPrefs }) =>
     api<PortalSettings>("/app/settings", { method: "PATCH", body }),
-  /** Owners only: trade name, state and address. Legal name, GSTIN and PAN are changed by the team (Request correction). */
-  updateClient: (body: { trade_name: string | null; state: string | null; address: string | null }) =>
+  /** Owners only: every business detail except status. Blank optional fields are sent as null. */
+  updateClient: (body: Partial<Record<"legal_name" | "trade_name" | "business_type" | "date_of_establishment" | "gstin" | "pan" | "state" | "address" | "accounting_software" | "primary_contact_name" | "primary_contact_email" | "primary_contact_phone", string | null>>) =>
     api<PortalBusiness>("/app/client", { method: "PATCH", body }),
+  /** Owners only. Each returns the refreshed My Business payload. */
+  saveTaxDetails: (body: BusinessTaxBody) => api<PortalBusiness>("/app/business/tax-details", { method: "PUT", body }),
+  addStakeholder: (body: BusinessStakeholderBody) => api<PortalBusiness>("/app/business/stakeholders", { method: "POST", body }),
+  updateStakeholder: ({ id, ...body }: BusinessStakeholderBody & { id: number }) => api<PortalBusiness>(`/app/business/stakeholders/${id}`, { method: "PATCH", body }),
+  removeStakeholder: (id: number) => api<PortalBusiness>(`/app/business/stakeholders/${id}`, { method: "DELETE" }),
+  saveFinancialProfile: (body: BusinessFinancialBody) => api<PortalBusiness>("/app/business/financial-profile", { method: "PUT", body }),
+  saveServices: (body: BusinessServicesBody) => api<PortalBusiness>("/app/business/services", { method: "PUT", body }),
 };
+
+type Reg = "not_registered" | "applied" | "registered" | null;
+export interface BusinessTaxBody {
+  pan_number: string | null; pan_status: Reg; tan_number: string | null; tan_status: Reg; gstin: string | null; gstin_status: Reg;
+  cin: string | null; cin_status: Reg; llpin: string | null; llpin_status: Reg; msme_udyam_number: string | null; msme_status: Reg;
+  professional_tax_registration: string | null; professional_tax_status: Reg;
+}
+export interface BusinessStakeholderBody {
+  stakeholder_type: "director" | "partner" | "owner" | "proprietor"; full_name: string; designation: string | null; ownership_percentage: number | null; is_primary: boolean;
+}
+export interface BusinessFinancialBody {
+  financial_year_start_month: number | null; annual_turnover: number | null; monthly_transaction_volume: number | null;
+  monthly_invoice_count: number | null; employee_count: number | null; current_accounting_software: string | null;
+}
+export interface BusinessServicesBody {
+  bookkeeping: boolean; gst_filing: boolean; income_tax_filing: boolean; payroll: boolean; audit_support: boolean; other_services: string | null;
+}

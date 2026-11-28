@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CalendarDays, Check, ChevronDown, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Pencil, Plus, Stamp, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, FileUp, Kanban, List, ListChecks, Minus, MessageSquare, Pencil, Plus, Stamp, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -15,7 +15,7 @@ import { formatPeriod, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api-client";
-import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks, useOwnTaskActions } from "../hooks/use-client-portal";
+import { usePortalApprovals, usePortalReports, usePortalRequests, usePortalTasks, usePortalTeam, useOwnTaskActions } from "../hooks/use-client-portal";
 import type { PortalRequest, PortalTask } from "../types/client-portal.types";
 import { CompanyGate } from "./company-gate";
 import { NewTaskDialog } from "./new-task-dialog";
@@ -65,15 +65,28 @@ export function StagePill({ stage, className }: { stage: number; className?: str
   return <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset", s.pill, className)}>{s.label}</span>;
 }
 
-function Person({ name, size = "sm" }: { name: string | null; size?: "sm" | "default" }) {
+/**
+ * An accountant's name with their initials. With a userId of someone on the company's team, it links to their page on
+ * My Accounting Team (onNavigate lets a sheet close first). Anyone no longer on the team is shown as plain text.
+ */
+function Person({ name, userId, onNavigate, size = "sm" }: { name: string | null; userId?: number | null; onNavigate?: () => void; size?: "sm" | "default" }) {
+  const team = usePortalTeam();
   if (!name) return <span className="text-muted-foreground text-sm">Not assigned yet</span>;
-  return (
-    <span className="inline-flex items-center gap-2">
+  const body = (
+    <>
       <Avatar size={size}>
         <AvatarFallback className="bg-primary/15 text-primary ring-primary/25 text-[10px] font-semibold ring-1 ring-inset">{initials(name)}</AvatarFallback>
       </Avatar>
       <span className="text-sm">{name}</span>
-    </span>
+    </>
+  );
+  const onTeam = !!userId && (team.data ?? []).some((m) => m.user_id === userId);
+  if (!onTeam) return <span className="inline-flex items-center gap-2">{body}</span>;
+  return (
+    <Link href={`/app/team?member=${userId}`} onClick={onNavigate} className="group inline-flex items-center gap-2 rounded-md hover:underline" title={`See everything ${name.split(" ")[0]} does for you`}>
+      {body}
+      <ChevronRight className="text-muted-foreground size-3.5 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+    </Link>
   );
 }
 
@@ -335,7 +348,8 @@ function JobList({ tasks, onOpen }: { tasks: PortalTask[]; onOpen: (t: PortalTas
 
 // ───────────── Job details panel ─────────────
 
-function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: PortalTask | null; period: string; onClose: () => void; isOwner: boolean; onEdit: (t: PortalTask) => void }) {
+/** A task's detail panel for the client: what it means, who's on it, its stage and steps. Also used on My Accounting Team. */
+export function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: PortalTask | null; period: string; onClose: () => void; isOwner: boolean; onEdit: (t: PortalTask) => void }) {
   const requests = usePortalRequests();
   const { remove } = useOwnTaskActions();
   const addedByClient = !!task?.created_by_client;
@@ -386,9 +400,9 @@ function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: PortalTask
                 <dt className="text-muted-foreground">Due</dt>
                 <dd>{task.due_date ? longDate(task.due_date) : "No date set"}</dd>
                 <dt className="text-muted-foreground">Handled by</dt>
-                <dd><Person name={task.handled_by} /></dd>
+                <dd><Person name={task.handled_by} userId={task.assignee_id} onNavigate={onClose} /></dd>
                 <dt className="text-muted-foreground">Checked by</dt>
-                <dd><Person name={task.checked_by} /></dd>
+                <dd><Person name={task.checked_by} userId={task.reviewer_id} onNavigate={onClose} /></dd>
                 <dt className="text-muted-foreground">Status</dt>
                 <dd className="flex flex-wrap items-center gap-2">
                   <StagePill stage={stage} />

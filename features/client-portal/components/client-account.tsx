@@ -1,8 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert, CircleCheck, CreditCard, Loader2, MessageSquare } from "lucide-react";
-import Link from "next/link";
+import { CircleAlert, CircleCheck, CreditCard, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -161,20 +160,51 @@ const PREFS: { key: keyof NotificationPrefs; label: string; description: string 
   { key: "monthly_summary", label: "Monthly summary", description: "A short summary after each month closes." },
 ];
 
-// Mirrors backend portalClientUpdateSchema (owners only).
+// Mirrors backend portalClientUpdateSchema (owners only): everything on the client record except status.
+const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const PAN_RE = /^[A-Z]{5}\d{4}[A-Z]$/;
+const upper = (re: RegExp, message: string) =>
+  z.string().trim().transform((v) => v.toUpperCase()).refine((v) => v === "" || re.test(v), message);
 const businessSchema = z.object({
+  legal_name: z.string().trim().min(2, "Enter the legal name").max(200),
   trade_name: z.string().trim().max(200),
+  business_type: z.string(),
+  date_of_establishment: z.string(),
+  gstin: upper(GSTIN_RE, "Enter a valid 15-character GSTIN"),
+  pan: upper(PAN_RE, "Enter a valid 10-character PAN"),
   state: z.string(),
   address: z.string().trim().max(500),
+  accounting_software: z.enum(["journl", "none"]),
+  primary_contact_name: z.string().trim().max(150),
+  primary_contact_email: z.union([z.literal(""), z.string().trim().email("Enter a valid email address").max(255)]),
+  primary_contact_phone: z.string().trim().max(30),
 });
-type BusinessValues = z.infer<typeof businessSchema>;
+type BusinessValues = z.input<typeof businessSchema>;
+const BUSINESS_FIELDS = Object.keys(businessSchema.shape) as (keyof BusinessValues)[];
+const BUSINESS_TYPES = ["private_limited", "public_limited", "llp", "partnership", "proprietorship", "opc"] as const;
+const BUSINESS_TYPE_LABEL: Record<(typeof BUSINESS_TYPES)[number], string> = {
+  private_limited: "Private limited", public_limited: "Public limited", llp: "LLP", partnership: "Partnership", proprietorship: "Proprietorship", opc: "One person company",
+};
 
-/** Legal name, GSTIN and PAN are read-only; the owner may change trade name, state and address. */
+/** The owner keeps the company's details up to date themselves; changes apply straight away and are logged. */
 function BusinessDetailsCard({ business, isOwner, onSave }: { business: PortalBusiness; isOwner: boolean; onSave: () => void }) {
   const updateClient = useUpdateClient();
   const [editing, setEditing] = useState(false);
-  const toValues = (b: PortalBusiness): BusinessValues => ({ trade_name: b.trade_name ?? "", state: b.state ?? "", address: b.address ?? "" });
-  const { register, control, handleSubmit, reset, setError, formState: { errors } } = useForm<BusinessValues>({
+  const toValues = (b: PortalBusiness): BusinessValues => ({
+    legal_name: b.legal_name ?? "",
+    trade_name: b.trade_name ?? "",
+    business_type: b.business_type ?? "",
+    date_of_establishment: b.date_of_establishment?.slice(0, 10) ?? "",
+    gstin: b.gstin ?? "",
+    pan: b.pan ?? "",
+    state: b.state ?? "",
+    address: b.address ?? "",
+    accounting_software: b.accounting_software === "journl" ? "journl" : "none",
+    primary_contact_name: b.primary_contact_name ?? "",
+    primary_contact_email: b.primary_contact_email ?? "",
+    primary_contact_phone: b.primary_contact_phone ?? "",
+  });
+  const { register, control, handleSubmit, reset, setError, formState: { errors } } = useForm<BusinessValues, unknown, z.output<typeof businessSchema>>({
     resolver: zodResolver(businessSchema),
     defaultValues: toValues(business),
   });
@@ -185,54 +215,72 @@ function BusinessDetailsCard({ business, isOwner, onSave }: { business: PortalBu
   };
   const save = handleSubmit(async (v) => {
     try {
-      const updated = await updateClient.mutateAsync({ trade_name: v.trade_name || null, state: v.state || null, address: v.address || null });
+      // Blank optional fields are sent as null (cleared); the legal name is required.
+      const blankToNull = (s: string) => (s === "" ? null : s);
+      const updated = await updateClient.mutateAsync({
+        legal_name: v.legal_name,
+        trade_name: blankToNull(v.trade_name),
+        business_type: blankToNull(v.business_type),
+        date_of_establishment: blankToNull(v.date_of_establishment),
+        gstin: blankToNull(v.gstin),
+        pan: blankToNull(v.pan),
+        state: blankToNull(v.state),
+        address: blankToNull(v.address),
+        accounting_software: v.accounting_software,
+        primary_contact_name: blankToNull(v.primary_contact_name),
+        primary_contact_email: blankToNull(v.primary_contact_email),
+        primary_contact_phone: blankToNull(v.primary_contact_phone),
+      });
       reset(toValues(updated));
       toast.success("Business details saved");
       setEditing(false);
       onSave();
     } catch (err) {
-      applyApiError(err, setError, ["trade_name", "state", "address"]);
+      applyApiError(err, setError, BUSINESS_FIELDS);
     }
   });
+
+  const locked = !editing;
+  const text = (name: keyof BusinessValues, label: string, opts: { mono?: boolean; type?: string; placeholder?: string } = {}) => (
+    <FormField id={name} label={label} error={errors[name]?.message}>
+      <Input id={name} type={opts.type} readOnly={locked} placeholder={opts.placeholder ?? (locked ? "—" : undefined)} className={opts.mono ? "font-mono uppercase" : undefined} aria-invalid={!!errors[name]} {...register(name)} />
+    </FormField>
+  );
+  const select = (name: "business_type" | "state" | "accounting_software", label: string, options: { value: string; label: string }[]) => (
+    <FormField id={name} label={label} error={errors[name]?.message}>
+      <Controller control={control} name={name} render={({ field }) => (
+        <Select value={field.value || ""} onValueChange={field.onChange} disabled={locked}>
+          <SelectTrigger id={name} className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
+          <SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+        </Select>
+      )} />
+    </FormField>
+  );
 
   return (
     <Card
       title="Business details"
-      subtitle={isOwner ? "You can update the trade name, state and address. Your accounting team manages the rest." : "Only the company owner can change these."}
-      actions={
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/app/messages?subject=${encodeURIComponent("Correction: Company details")}`}><MessageSquare className="size-4" /> Request correction</Link>
-        </Button>
-      }
+      subtitle={isOwner ? "Keep your company's details up to date. Changes apply straight away and your accounting team sees them." : "Only the company owner can change these."}
     >
       <form id="business-form" onSubmit={save} noValidate>
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <FormField id="legal_name" label="Legal name" hint="Managed by your accounting team.">
-            <Input id="legal_name" value={business.legal_name} readOnly disabled />
-          </FormField>
-          <FormField id="trade_name" label="Trade name" error={errors.trade_name?.message}>
-            <Input id="trade_name" readOnly={!editing} aria-invalid={!!errors.trade_name} {...register("trade_name")} />
-          </FormField>
-          <FormField id="gstin" label="GSTIN" hint="Managed by your accounting team.">
-            <Input id="gstin" className="font-mono" value={business.gstin ?? ""} placeholder="—" readOnly disabled />
-          </FormField>
-          <FormField id="pan" label="PAN" hint="Managed by your accounting team.">
-            <Input id="pan" className="font-mono" value={business.pan ?? ""} placeholder="—" readOnly disabled />
-          </FormField>
-          <FormField id="state" label="State" error={errors.state?.message}>
-            <Controller control={control} name="state" render={({ field }) => (
-              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!editing}>
-                <SelectTrigger id="state" className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
-            )} />
-          </FormField>
-          <FormField id="address" label="Address" error={errors.address?.message}>
-            <Input id="address" readOnly={!editing} aria-invalid={!!errors.address} {...register("address")} />
-          </FormField>
-          <FormField id="software" label="Accounting software">
-            <Input id="software" value={ACCOUNTING_SOFTWARE_LABELS[business.accounting_software] ?? business.accounting_software} readOnly disabled />
-          </FormField>
+          {text("legal_name", "Legal name")}
+          {text("trade_name", "Trade name")}
+          {select("business_type", "Business type", BUSINESS_TYPES.map((t) => ({ value: t, label: BUSINESS_TYPE_LABEL[t] })))}
+          {text("date_of_establishment", "Established on", { type: "date" })}
+          {text("gstin", "GSTIN", { mono: true, placeholder: locked ? "—" : "15 characters" })}
+          {text("pan", "PAN", { mono: true, placeholder: locked ? "—" : "10 characters" })}
+          {select("state", "State", INDIAN_STATES.map((s) => ({ value: s, label: s })))}
+          {text("address", "Address")}
+          {select("accounting_software", "Accounting software", Object.entries(ACCOUNTING_SOFTWARE_LABELS).map(([value, label]) => ({ value, label })))}
+        </div>
+        <div className="border-t">
+          <h3 className="px-5 pt-4 text-sm font-medium">Primary contact</h3>
+          <div className="grid gap-4 p-5 sm:grid-cols-3">
+            {text("primary_contact_name", "Name")}
+            {text("primary_contact_email", "Email", { type: "email" })}
+            {text("primary_contact_phone", "Phone", { type: "tel" })}
+          </div>
         </div>
       </form>
       {isOwner && (

@@ -12,7 +12,8 @@ import { formatDate, formatMeetingTime, formatPeriod, initials, parseUtc } from 
 import { cn } from "@/lib/utils";
 import { usePortalMember } from "../hooks/use-client-portal";
 import type { PortalMemberOverview, PortalTeamMember } from "../types/client-portal.types";
-import { STAGE_OF, STAGE_WEIGHT, StagePill, isLate, shortDate } from "./client-progress";
+import { JobSheet, STAGE_OF, STAGE_WEIGHT, StagePill, isLate, shortDate } from "./client-progress";
+import { NewTaskDialog } from "./new-task-dialog";
 
 export const ROLE_LABEL: Record<PortalTeamMember["team_role"], string> = { cfo: "CFO", finance_manager: "Finance manager", reviewer: "Reviewer", bookkeeper: "Bookkeeper" };
 
@@ -64,11 +65,17 @@ function StepBar({ task }: { task: Task }) {
   );
 }
 
-function TaskRow({ task, userId }: { task: Task; userId: number }) {
+function TaskRow({ task, userId, onOpen }: { task: Task; userId: number; onOpen: (t: Task) => void }) {
   const stage = STAGE_OF[task.status];
   const part = task.assignee_id === userId ? "Doing" : task.reviewer_id === userId ? "Checking" : "Overseeing";
   return (
-    <li className="grid gap-2 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+    <li>
+    <button
+      type="button"
+      onClick={() => onOpen(task)}
+      aria-label={`${task.title}: open details`}
+      className="hover:bg-muted/40 focus-visible:bg-muted/40 grid w-full gap-2 px-5 py-3 text-left focus-visible:outline-none sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
+    >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{task.title}</p>
         <p className={cn("text-xs", isLate(task) ? "text-amber-700" : "text-muted-foreground")}>
@@ -80,12 +87,18 @@ function TaskRow({ task, userId }: { task: Task; userId: number }) {
         <StepBar task={task} />
         <StagePill stage={stage} />
       </div>
+    </button>
     </li>
   );
 }
 
-function TasksSection({ tasks, userId }: { tasks: Task[]; userId: number }) {
+function TasksSection({ tasks, userId, isOwner }: { tasks: Task[]; userId: number; isOwner: boolean }) {
   const [showDone, setShowDone] = useState(false);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [editing, setEditing] = useState<Task | null>(null);
+  // Looked up by id so the panel shows fresh data after a refetch (and closes if the task was deleted).
+  const openTask = tasks.find((t) => t.id === openId) ?? null;
+  const onOpen = (t: Task) => setOpenId(t.id);
   const open = tasks.filter((t) => STAGE_OF[t.status] < 3);
   const done = tasks.filter((t) => STAGE_OF[t.status] === 3);
   return (
@@ -94,22 +107,24 @@ function TasksSection({ tasks, userId }: { tasks: Task[]; userId: number }) {
         <Empty>No tasks with this person yet.</Empty>
       ) : (
         <>
-          {open.length > 0 ? <ul className="divide-y">{open.map((t) => <TaskRow key={t.id} task={t} userId={userId} />)}</ul> : <Empty>Nothing open right now. Everything is finished.</Empty>}
+          {open.length > 0 ? <ul className="divide-y">{open.map((t) => <TaskRow key={t.id} task={t} userId={userId} onOpen={onOpen} />)}</ul> : <Empty>Nothing open right now. Everything is finished.</Empty>}
           {done.length > 0 && (
             <div className="border-t">
               <button type="button" onClick={() => setShowDone((v) => !v)} className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1 px-5 py-2.5 text-xs" aria-expanded={showDone}>
                 <ChevronRight className={cn("size-3.5 transition-transform", showDone && "rotate-90")} aria-hidden /> {showDone ? "Hide" : "Show"} {done.length} finished
               </button>
-              {showDone && <ul className="divide-y border-t">{done.map((t) => <TaskRow key={t.id} task={t} userId={userId} />)}</ul>}
+              {showDone && <ul className="divide-y border-t">{done.map((t) => <TaskRow key={t.id} task={t} userId={userId} onOpen={onOpen} />)}</ul>}
             </div>
           )}
         </>
       )}
+      <JobSheet task={openTask} period={openTask?.period ?? ""} onClose={() => setOpenId(null)} isOwner={isOwner} onEdit={(t) => setEditing(t as Task)} />
+      {isOwner && <NewTaskDialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} onCreated={() => setEditing(null)} task={editing} />}
     </Section>
   );
 }
 
-function OverviewBody({ data }: { data: PortalMemberOverview }) {
+function OverviewBody({ data, isOwner }: { data: PortalMemberOverview; isOwner: boolean }) {
   const { member, tasks, requests, approvals, threads, meetings } = data;
   const first = firstName(member.full_name);
   const openTasks = tasks.filter((t) => STAGE_OF[t.status] < 3);
@@ -149,7 +164,7 @@ function OverviewBody({ data }: { data: PortalMemberOverview }) {
         <Stat label="Approvals" value={pendingApprovals.length} hint={pendingApprovals.length ? "Need your decision" : "Nothing pending"} tone={pendingApprovals.length ? "warn" : undefined} />
       </div>
 
-      <TasksSection tasks={tasks} userId={member.user_id} />
+      <TasksSection tasks={tasks} userId={member.user_id} isOwner={isOwner} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Section icon={FileUp} title="Documents requested" count={requests.length} action={<Link href="/app/requests" className="text-primary text-xs hover:underline">Document Requests</Link>}>
@@ -240,7 +255,7 @@ function OverviewBody({ data }: { data: PortalMemberOverview }) {
 }
 
 /** Everything one accountant does for the company: details, tasks & progress, document requests, approvals, messages, meetings. */
-export function AccountantOverview({ userId }: { userId: number }) {
+export function AccountantOverview({ userId, isOwner = false }: { userId: number; isOwner?: boolean }) {
   const q = usePortalMember(userId);
   if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   if (q.isLoading || !q.data) {
@@ -252,5 +267,5 @@ export function AccountantOverview({ userId }: { userId: number }) {
       </div>
     );
   }
-  return <OverviewBody data={q.data} />;
+  return <OverviewBody data={q.data} isOwner={isOwner} />;
 }

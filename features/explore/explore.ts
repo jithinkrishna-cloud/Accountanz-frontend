@@ -20,6 +20,24 @@ export interface ExploreAccountant {
   pending_request_id: number | null;
 }
 
+/** The profile with this accountant's work for the client's own company (null if they never worked on it). */
+export interface ExploreProfile extends ExploreAccountant {
+  with_you: {
+    /** A CFO on the account oversees all its work, so their numbers cover every task. */
+    oversees: boolean;
+    since: string | null;
+    done_total: number;
+    month_total: number;
+    month_done: number;
+    open_now: number;
+    waiting_review: number;
+    open_requests: number;
+    last_activity: string | null;
+    recent: { id: number; title: string; period: string; finished_on: string | null; part: "did" | "checked" | "oversaw" }[];
+    assignments: { team_role: string; valid_from: string; valid_to: string | null; current: boolean }[];
+  } | null;
+}
+
 export interface AccountantRequest {
   id: number;
   client_id: number;
@@ -63,6 +81,7 @@ const items = <T,>(path: string) => api<{ items: T[] }>(path).then((r) => r.item
 
 export const exploreService = {
   accountants: () => items<ExploreAccountant>("/app/explore/accountants"),
+  profile: (id: number) => api<ExploreProfile>(`/app/explore/accountants/${id}`),
   request: (accountantId: number, body: RequestBody) => api<AccountantRequest>(`/app/explore/accountants/${accountantId}/requests`, { method: "POST", body }),
   myRequests: () => items<AccountantRequest>("/app/accountant-requests"),
   withdraw: (id: number) => api<AccountantRequest>(`/app/accountant-requests/${id}/withdraw`, { method: "POST" }),
@@ -76,6 +95,7 @@ const APP = ["app", "explore"] as const;
 const ADMIN = ["admin", "accountant-requests"] as const;
 
 export const useExploreAccountants = () => useQuery({ queryKey: [...APP, "accountants"], queryFn: exploreService.accountants });
+export const useExploreProfile = (id: number) => useQuery({ queryKey: [...APP, "accountants", id], queryFn: () => exploreService.profile(id) });
 export const useMyAccountantRequests = () => useQuery({ queryKey: [...APP, "requests"], queryFn: exploreService.myRequests });
 
 function useRefreshExplore() {
