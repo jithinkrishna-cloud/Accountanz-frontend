@@ -86,7 +86,7 @@ function RequestsBody() {
                         <dt className="text-muted-foreground text-[11px] tracking-wide uppercase">For task</dt>
                         <dd className="mt-1 min-w-0">
                           {r.task ? (
-                            <Link href={`/app/progress?task=${r.task.id}&period=${r.task.period}`} className="group inline-flex max-w-full items-center gap-1.5" title="Open this task">
+                            <Link href={`/app/progress/${r.task.id}`} className="group inline-flex max-w-full items-center gap-1.5" title="Open this task">
                               <ListChecks className="text-muted-foreground size-4 shrink-0" aria-hidden />
                               <span className="truncate font-medium group-hover:underline">{r.task.title}</span>
                               <span className="text-muted-foreground shrink-0">· {formatPeriod(r.task.period)}</span>

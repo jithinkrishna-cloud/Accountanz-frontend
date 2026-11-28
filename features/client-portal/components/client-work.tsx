@@ -217,7 +217,7 @@ function ApprovalCard({ a, canDecide, onDecide }: { a: PortalApproval; canDecide
             </Field>
             <Field label="For task" className="sm:px-5">
               {a.task_id && a.task_title && a.task_period && a.task_status ? (
-                <Link href={`/app/progress?task=${a.task_id}&period=${a.task_period}`} className="group inline-flex max-w-full items-center gap-1.5" title="Open this task">
+                <Link href={`/app/progress/${a.task_id}`} className="group inline-flex max-w-full items-center gap-1.5" title="Open this task">
                   <ListChecks className="text-muted-foreground size-4 shrink-0" aria-hidden />
                   <span className="truncate font-medium group-hover:underline">{a.task_title}</span>
                   <span className="text-muted-foreground shrink-0">· {formatPeriod(a.task_period)}</span>

@@ -123,6 +123,16 @@ export interface PortalTeamMember {
   team_role: "cfo" | "finance_manager" | "reviewer" | "bookkeeper";
 }
 
+/** One job's own page: the job plus when it moved along and what's tied to it. */
+export interface PortalTaskDetail extends PortalTask {
+  period: string;
+  created_at: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+  requests: { id: number; description: string; due_date: string | null; status: string; requested_by: string | null; files: number }[];
+  approvals: { id: number; subject: string; status: "pending" | "approved" | "rejected"; created_at: string; decided_at: string | null }[];
+}
+
 export interface PortalTask {
   id: number;
   title: string;

@@ -24,7 +24,7 @@ import {
   usePortalThreads,
 } from "../hooks/use-client-portal";
 import type { PortalCompany, PortalTask } from "../types/client-portal.types";
-import { isLate, shortDate, STAGE_OF, STAGES, StagePill } from "./client-progress";
+import { isLate, monthPercent, ProgressRing, shortDate, STAGE_OF, STAGES, StageIcon, StagePill } from "./client-progress";
 import { ProposalCard } from "./client-proposal";
 import { CompanyGate } from "./company-gate";
 import { ROLE_INFO } from "./portal-ui";
@@ -64,51 +64,88 @@ const byUrgency = (a: PortalTask, b: PortalTask) =>
   Number(STAGE_OF[a.status] === 3) - Number(STAGE_OF[b.status] === 3) ||
   (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999");
 
+
+
+/** The month at a glance on the dashboard: overall progress, the four status counts and the most urgent jobs. */
 function MonthWork({ period }: { period: string }) {
   const q = usePortalTasks(period);
   const tasks = q.data?.tasks;
   const counts = STAGES.map((_, i) => tasks?.filter((t) => STAGE_OF[t.status] === i).length ?? 0);
   const total = tasks?.length ?? 0;
+  const done = counts[3]!;
+  const late = tasks?.filter(isLate).length ?? 0;
+  const SHOWN = 5;
 
   return (
-    <Panel title={`${formatPeriod(period)} work`} href="/app/progress" linkLabel="Full progress">
+    <section className="bg-card overflow-hidden rounded-xl border shadow-xs">
+      <header className="flex items-center justify-between gap-3 border-b px-5 py-3">
+        <div className="min-w-0">
+          <h2 className="font-medium">This month&apos;s work</h2>
+          <p className="text-muted-foreground text-xs">{formatPeriod(period)} books</p>
+        </div>
+        <Link href="/app/progress" className="text-primary inline-flex items-center gap-0.5 text-sm font-medium hover:underline">
+          Tasks &amp; Progress <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      </header>
       {!tasks ? (
-        <Rows />
+        <div className="pt-4"><Rows /></div>
       ) : total === 0 ? (
-        <Quiet>Your team hasn&apos;t scheduled any work for this month yet.</Quiet>
+        <p className="text-muted-foreground px-5 py-6 text-sm">Your team hasn&apos;t scheduled any work for this month yet.</p>
       ) : (
         <>
-          <div className="px-5 pb-3">
-            <div className="flex h-2 overflow-hidden rounded-full bg-muted" role="img" aria-label={STAGES.map((s, i) => `${counts[i]} ${s.label.toLowerCase()}`).join(", ")}>
-              {STAGES.map((s, i) => counts[i] ? <span key={s.label} className={s.dot} style={{ width: `${(counts[i] / total) * 100}%` }} /> : null)}
+          <div className="flex items-center gap-4 px-5 py-4">
+            <ProgressRing percent={monthPercent(tasks)} small />
+            <div className="min-w-0">
+              <p className="font-semibold">{done === total ? "All done for this month" : `${done} of ${total} jobs finished`}</p>
+              <p className="text-muted-foreground text-sm">
+                {done === total ? "Every job has been checked." : late ? `${late} taking a little longer than planned` : "Everything is on track."}
+              </p>
             </div>
-            <ul className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {STAGES.map((s, i) => (
-                <li key={s.label} className="inline-flex items-center gap-1.5">
-                  <span className={cn("size-2 rounded-full", s.dot)} aria-hidden />
-                  {s.label} <span className="text-foreground font-medium">{counts[i]}</span>
-                </li>
-              ))}
-            </ul>
           </div>
-          <ul className="divide-y border-t">
-            {[...tasks].sort(byUrgency).slice(0, 6).map((t) => (
-              <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{t.title}</p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {t.handled_by ?? "Not assigned yet"}
-                    {t.due_date && <span className={cn(isLate(t) && "font-medium text-red-600")}> · {isLate(t) ? "was due" : "due"} {shortDate(t.due_date)}</span>}
-                  </p>
-                </div>
-                <StagePill stage={STAGE_OF[t.status]} />
-              </li>
+          <div className="bg-border grid grid-cols-2 gap-px border-y sm:grid-cols-4">
+            {STAGES.map((s, i) => (
+              <div key={s.label} className="bg-card flex items-center gap-2.5 px-4 py-3">
+                <StageIcon stage={i} small />
+                <span className="min-w-0">
+                  <span className="block leading-tight font-semibold tabular-nums">{counts[i]}</span>
+                  <span className="text-muted-foreground block text-xs leading-tight">{s.label}</span>
+                </span>
+              </div>
             ))}
+          </div>
+          <ul className="divide-y">
+            {[...tasks].sort(byUrgency).slice(0, SHOWN).map((t) => {
+              const stage = STAGE_OF[t.status];
+              return (
+                <li key={t.id}>
+                  <Link href={`/app/progress/${t.id}`} className="hover:bg-muted/40 group flex items-center gap-3 px-5 py-3 text-sm transition-colors">
+                    <StageIcon stage={stage} small />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{t.title}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {t.handled_by ?? "Not assigned yet"}
+                        {t.due_date && (stage === 3 ? " · finished" : ` · due ${shortDate(t.due_date)}`)}
+                      </p>
+                    </div>
+                    {isLate(t) ? (
+                      <span className="hidden shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 sm:inline dark:text-amber-300">Taking a little longer</span>
+                    ) : (
+                      <StagePill stage={stage} className="hidden shrink-0 sm:inline-flex" />
+                    )}
+                    <ChevronRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
-          {total > 6 && <p className="text-muted-foreground border-t px-5 py-2.5 text-xs">and {total - 6} more</p>}
+          {total > SHOWN && (
+            <Link href="/app/progress" className="text-muted-foreground hover:text-foreground hover:bg-muted/40 block border-t px-5 py-2.5 text-center text-xs font-medium">
+              See all {total} jobs
+            </Link>
+          )}
         </>
       )}
-    </Panel>
+    </section>
   );
 }
 

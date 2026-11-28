@@ -17,7 +17,7 @@ import type {
   PortalReport,
   PortalRequest,
   PortalSettings,
-  PortalTask,
+  PortalTask, PortalTaskDetail,
   PortalTeamMember,
   PortalThread,
   PortalThreadDetail,
@@ -68,6 +68,7 @@ export const clientPortalService = {
     return api<{ id: number; fulfilled_request: number | null }>("/app/documents", { method: "POST", body });
   },
   requests: () => items<PortalRequest>("/app/requests"),
+  task: (id: number) => api<PortalTaskDetail>(`/app/tasks/${id}`),
   tasks: (period?: string) => api<{ period: string; periods: string[]; tasks: PortalTask[] }>("/app/tasks", { query: { period } }),
   createTask: (body: { title: string; description: string | null; due_date: string; checklist: string[] }) =>
     api<{ id: number; title: string; period: string; due_date: string }>("/app/tasks", { method: "POST", body }),

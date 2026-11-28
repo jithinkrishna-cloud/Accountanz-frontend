@@ -3,7 +3,7 @@
 import { AlertCircle, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDashed, CircleDot, Clock, FileUp, Minus, MessageSquare, Pencil, Plus, SearchCheck, Stamp, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -50,10 +50,10 @@ const PLAIN: [RegExp, string][] = [
   [/trial balance/i, "A final check that your books balance and nothing is parked in the wrong place."],
   [/management|mis|p&l/i, "We prepare your monthly profit & loss and balance sheet."],
 ];
-const explain = (t: PortalTask) => t.description?.trim() || PLAIN.find(([re]) => re.test(t.title))?.[1] || null;
+export const explain = (t: PortalTask) => t.description?.trim() || PLAIN.find(([re]) => re.test(t.title))?.[1] || null;
 
 export const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+export const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 const todayIso = () => new Date().toISOString().slice(0, 10);
 export const isLate = (t: PortalTask) => STAGE_OF[t.status] < 2 && !!t.due_date && t.due_date < todayIso();
 const firstName = (name: string) => name.split(" ")[0];
@@ -69,7 +69,7 @@ export function StagePill({ stage, className }: { stage: number; className?: str
  * An accountant's name with their initials. With a userId of someone on the company's team, it links to their page on
  * My Accounting Team (onNavigate lets a sheet close first). Anyone no longer on the team is shown as plain text.
  */
-function Person({ name, userId, onNavigate, size = "sm" }: { name: string | null; userId?: number | null; onNavigate?: () => void; size?: "sm" | "default" }) {
+export function Person({ name, userId, onNavigate, size = "sm" }: { name: string | null; userId?: number | null; onNavigate?: () => void; size?: "sm" | "default" }) {
   const team = usePortalTeam();
   if (!name) return <span className="text-muted-foreground text-sm">Not assigned yet</span>;
   const body = (
@@ -90,7 +90,7 @@ function Person({ name, userId, onNavigate, size = "sm" }: { name: string | null
   );
 }
 
-function StageTracker({ stage }: { stage: number }) {
+export function StageTracker({ stage }: { stage: number }) {
   return (
     <ol className="flex items-center gap-1.5" aria-label={`Stage ${stage + 1} of 4: ${STAGES[stage]!.label}`}>
       {STAGES.map((s, i) => {
@@ -119,14 +119,14 @@ const stepCount = (t: PortalTask) => `${t.checklist.filter((c) => c.done).length
 // ───────────── Month overview ─────────────
 
 /** Each job counts for its stage (not started 0, working 40%, being checked 80%, done 100%). */
-const monthPercent = (tasks: PortalTask[]) =>
+export const monthPercent = (tasks: PortalTask[]) =>
   tasks.length ? Math.round((tasks.reduce((n, t) => n + STAGE_WEIGHT[STAGE_OF[t.status]]!, 0) / tasks.length) * 100) : 0;
 
-function ProgressRing({ percent }: { percent: number }) {
+export function ProgressRing({ percent, small }: { percent: number; small?: boolean }) {
   const r = 34;
   const c = 2 * Math.PI * r;
   return (
-    <div className="relative size-24 shrink-0" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label="Month progress">
+    <div className={cn("relative shrink-0", small ? "size-16" : "size-24")} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label="Month progress">
       <svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
         <circle cx="40" cy="40" r={r} fill="none" strokeWidth="8" className="stroke-muted" />
         <circle
@@ -137,8 +137,8 @@ function ProgressRing({ percent }: { percent: number }) {
         />
       </svg>
       <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        <span className="text-xl font-semibold tabular-nums">{percent}%</span>
-        <span className="text-muted-foreground mt-1 text-[10px]">done</span>
+        <span className={cn("font-semibold tabular-nums", small ? "text-sm" : "text-xl")}>{percent}%</span>
+        {!small && <span className="text-muted-foreground mt-1 text-[10px]">done</span>}
       </span>
     </div>
   );
@@ -208,7 +208,7 @@ function MonthOverview({ period, tasks, filter, onFilter }: { period: string; ta
 // ───────────── Waiting on you ─────────────
 
 /** Open document requests for a month (or with no month). These are what can hold the month's jobs up. */
-const blockingRequests = (requests: PortalRequest[] | undefined, period: string) => (requests ?? []).filter((r) => r.status === "open" && (!r.period || r.period === period));
+export const blockingRequests = (requests: PortalRequest[] | undefined, period: string) => (requests ?? []).filter((r) => r.status === "open" && (!r.period || r.period === period));
 
 function WaitingOnYou({ period }: { period: string }) {
   const requests = usePortalRequests();
@@ -246,7 +246,7 @@ const STAGE_ICON = [
   { icon: CheckCircle2, tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
 ] as const;
 
-function StageIcon({ stage, small }: { stage: number; small?: boolean }) {
+export function StageIcon({ stage, small }: { stage: number; small?: boolean }) {
   const { icon: Icon, tone } = STAGE_ICON[stage]!;
   return (
     <span className={cn("flex shrink-0 items-center justify-center rounded-full", small ? "size-6" : "size-9", tone)} aria-hidden>
@@ -268,12 +268,12 @@ function StepBar({ task }: { task: PortalTask }) {
   );
 }
 
-function JobRow({ task, onOpen }: { task: PortalTask; onOpen: () => void }) {
+function JobRow({ task }: { task: PortalTask }) {
   const stage = STAGE_OF[task.status];
   const meaning = explain(task);
   return (
     <li>
-      <button type="button" onClick={onOpen} className="hover:bg-muted/40 focus-visible:bg-muted/40 group flex w-full items-start gap-4 px-5 py-4 text-left transition-colors focus-visible:outline-none">
+      <Link href={`/app/progress/${task.id}`} className="hover:bg-muted/40 focus-visible:bg-muted/40 group flex w-full items-start gap-4 px-5 py-4 text-left transition-colors focus-visible:outline-none">
         <StageIcon stage={stage} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -300,7 +300,7 @@ function JobRow({ task, onOpen }: { task: PortalTask; onOpen: () => void }) {
           {task.checklist.length > 0 && <StepBar task={task} />}
         </div>
         <ChevronRight className="text-muted-foreground mt-2.5 size-4 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
-      </button>
+      </Link>
     </li>
   );
 }
@@ -311,7 +311,7 @@ const GROUPS = [
   { title: "Done", hint: "Checked and complete.", stages: [3] },
 ] as const;
 
-function JobGroup({ title, hint, tasks, onOpen, collapsible }: { title: string; hint: string; tasks: PortalTask[]; onOpen: (t: PortalTask) => void; collapsible?: boolean }) {
+function JobGroup({ title, hint, tasks, collapsible }: { title: string; hint: string; tasks: PortalTask[]; collapsible?: boolean }) {
   const [shown, setShown] = useState(!collapsible);
   return (
     <section className="bg-card overflow-hidden rounded-xl border shadow-xs">
@@ -326,12 +326,12 @@ function JobGroup({ title, hint, tasks, onOpen, collapsible }: { title: string; 
           </Button>
         )}
       </header>
-      {shown && <ul className="divide-y">{tasks.map((t) => <JobRow key={t.id} task={t} onOpen={() => onOpen(t)} />)}</ul>}
+      {shown && <ul className="divide-y">{tasks.map((t) => <JobRow key={t.id} task={t} />)}</ul>}
     </section>
   );
 }
 
-function Jobs({ tasks, filter, onClearFilter, onOpen }: { tasks: PortalTask[]; filter: number | null; onClearFilter: () => void; onOpen: (t: PortalTask) => void }) {
+function Jobs({ tasks, filter, onClearFilter }: { tasks: PortalTask[]; filter: number | null; onClearFilter: () => void }) {
   if (tasks.length === 0) {
     return <div className="bg-card rounded-xl border shadow-xs"><EmptyState title="No work scheduled for this month yet" description="Your team plans each month's jobs at the start of the month." /></div>;
   }
@@ -344,7 +344,7 @@ function Jobs({ tasks, filter, onClearFilter, onOpen }: { tasks: PortalTask[]; f
           Showing jobs that are <span className="text-foreground font-medium">{label.toLowerCase()}</span>
           <Button type="button" variant="ghost" size="sm" onClick={onClearFilter}><X className="size-3.5" /> Show all</Button>
         </div>
-        {items.length ? <JobGroup title={label} hint={STAGES[filter]!.help} tasks={items} onOpen={onOpen} /> : (
+        {items.length ? <JobGroup title={label} hint={STAGES[filter]!.help} tasks={items} /> : (
           <div className="bg-card text-muted-foreground rounded-xl border p-6 text-center text-sm">No jobs are {label.toLowerCase()} right now.</div>
         )}
       </div>
@@ -357,7 +357,7 @@ function Jobs({ tasks, filter, onClearFilter, onOpen }: { tasks: PortalTask[]; f
         const items = tasks.filter((t) => (g.stages as readonly number[]).includes(STAGE_OF[t.status]));
         if (!items.length) return null;
         // While work is still open, finished jobs fold away so the list leads with what's happening.
-        return <JobGroup key={g.title} title={g.title} hint={g.hint} tasks={items} onOpen={onOpen} collapsible={g.title === "Done" && anyOpen} />;
+        return <JobGroup key={g.title} title={g.title} hint={g.hint} tasks={items} collapsible={g.title === "Done" && anyOpen} />;
       })}
     </div>
   );
@@ -490,7 +490,12 @@ export function JobSheet({ task, period, onClose, isOwner, onEdit }: { task: Por
         {task && (
           <>
             <SheetHeader className="gap-1.5 border-b px-6 py-6 sm:px-8">
-              <p className="text-muted-foreground text-xs">{formatPeriod(period)} / Tasks &amp; Progress</p>
+              <div className="flex items-center justify-between gap-3 pr-8">
+                <p className="text-muted-foreground text-xs">{formatPeriod(period)} / Tasks &amp; Progress</p>
+                <Link href={`/app/progress/${task.id}`} onClick={onClose} className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline">
+                  Open full page <ChevronRight className="size-3.5" aria-hidden />
+                </Link>
+              </div>
               <SheetTitle className="pr-8 text-2xl">{task.title}</SheetTitle>
               <SheetDescription className="text-sm leading-relaxed">{explain(task) ?? "Part of your monthly bookkeeping."}</SheetDescription>
             </SheetHeader>
@@ -606,17 +611,15 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
     setPeriodState(p);
     setFilter(null);
   };
-  const [openId, setOpenId] = useState<number | null>(() => Number(params.get("task")) || null);
-  const closeJob = () => {
-    setOpenId(null);
-    if (params.get("task")) router.replace("/app/progress", { scroll: false });
-  };
+  // Older links (?task=) open the job's own page.
+  const legacyTask = Number(params.get("task")) || null;
+  useEffect(() => {
+    if (legacyTask) router.replace(`/app/progress/${legacyTask}`);
+  }, [legacyTask, router]);
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<PortalTask | null>(null);
   const { data, isLoading, error, refetch } = usePortalTasks(period);
   // Late jobs first, then by due date.
   const tasks = [...(data?.tasks ?? [])].sort((a, b) => Number(isLate(b)) - Number(isLate(a)) || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
-  const open = tasks.find((t) => t.id === openId) ?? null;
 
   return (
     <>
@@ -631,7 +634,6 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
         }
       />
       {isOwner && <NewTaskDialog open={creating} onOpenChange={setCreating} onCreated={setPeriod} />}
-      {isOwner && <NewTaskDialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} onCreated={setPeriod} task={editing} />}
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : isLoading || !data ? (
@@ -646,14 +648,13 @@ function ProgressBody({ isOwner }: { isOwner: boolean }) {
                 <h2 className="font-medium">Jobs this month</h2>
                 <p className="text-muted-foreground text-xs">Click a job to see its steps, who&apos;s on it and when it&apos;s due.</p>
               </div>
-              <Jobs tasks={tasks} filter={filter} onClearFilter={() => setFilter(null)} onOpen={(t) => setOpenId(t.id)} />
+              <Jobs tasks={tasks} filter={filter} onClearFilter={() => setFilter(null)} />
             </div>
             <aside className="space-y-4 lg:sticky lg:top-6">
               {tasks.length > 0 && <MonthPath period={data.period} tasks={tasks} />}
               <StageGuide />
             </aside>
           </div>
-          <JobSheet task={open} period={data.period} onClose={closeJob} isOwner={isOwner} onEdit={(t) => setEditing(t)} />
         </div>
       )}
     </>
