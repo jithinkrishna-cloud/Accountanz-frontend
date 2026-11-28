@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { AnalyticsOverview } from "../types/analytics.types";
+import type { AnalyticsOverview, AnalyticsRange } from "../types/analytics.types";
 
-export const analyticsService = { overview: () => api<AnalyticsOverview>("/admin/analytics") };
+export const analyticsService = { overview: (range: AnalyticsRange) => api<AnalyticsOverview>("/admin/analytics", { query: { range } }) };
 
-export const useAnalytics = () => useQuery({ queryKey: ["admin", "analytics"], queryFn: analyticsService.overview });
+export const useAnalytics = (range: AnalyticsRange) =>
+  useQuery({ queryKey: ["admin", "analytics", range], queryFn: () => analyticsService.overview(range), placeholderData: keepPreviousData });

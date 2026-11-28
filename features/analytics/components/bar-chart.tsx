@@ -46,8 +46,8 @@ export function BarChart({ bars, format, title, orientation = "vertical" }: BarC
         {table}
         <ul className="space-y-3" aria-hidden>
           {bars.map((b) => (
-            <li key={b.key} className="grid grid-cols-[7rem_1fr_auto] items-center gap-3 text-sm">
-              <span className="text-muted-foreground truncate">{b.label}</span>
+            <li key={b.key} className="grid grid-cols-[minmax(0,11rem)_1fr_auto] items-center gap-3 text-sm">
+              <span className="text-muted-foreground truncate" title={b.label}>{b.label}</span>
               <div className="bg-muted h-2.5 rounded-full">
                 <div className="bg-primary h-full rounded-full" style={{ width: `${Math.max(pct(b.value), b.value > 0 ? 2 : 0)}%` }} />
               </div>
